@@ -79,17 +79,7 @@ export default defineConfig({
   // --- Navigation (Sidebar) ---
   navigation: [
     { title: 'Introduction', path: '/', icon: 'home' },
-    {
-      title: 'Getting Started',
-      icon: 'rocket',
-      collapsible: false,
-      children: [
-        { title: 'Installation', path: 'https://docs.docmd.io/getting-started/installation', icon: 'download', external: true },
-        { title: 'Configuration', path: 'https://docs.docmd.io/configuration/general/', icon: 'cog', external: true },
-      ],
-    },
-    { title: 'Live Editor', path: 'https://live.docmd.io', icon: 'play', external: true },
-    { title: 'GitHub', path: 'https://github.com/docmd-io/docmd', icon: 'github', external: true },
+    { title: 'Project Statement', path: '/project-statement', icon: 'rocket' },
   ],
 
   // --- Plugins ---

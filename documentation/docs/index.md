@@ -1,58 +1,34 @@
 ---
-title: "Welcome"
-description: "Welcome to Growth Chat documentation site."
+title: "Welcome to Growth Chat Docs"
+description: "Documentation hub for the Growth Chat project — architecture, decisions, and development process."
 ---
 
-# Welcome to Growth Chat Docs 🚀
+Documentation covering the full Growth Chat development process, from discovery and design to implementation and deployment.
 
-Documentation about all Growth Chat development process.
-From discovery to plan and design.
+## What is Growth Chat?
 
-## Quick Start
+An AI-powered chat widget for a company landing page that replaces passive contact forms with intelligent conversations. It qualifies inbound leads, answers questions about the company's services, and routes hot prospects to sales in real time.
 
-You are currently viewing `docs/index.md`.
-
-```bash
-npm start   # Start the dev server
-docmd build # Build for production
-```
-
-## Features Demo
-
-### 1. Smart Containers
-::: callout tip "Did you know?"
-You can nest containers, add custom titles, and use emojis! :tada:
+::: callout tip "Learning Goal"
+This project is built as part of a course to explore real-world AI engineering — agent design, RAG, tool use, and production deployment.
 :::
 
-::: card "Flexible Structure"
-Organise your content with cards.
-::: button "View Documentation" https://docs.docmd.io
+## Project Modules
+
+::: card "Documentation"
+This site. Architecture decisions, design docs, and development notes.
 :::
 
-### 2. Tabs & Code
-::: tabs
-== tab "JavaScript"
-```javascript
-console.log('Hello World');
-```
-
-== tab "Python"
-```python
-print('Hello World')
-```
+::: card "Agent API"
+Python-based backend powering the chat agent. Handles conversation, qualification logic, and lead routing.
+> Status: TODO
 :::
 
-### 3. Plugins (Enabled by Default)
-- **Search**
-- **Sitemap**
-- **SEO Optimisation**
-- **Analytics**
-- **Mermaid Diagrams**
-- **LLMs (AI Integration)**
+::: card "Chat UI"
+React widget embedded on the company landing page. Connects to the Agent API.
+> Status: TODO
+:::
 
-## Next Steps
-- **[Official Documentation](https://docs.docmd.io)**
-- **[Customise Theme](https://docs.docmd.io/theming/available-themes)**
-- **[Deploy Site](https://docs.docmd.io/deployment)**
+## Documentation
 
-Happy documenting! 🎉
+- **[Project Statement](./project-statement.md)** — Goals, success metrics, and key design considerations
