@@ -11,3 +11,11 @@ This project uses **[NodeJS](https://nodejs.org/es)** for documentation, version
 ## Documentation
 
 All documentation about project is in `./documentation` folder.
+
+## Agent API
+
+> TODO: python agent api in `./agent-api`
+
+## Chat UI
+
+> TODO: react base front-end in `./chat-ui`
