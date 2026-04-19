@@ -12,6 +12,21 @@ This project uses **[NodeJS](https://nodejs.org/es)** for documentation, version
 
 All documentation about project is in `./documentation` folder.
 
+Based on **[docmd framework](https://docs.docmd.io/)**
+
+### Commands
+
+```bash
+# Move to documentation directory
+cd ./docuemntation
+
+# Start project on local
+npx docmd dev
+
+# Build project
+npx docmd build
+```
+
 ## Agent API
 
 > TODO: python agent api in `./agent-api`
