@@ -1,6 +1,6 @@
 ---
-title: "Project Statement"
-description: "Project goals, success metrics, and key design considerations for Growth Chat."
+title: "Discovery artifact"
+description: "Discovery artifact capturing the problem space, open questions, and design considerations for Growth Chat."
 ---
 
 The company website gets traffic but conversion to qualified leads is low. Visitors browse, maybe read a case study, then bounce. There's no intelligent engagement—just a contact form that feels like shouting into a void. Build a conversational chat widget for the company landing page that serves as an acquisition channel: - Answers questions about the company's services, expertise, and engagement models - Qualifies visitors (company size, needs, timeline, budget signals) - Captures lead information naturally through conversation (not forms) - Routes hot leads to sales in real-time - Provides value even to visitors who aren't ready to buy (resources, insights) The chat should feel like talking to a knowledgeable company representative, not a generic chatbot. It should understand the company's positioning (senior engineers, AI expertise, European timezone coverage) and articulate its value. Success metric: Chat becomes a top-3 lead source with higher qualification rate than form submissions.

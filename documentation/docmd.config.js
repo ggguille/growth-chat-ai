@@ -79,7 +79,7 @@ export default defineConfig({
   // --- Navigation (Sidebar) ---
   navigation: [
     { title: 'Introduction', path: '/', icon: 'home' },
-    { title: 'Project Statement', path: '/project-statement', icon: 'rocket' },
+    { title: 'Discovery Artifact', path: '/discovery-artifact', icon: 'rocket' },
   ],
 
   // --- Plugins ---

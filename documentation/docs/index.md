@@ -31,4 +31,4 @@ React widget embedded on the company landing page. Connects to the Agent API.
 
 ## Documentation
 
-- **[Project Statement](./project-statement.md)** — Goals, success metrics, and key design considerations
+- **[Discovery Artifact](./discovery-artifact.md)** — Problem space, open questions, and design considerations
