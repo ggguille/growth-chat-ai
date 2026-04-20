@@ -32,3 +32,4 @@ React widget embedded on the company landing page. Connects to the Agent API.
 ## Documentation
 
 - **[Discovery Artifact](./discovery-artifact.md)** — Problem space, open questions, and design considerations
+- **[User Personas](./user-personas/)** — Target and negative visitor personas for the company website chat

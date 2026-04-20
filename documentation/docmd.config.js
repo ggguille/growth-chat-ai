@@ -80,6 +80,18 @@ export default defineConfig({
   navigation: [
     { title: 'Introduction', path: '/', icon: 'home' },
     { title: 'Discovery Artifact', path: '/discovery-artifact', icon: 'rocket' },
+    {
+      title: 'User Personas',
+      path: '/user-personas',
+      icon: 'users',
+      children: [
+        { title: 'P1 — Evaluating CTO', path: '/user-personas/p1-evaluating-cto' },
+        { title: 'P2 — Exploring Founder', path: '/user-personas/p2-exploring-founder' },
+        { title: 'P3 — Referred Decision-Maker', path: '/user-personas/p3-referred-decision-maker' },
+        { title: 'N1 — Competitor', path: '/user-personas/n1-competitor' },
+        { title: 'N2 — Curious Researcher', path: '/user-personas/n2-curious-researcher' },
+      ]
+    },
   ],
 
   // --- Plugins ---
