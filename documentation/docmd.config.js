@@ -81,6 +81,14 @@ export default defineConfig({
     { title: 'Introduction', path: '/', icon: 'home' },
     { title: 'Discovery Artifact', path: '/discovery-artifact', icon: 'rocket' },
     {
+      title: 'Considerations',
+      path: '/considerations',
+      icon: 'lightbulb',
+      children: [
+        { title: 'Chat Behaviour', path: '/considerations/chat-behaviour' },
+      ]
+    },
+    {
       title: 'User Personas',
       path: '/user-personas',
       icon: 'users',
