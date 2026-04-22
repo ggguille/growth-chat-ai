@@ -22,14 +22,14 @@ This section documents the answers to the design questions raised in the [Discov
 | # | Topic | Question | Document | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Helpfulness vs. lead capture | How do you balance helpfulness with lead capture? | [Chat Behaviour](./chat-behaviour.md) | Answered |
-| 2 | Qualification signals | What qualification signals matter? | [Qualification Signals](./qualification-signals.md) | Draft |
-| 3 | Human handoff | When does the bot hand off to a human? | — | Pending |
+| 2 | Qualification signals | What qualification signals matter? | [Qualification Signals](./qualification-signals.md) | Answered |
+| 3 | Human handoff | When does the bot hand off to a human? | [Human Handoff](./human-handoff.md) | Answered |
 | 4 | Competitor handling | How do you handle competitors asking questions? | — | Pending |
-| 5 | Chat personality | What personality should the chat have? | — | Pending |
+| 5 | Chat personality | What personality should the chat have? | [Chat Behaviour §Design Principle](./chat-behaviour.md#design-principle) | Partial |
 | 6 | Pricing questions | How do you handle pricing questions? | — | Pending |
 | 7 | Case study contextualisation | Should the chat know about specific case studies and reference them contextually? | — | Pending |
-| 8 | Contact capture | How do you capture email/contact info without feeling like a form? | [Chat Behaviour §Contact Information](./chat-behaviour.md) | Partial |
-| 9 | Out-of-hours behaviour | What happens outside business hours? | — | Pending |
+| 8 | Contact capture | How do you capture email/contact info without feeling like a form? | [Chat Behaviour §Contact Information](./chat-behaviour.md#contact-information--when-and-how-to-ask) | Partial |
+| 9 | Out-of-hours behaviour | What happens outside business hours? | [Human Handoff §Outside Business Hours](./human-handoff.md#handoff-execution--outside-business-hours) | Partial |
 | 10 | A/B testing | How do you A/B test different approaches? | — | Pending |
 | 11 | Support channel prevention | How do you prevent the chat from becoming a support channel for existing clients? | — | Pending |
 

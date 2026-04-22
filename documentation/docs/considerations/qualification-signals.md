@@ -2,9 +2,9 @@
 description: "Defines which qualification signals the chat must detect — company size, needs, timeline, prior AI attempts — and the logic for escalating, nurturing, or helping without a sales follow-up."
 ---
 
-# Strategic Question P3
+# Qualification Signals
 
-## Qualification Signals — What the Chat Needs to Detect and When
+## What the Chat Needs to Detect and When
 
 **Project:** AI-powered lead qualification chat
 **Version:** 1.0

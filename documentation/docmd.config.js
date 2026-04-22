@@ -87,6 +87,7 @@ export default defineConfig({
       children: [
         { title: 'Chat Behaviour', path: '/considerations/chat-behaviour' },
         { title: 'Qualification Signals', path: '/considerations/qualification-signals' },
+        { title: 'Human Handoff', path: '/considerations/human-handoff' },
       ]
     },
     {
