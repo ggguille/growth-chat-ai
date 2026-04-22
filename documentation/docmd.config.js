@@ -86,6 +86,7 @@ export default defineConfig({
       icon: 'lightbulb',
       children: [
         { title: 'Chat Behaviour', path: '/considerations/chat-behaviour' },
+        { title: 'Qualification Signals', path: '/considerations/qualification-signals' },
       ]
     },
     {

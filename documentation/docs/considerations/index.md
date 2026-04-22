@@ -22,7 +22,7 @@ This section documents the answers to the design questions raised in the [Discov
 | # | Topic | Question | Document | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Helpfulness vs. lead capture | How do you balance helpfulness with lead capture? | [Chat Behaviour](./chat-behaviour.md) | Answered |
-| 2 | Qualification signals | What qualification signals matter? | — | Pending |
+| 2 | Qualification signals | What qualification signals matter? | [Qualification Signals](./qualification-signals.md) | Draft |
 | 3 | Human handoff | When does the bot hand off to a human? | — | Pending |
 | 4 | Competitor handling | How do you handle competitors asking questions? | — | Pending |
 | 5 | Chat personality | What personality should the chat have? | — | Pending |
