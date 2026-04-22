@@ -1,5 +1,4 @@
 ---
-title: "P1 — The Evaluating CTO"
 description: "Senior technical decision-maker actively evaluating AI engineering vendors with a concrete initiative and board mandate."
 ---
 
