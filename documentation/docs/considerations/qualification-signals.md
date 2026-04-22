@@ -49,7 +49,7 @@ This is the most important signal. Without a concrete problem there is no lead, 
 
 Problem fit is the first filter. A visitor who clears it is worth continuing to qualify. A visitor who does not clear it after several exchanges should be treated as a researcher or early explorer, not a lead.
 
-#### Explicit signals
+#### Explicit problem signals
 
 | Signal type | Example phrases |
 | --- | --- |
@@ -58,7 +58,7 @@ Problem fit is the first filter. A visitor who clears it is worth continuing to 
 | Modernisation need | "We need to move off our legacy data pipeline", "We're rebuilding our backend and want to do it right" |
 | Staff augmentation need | "We need to scale our engineering capacity fast", "We're looking for senior engineers to embed with our team" |
 
-#### Implicit signals
+#### Implicit problem signals
 
 | Observed behaviour | What it suggests |
 | --- | --- |
@@ -75,7 +75,7 @@ Problem fit is the first filter. A visitor who clears it is worth continuing to 
 
 The company engages on contracts of meaningful size. A conversation with someone who has no authority or influence over the buying decision may have nurture value but should not consume sales team time. The chat needs to build a picture of the visitor's role without asking directly — "are you the decision-maker?" is a sales script, not a conversation.
 
-#### Explicit signals
+#### Explicit authority signals
 
 | Signal type | Example phrases |
 | --- | --- |
@@ -136,7 +136,7 @@ The chat should note these but not immediately disqualify. Context matters.
 
 Without a timeline, there is no near-term conversion. A visitor with strong problem, authority, and company fit but no urgency is a warm lead for nurture — not for immediate escalation. A visitor with urgency signals should be escalated quickly even if the picture is not fully complete.
 
-#### Explicit signals
+#### Explicit timing signals
 
 | Signal type | Example phrases |
 | --- | --- |
