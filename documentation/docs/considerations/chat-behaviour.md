@@ -1,3 +1,7 @@
+---
+description: "Explores the core design tension between being genuinely helpful to visitors and capturing leads — and how resolving it shapes the chat's personality, conversation flow, and conversion logic."
+---
+
 # Chat Behaviour
 
 ## Helpfulness vs. Lead Capture — Defining the Chat's Core Balance
