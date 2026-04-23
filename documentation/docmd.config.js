@@ -80,6 +80,7 @@ export default defineConfig({
   navigation: [
     { title: 'Introduction', path: '/', icon: 'home' },
     { title: 'Discovery Artifact', path: '/discovery-artifact', icon: 'rocket' },
+    { title: 'Problem Statement', path: '/problem-statement', icon: 'clipboard' },
     {
       title: 'Considerations',
       path: '/considerations',

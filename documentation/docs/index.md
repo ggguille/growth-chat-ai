@@ -32,4 +32,5 @@ React widget embedded on the company landing page. Connects to the Agent API.
 ## Documentation
 
 - **[Discovery Artifact](./discovery-artifact.md)** — Problem space, open questions, and design considerations
+- **[Problem Statement](./problem-statement.md)** — Formal problem definition and MVP scope, the authoritative input to the PRD
 - **[User Personas](./user-personas/)** — Target and negative visitor personas for the company website chat
