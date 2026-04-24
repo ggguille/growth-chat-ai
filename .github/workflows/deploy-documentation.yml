@@ -6,20 +6,37 @@ name: Deploy Documentation
     paths:
       - documentation/**
   workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-      - run: npx @docmd/core build
+      - name: Install dependencies
+        run: npm ci
+        working-directory: documentation
+      - name: Build documentation
+        run: npx @docmd/core build
+        working-directory: documentation
+      - name: Add CNAME
+        run: echo "growth-chat-ai.ggguille.com" > ./documentation/site/CNAME
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: ./site
-      - uses: actions/deploy-pages@v5
+          path: ./documentation/site
+      - id: deployment
+        uses: actions/deploy-pages@v5
