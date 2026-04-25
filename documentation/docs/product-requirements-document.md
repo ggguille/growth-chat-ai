@@ -174,9 +174,11 @@ when maturity signals are detected.
 **M5 — Hot lead escalation (business hours)**
 When a hot lead is detected during business hours, the chat proposes a
 connection to the company team immediately. It collects email and optional
-preferred time. It sends a structured notification to the sales team containing
-the conversation summary and qualification state. Target: < 5 minutes from
-detection to notification.
+preferred time. It delivers the context packet to two channels simultaneously:
+a Slack message to `#new-leads` (for immediate visibility) and a new lead
+record in the CRM (for record and follow-up tracking). Email to `sales@` is a
+fallback only if both primary channels are unavailable. Target: < 5 minutes
+from detection to notification.
 
 **M6 — Outside-hours capture flow**
 When a hot lead or explicit handoff request occurs outside business hours,
@@ -207,6 +209,22 @@ Full disqualification criteria and example responses in
 When a visitor identifies as an existing company client seeking support, the
 chat recognises the out-of-scope context and routes them to the appropriate
 contact (account management), not to the sales team.
+
+**M10 — CRM lead record creation**
+At the point of any escalation or capture handoff, the system creates a new
+lead record in the company CRM pre-populated with the full context packet
+(conversation summary, qualification state, lead level, trigger, visitor data,
+timestamp). The CRM is the system of record for all leads — the Slack
+notification links to it so the sales rep does not need to reconstruct context.
+Specific CRM platform to be confirmed pending OQ-04.
+
+**M11 — Calendly self-serve booking for hot leads**
+When a hot lead confirms they want to connect during business hours, the chat
+presents a Calendly link for a 30-minute intro call with a two-day advance
+booking minimum. The two-day buffer gives the assigned rep time to review the
+context packet before the call. Calendly is not offered for warm or cold
+capture handoffs — those flows end with email collection and human follow-up
+only.
 
 **M9 — Pricing deflection**
 The chat does not give specific pricing. When asked, it acknowledges the
@@ -244,21 +262,16 @@ Dynamic retrieval from a structured knowledge base of all company case studies,
 enabling precise matching between visitor problems and relevant work. Requires
 a content audit and embedding pipeline before implementation.
 
-**C2 — CRM integration**
-Automatic creation of a lead record in the company's CRM at the point of handoff,
-populated with the qualification state and conversation summary. Requires
-CRM selection and API access.
-
-**C3 — A/B testing framework**
+**C2 — A/B testing framework**
 Infrastructure to test different greeting approaches, conversation opening
 lines, and escalation timing. Requires a baseline dataset from v1 before
 meaningful experiments can be designed.
 
-**C4 — Multi-page context awareness**
+**C3 — Multi-page context awareness**
 The chat knows which page the visitor is on and adjusts its opening approach
 accordingly (homepage vs. services page vs. a specific case study).
 
-**C5 — Returning visitor recognition**
+**C4 — Returning visitor recognition**
 If a visitor has chatted before, the chat acknowledges the previous conversation
 and picks up from where they left off, rather than starting cold.
 
@@ -320,11 +333,13 @@ Custom build in v1 to maintain full control over conversation logic and data.
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| FR-19 | The system sends a structured sales notification within 5 minutes of hot lead detection during business hours | Must |
+| FR-19 | At the point of any escalation handoff, the system delivers the context packet to two destinations simultaneously within 5 minutes: a Slack message to `#new-leads` and a new CRM lead record. Email to `sales@` is used only if both primary channels are unavailable | Must |
 | FR-20 | The system captures email with a clear, value-attached reason — never as a standalone request | Must |
 | FR-21 | The system detects outside-hours context and executes the outside-hours capture flow | Must |
-| FR-22 | The outside-hours flow states the specific follow-up time commitment (next business day before 10am CET) | Must |
+| FR-22 | The outside-hours flow states the specific follow-up time commitment (next business day before 10am CET). The system does not offer same-day follow-up for conversations that begin after 4pm CET | Must |
 | FR-23 | The system routes existing client support requests to account management contact, not to sales | Must |
+| FR-24 | For hot lead escalations during business hours, after the visitor confirms they want to connect, the chat presents a Calendly link for a 30-minute intro call with a minimum two-day advance booking window | Must |
+| FR-25 | Calendly booking is not offered in warm or cold capture handoff flows — those flows end with email collection only | Must |
 
 ---
 
@@ -448,18 +463,19 @@ mobile responsiveness.
 
 #### Notification and Lead Capture
 
-> *Decision owner: AI Engineering Lead — ADR-005 (pending)*
+*Decision: Both Slack webhook (`#new-leads`) and CRM integration are required in V1 — Slack for speed, CRM for record (see M5, M10, FR-19). Email is fallback only. Calendly integration required for hot lead self-serve booking (M11, FR-24). Specific CRM platform to be confirmed pending OQ-04. ADR-005 to document final implementation choices.*
 
 | Candidate | Strengths | Weaknesses |
 | --- | --- | --- |
 | Slack webhook | Instant, zero cost, sales team already in Slack | No structured data, hard to query later, not a CRM |
 | Email (SMTP / SendGrid) | Universal, structured template possible, easy to route | Slower than Slack, higher chance of being missed |
 | Zapier / Make webhook | No-code routing to any destination, easy to change target | External dependency, adds latency, not suitable for < 5 min SLA |
-| Native CRM integration (v1) | Structured lead record from day one | Requires CRM selection (OQ-04 unresolved), significant added complexity for MVP |
+| Native CRM integration | Structured lead record from day one | Requires CRM selection (OQ-04 unresolved), significant added complexity for MVP |
 
 **Key evaluation criteria:** delivery speed (< 5 min SLA from FR-19), structured
-context packet support (FR-13), operational simplicity for MVP, path to CRM
-integration in v2.
+context packet support (FR-13), operational simplicity for MVP. Slack and CRM
+are both required; the evaluation focuses on which CRM and which Slack
+integration approach.
 
 ---
 
@@ -551,11 +567,9 @@ These questions remain unresolved and require input before or during development
 | # | Question | Owner | Needed by |
 | --- | --- | --- | --- |
 | OQ-01 | Which specific company case studies should be included in the v1 knowledge base? Requires a content audit. | marketing / PM | Before build starts |
-| OQ-02 | Who receives the sales notification — a shared inbox, a specific person, a Slack channel? | sales team | Before build starts |
 | OQ-03 | What is the current form submission volume and qualification rate? (Baseline for success metric comparison) | sales / analytics | Before launch |
-| OQ-04 | Is there an existing CRM? If so, which one? (Informs v2 integration planning) | ops | Before v2 planning |
+| OQ-04 | Is there an existing CRM? If so, which one? (CRM integration is required in V1 — M10 — this determines the implementation path) | ops | Before build starts |
 | OQ-05 | Are there specific topics that must never be discussed — beyond pricing and internal operations? | leadership | Before build starts |
-| OQ-06 | Should the chat offer a self-serve calendar booking (e.g. Calendly) for hot leads, or always go through a human to schedule? | sales team | Sprint 1 |
 
 ---
 

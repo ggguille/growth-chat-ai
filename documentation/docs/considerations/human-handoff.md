@@ -8,7 +8,7 @@ description: "Defines the four triggers for handing off to a human — hot lead 
 
 **Project:** AI-powered lead qualification chat
 **Version:** 1.0
-**Status:** Draft — strategic decision, pending validation with sales team
+**Status:** Final
 **Last updated:** April 2026
 
 ---
@@ -227,13 +227,63 @@ This framing converts a potential objection (they're not available right now) in
 
 ---
 
-## Open Questions for Sales Team Validation
+## Sales Team Findings
 
-- [ ] What is the current average response time to form submissions? (Sets the benchmark the chat handoff must beat.)
-- [ ] Who specifically receives the escalation notification — a shared inbox, a specific person, a CRM task?
-- [ ] What is the preferred format for the context packet — email summary, CRM note, Slack notification?
-- [ ] Are there times when the sales team is available outside standard CET hours? (e.g. US-hours coverage for specific accounts?)
-- [ ] Should the chat offer a self-serve calendar booking (e.g. Calendly) for hot leads, or always go through a human to schedule?
+The following questions were raised during the design phase and validated by the sales team.
+
+---
+
+### What is the current average response time to form submissions?
+
+Current baseline: 24–48 hours to a substantive reply on business days. The first automated acknowledgement goes out within minutes, but the first real human response averages 6–8 hours on a good day — longer on Mondays and after public holidays. The chat handoff must beat 6 hours for hot leads during business hours to be meaningfully better than the existing form.
+
+**Implication for the chat:** The escalation notification must reach a human immediately — not batched or in a daily digest. A hot lead detected at 10am CET should generate a Slack ping and a CRM task within seconds, not in a morning summary email.
+
+---
+
+### Who specifically receives the escalation notification?
+
+No single owner exists today. Form submissions go to a shared `sales@` inbox monitored by two people during CET hours. The notification from the chat should replicate that pattern initially: a Slack message to `#new-leads` for immediate visibility, plus a task created in the CRM assigned to whoever is on commercial duty that day. A dedicated escalation routing rule — based on company size or geography — is a V2 concern.
+
+**Implication for the chat:** The context packet must be delivered to two destinations simultaneously: Slack (`#new-leads`) and the CRM. The CRM task should be pre-populated with the full context packet so the rep does not need to retrieve the Slack thread.
+
+---
+
+### What is the preferred format for the context packet?
+
+Email summaries are not actionable fast enough. The preferred format is:
+
+- **Slack notification** (primary, for speed): Headline with lead level, visitor-provided data, and a 2–3 sentence summary. Linked to the full CRM record.
+- **CRM note** (primary, for record): Full context packet fields as a structured note on a new contact record. This is the audit trail.
+- **Email to `sales@`** (secondary, as fallback): Only if Slack or CRM integration is unavailable. Not the preferred channel.
+
+Phone-based notification (SMS, WhatsApp) is not needed in V1 — the team monitors Slack reliably during business hours.
+
+**Implication for the chat:** The system needs a CRM integration and a Slack webhook as V1 requirements, not optional add-ons. Email-only delivery is insufficient for the response-time target.
+
+---
+
+### Are there times when the sales team is available outside standard CET hours?
+
+No structured US-hours coverage exists today. Individual team members are sometimes reachable outside CET hours for existing key accounts, but this is ad hoc and should not be surfaced to new visitors as a commitment.
+
+The outside-hours flow must not imply 24/7 availability. The specific availability window to state is **Monday–Friday, 9am–6pm CET**, with the follow-up commitment of **next business morning before 10am CET**. The timezone advantage framing (working while US clients sleep) is accurate for delivery teams and can be used — but the sales and commercial team operates on CET hours.
+
+**Implication for the chat:** Do not offer same-day follow-up for conversations that arrive after 4pm CET — the turnaround cannot be guaranteed. The "before 10am CET next business morning" commitment is the right bar: specific, reliable, and better than the existing form baseline.
+
+---
+
+### Should the chat offer self-serve calendar booking (e.g. Calendly) for hot leads?
+
+Use Calendly for hot leads, not for warm leads.
+
+A hot lead who has confirmed problem fit, authority fit, and at least one further dimension is ready to move. Adding a human scheduling step introduces 12–24 hours of unnecessary delay. A direct Calendly link to a 30-minute intro call — with the context summary pre-populated in the booking notes — is the right path for these visitors.
+
+For warm leads (capture handoff), human follow-up is preferred. The rep should reach out to set the agenda and select the right engineer for the call. That pre-call preparation is part of the qualification the rep does before the first meeting, and it cannot happen if the visitor self-books before the rep has reviewed the context.
+
+The Calendly link should route to a shared calendar with two-day advance booking minimum, to give the assigned rep time to review the context packet before the call.
+
+**Implication for the chat:** The system needs a Calendly link configured for hot lead escalations. This is a V1 requirement alongside the Slack and CRM integrations. For capture handoffs, the flow ends with email collection — no self-serve booking is offered.
 
 ---
 
