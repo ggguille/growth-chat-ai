@@ -2,7 +2,7 @@
 export default defineConfig({
   // --- Core Metadata ---
   title: 'Growth Chat Documentation',
-  url: 'http://growth-chat-ai.ggguille.com', // e.g. https://mysite.com (Critical for SEO/Sitemap)
+  url: 'https://growth-chat-ai.ggguille.com', // e.g. https://mysite.com (Critical for SEO/Sitemap)
 
   // --- Branding ---
   logo: {
