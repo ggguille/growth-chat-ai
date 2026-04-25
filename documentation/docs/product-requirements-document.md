@@ -49,7 +49,10 @@ a meaningful signal.
 | Contact capture rate | > 15% of chat conversations result in email captured | Chat analytics |
 | Hot lead response time | < 5 minutes during business hours | Handoff system logs |
 | Conversation progression | > 30% of qualifying interactions reach Stage 3 (proposal) | Conversation state analytics |
+| Conversation depth | Average number of exchanges per conversation before drop-off | Chat analytics |
 | Go / no-go decision | Based on above metrics at 90-day mark | Product review |
+
+Contact capture rate should not be read in isolation. Low capture rate paired with high conversation depth may indicate the approach is building brand value that does not show up in immediate conversions. A strategy re-evaluation is warranted only when both contact capture rate and conversation depth are below expectation simultaneously.
 
 ---
 
@@ -181,11 +184,24 @@ the chat is transparent about availability, makes a specific follow-up
 commitment, captures email, and optionally sends a relevant resource.
 The company timezone is framed as a feature, not an apology.
 
-**M7 — Negative persona handling**
-The chat does not escalate visitors classified as N1 or N2. For N1 (competitor),
-it responds only with publicly available information and does not engage with
-operational or pricing probes. For N2 (researcher), it is helpful but does
-not push toward capture or escalation.
+**M7 — Negative persona handling and disqualification**
+The chat does not escalate visitors classified as N1 or N2, and handles the
+broader set of no-fit visitors defined in the disqualification path
+(individual contractors, geography or regulatory mismatches, and any context
+that clearly falls outside the company's ICP).
+
+For N1 (competitor): responds only with publicly available information;
+does not engage with operational or pricing probes.
+
+For N2 (researcher): helpful, no escalation, no contact push.
+
+For all other no-fit visitors: acknowledges the mismatch honestly, offers
+a relevant resource where possible, and closes the conversation with a positive
+impression. The chat never pretends a visitor is a fit and never requests
+contact information from a visitor who will not convert.
+
+Full disqualification criteria and example responses in
+[chat-behaviour.md](./considerations/chat-behaviour.md).
 
 **M8 — Existing client deflection**
 When a visitor identifies as an existing company client seeking support, the
@@ -276,6 +292,7 @@ Custom build in v1 to maintain full control over conversation logic and data.
 | FR-05 | The system detects maturity signals and triggers a Stage 3 proposal proactively when all three signals are present | Must |
 | FR-06 | The system adapts its register to the detected persona profile | Should |
 | FR-07 | The system recognises when a conversation has stalled (6+ exchanges without qualification progress) and offers a human | Must |
+| FR-07a | The system treats each session as stateless — no cross-session memory is maintained in v1. Each visit starts fresh regardless of prior conversations | Must |
 
 ### 5.2 Qualification and Escalation
 
@@ -284,7 +301,8 @@ Custom build in v1 to maintain full control over conversation logic and data.
 | FR-08 | The system classifies each session as hot, warm, or cold based on the scoring model in [qualification-signals.md](./considerations/qualification-signals.md) | Must |
 | FR-09 | Hot lead classification triggers an escalation proposal within the same exchange | Must |
 | FR-10 | An explicit visitor request for a human triggers immediate escalation regardless of qualification state | Must |
-| FR-11 | Escalation to sales is blocked for sessions classified as N1 or N2 | Must |
+| FR-11 | Escalation to sales is blocked for sessions classified as N1, N2, or any visitor context matching the disqualification criteria in chat-behaviour.md | Must |
+| FR-11a | When a session is classified as no-fit, the system acknowledges the mismatch, offers a relevant resource where possible, and closes without requesting contact information | Must |
 | FR-12 | The system generates a structured context packet at the point of handoff | Must |
 | FR-13 | The context packet contains: conversation summary, qualification state, lead level, trigger, visitor-provided data, timestamp | Must |
 

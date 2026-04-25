@@ -8,7 +8,7 @@ description: "Explores the core design tension between being genuinely helpful t
 
 **Project:** AI-powered lead qualification chat
 **Version:** 1.0
-**Status:** Draft — strategic decision, pending team review
+**Status:** Final
 **Last updated:** April 2026
 
 ---
@@ -112,6 +112,32 @@ If none are present after 4–5 exchanges, the chat offers a lower-friction opti
 
 ---
 
+## Disqualification Path
+
+Not every visitor is a fit. The chat should recognise this early and respond with honesty rather than pushing a conversion that will not happen.
+
+### When to recognise a no-fit visitor
+
+A visitor is likely not a fit when they clearly express:
+
+- **Individual scope** — looking for personal freelance work, not a staffing or engineering partner.
+- **Research or academic purpose** — a student, journalist, or researcher with no hiring intent.
+- **Competitor or vendor** — someone representing another agency or tool vendor.
+- **Geography or regulatory mismatch** — a context where the company does not operate or cannot engage.
+
+### How to handle it
+
+Acknowledge the mismatch, offer something genuinely useful if possible, and close gracefully.
+
+Examples:
+
+- *"Based on what you've described, it sounds like we may not be the right fit — we work with companies looking to scale their engineering teams, rather than with individual contractors. That said, [relevant resource] might be useful for what you're exploring."*
+- *"That's not something we cover, but I don't want to waste your time. If your situation changes and you're looking to grow an engineering team, we'd be glad to help."*
+
+**Rule:** The chat never pretends a visitor is a fit when they are not. It never asks for contact information from a no-fit visitor. No-fit visitors today may refer someone tomorrow — leave them with a positive impression.
+
+---
+
 ## Contact Information — When and How to Ask
 
 Contact information should never feel like a toll. The ask must always be attached to a clear reason that benefits the visitor.
@@ -160,6 +186,38 @@ The chat responds with vague, non-committal answers to avoid saying anything wro
 
 ---
 
+## Success Metrics
+
+This section defines what "good" looks like so the team can evaluate whether the helpfulness-first approach is working.
+
+### V1 baseline metrics
+
+| Metric | Definition | Purpose |
+| --- | --- | --- |
+| Stage 3 trigger rate | % of conversations that reach a proposal | Distinguishes helpfully passive from actively qualifying |
+| Contact capture rate | % of conversations that yield a contact | Core conversion metric |
+| Conversation depth | Average number of exchanges before drop-off | Proxy for engagement quality |
+
+### How to interpret them
+
+Contact capture rate alone is not a sufficient signal. A low capture rate paired with high conversation depth and return visit rate may indicate the approach is building brand value that does not show up in immediate conversions.
+
+A strategy re-evaluation is warranted when, after a statistically meaningful number of conversations, the contact capture rate is substantially below the team's baseline expectation **and** conversation depth is also low — meaning the chat is not engaging visitors, not just not converting them.
+
+---
+
+## Multi-Session Continuity
+
+**V1 decision: the chat does not maintain cross-session memory. Each visit starts fresh.**
+
+This keeps the architecture simple for the first version and avoids the identity and storage complexity of recognising returning visitors.
+
+Consequence for conversation design: the chat should never assume prior context. If a returning visitor brings up a previous topic, the chat qualifies naturally from that point rather than pretending it knows who they are.
+
+Cross-session persistence — a session ID tied to a stored conversation context — is a V2 consideration. It becomes valuable once Stage 3 trigger rates confirm that a meaningful portion of conversions come from return visits.
+
+---
+
 ## Implications for the PRD
 
 This decision has direct consequences for how the system is built:
@@ -169,6 +227,8 @@ This decision has direct consequences for how the system is built:
 - The system needs a maturity detection mechanism to trigger Stage 3 proactively.
 - Contact capture must be contextual — attached to a specific value exchange — not a standalone step.
 - The chat should never require contact information to continue a conversation.
+- The system must handle no-fit visitors gracefully — the prompt must include disqualification behaviour, not just conversion behaviour.
+- V1 requires no cross-session memory; the system can treat each conversation as stateless. V2 may revisit this.
 
 ---
 
