@@ -23,7 +23,7 @@ qualified leads. The only conversion mechanism is a static contact form that can
 engage visitors, answer questions, or differentiate between a CTO actively evaluating
 vendors and a curious researcher. The sales team receives cold leads with no context.
 
-Full problem definition in [problem-statement.md](./problem-statement.md).
+Full problem definition in [problem-statement.md](../problem-statement.md).
 
 ### 1.2 The Solution
 
@@ -89,7 +89,7 @@ advantage before they speak to anyone.
 
 ## 3. Target Users
 
-Full persona definitions in [user-personas](./user-personas/). This section summarises the
+Full persona definitions in [user-personas](../user-personas/). This section summarises the
 implications for product scope.
 
 ### 3.1 Target Personas
@@ -163,11 +163,11 @@ Content audit required before build (see OQ-01).
 The chat detects fit signals across four dimensions (problem, authority, company,
 timing) incrementally through natural conversation. It maintains a qualification
 state object per session and escalates when the hot lead threshold is reached.
-Full logic defined in [qualification-signals.md](./considerations/qualification-signals.md).
+Full logic defined in [qualification-signals.md](../considerations/qualification-signals.md).
 
 **M4 — Three-stage conversation model**
 Every conversation follows the respond → advance → propose sequence defined
-in [chat-behaviour.md](./considerations/chat-behaviour.md). The system does not ask for contact
+in [chat-behaviour.md](../considerations/chat-behaviour.md). The system does not ask for contact
 information before providing value. It proposes the next step proactively
 when maturity signals are detected.
 
@@ -203,7 +203,7 @@ impression. The chat never pretends a visitor is a fit and never requests
 contact information from a visitor who will not convert.
 
 Full disqualification criteria and example responses in
-[chat-behaviour.md](./considerations/chat-behaviour.md).
+[chat-behaviour.md](../considerations/chat-behaviour.md).
 
 **M8 — Existing client deflection**
 When a visitor identifies as an existing company client seeking support, the
@@ -311,7 +311,7 @@ Custom build in v1 to maintain full control over conversation logic and data.
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| FR-08 | The system classifies each session as hot, warm, or cold based on the scoring model in [qualification-signals.md](./considerations/qualification-signals.md) | Must |
+| FR-08 | The system classifies each session as hot, warm, or cold based on the scoring model in [qualification-signals.md](../considerations/qualification-signals.md) | Must |
 | FR-09 | Hot lead classification triggers an escalation proposal within the same exchange | Must |
 | FR-10 | An explicit visitor request for a human triggers immediate escalation regardless of qualification state | Must |
 | FR-11 | Escalation to sales is blocked for sessions classified as N1, N2, or any visitor context matching the disqualification criteria in chat-behaviour.md | Must |
@@ -577,11 +577,11 @@ These questions remain unresolved and require input before or during development
 
 | Document | Description |
 | --- | --- |
-| [problem-statement.md](./problem-statement.md) | Distilled problem statement — authoritative input to this PRD |
-| [user-personas](./user-personas/) | Five visitor personas — three target, two negative |
-| [chat-behaviour.md](./considerations/chat-behaviour.md) | Conversation model and lead capture principles |
-| [qualification-signals.md](./considerations/qualification-signals.md) | Qualification dimensions, scoring model, escalation logic |
-| [human-handoff.md](./considerations/human-handoff.md) | Handoff triggers, execution sequences, escalation matrix |
+| [problem-statement.md](../problem-statement.md) | Distilled problem statement — authoritative input to this PRD |
+| [user-personas](../user-personas/) | Five visitor personas — three target, two negative |
+| [chat-behaviour.md](../considerations/chat-behaviour.md) | Conversation model and lead capture principles |
+| [qualification-signals.md](../considerations/qualification-signals.md) | Qualification dimensions, scoring model, escalation logic |
+| [human-handoff.md](../considerations/human-handoff.md) | Handoff triggers, execution sequences, escalation matrix |
 
 ---
 

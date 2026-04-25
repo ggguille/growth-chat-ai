@@ -81,7 +81,15 @@ export default defineConfig({
     { title: 'Introduction', path: '/', icon: 'home' },
     { title: 'Discovery Artifact', path: '/discovery-artifact', icon: 'rocket' },
     { title: 'Problem Statement', path: '/problem-statement', icon: 'clipboard' },
-    { title: 'Product Requirements', path: '/product-requirements-document', icon: 'file-text' },
+    {
+      title: 'Product Requirements',
+      path: '/product-requirements',
+      icon: 'file-text',
+      children: [
+        { title: 'Engineering Review', path: '/product-requirements/engineering-review' },
+        { title: 'Stakeholder Review', path: '/product-requirements/stakeholder-review' },
+      ]
+    },
     {
       title: 'Considerations',
       path: '/considerations',
