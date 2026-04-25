@@ -304,7 +304,7 @@ Custom build in v1 to maintain full control over conversation logic and data.
 | FR-11 | Escalation to sales is blocked for sessions classified as N1, N2, or any visitor context matching the disqualification criteria in chat-behaviour.md | Must |
 | FR-11a | When a session is classified as no-fit, the system acknowledges the mismatch, offers a relevant resource where possible, and closes without requesting contact information | Must |
 | FR-12 | The system generates a structured context packet at the point of handoff | Must |
-| FR-13 | The context packet contains: conversation summary, qualification state, lead level, trigger, visitor-provided data, timestamp | Must |
+| FR-13 | The context packet contains: conversation summary, qualification state, lead level, trigger, visitor-provided data, timestamp, consultant/evaluator flag if the visitor identified as evaluating on behalf of a client | Must |
 
 ### 5.3 Knowledge Base and RAG
 
@@ -386,7 +386,7 @@ and recorded in the corresponding ADR.
 | Candidate | Strengths | Weaknesses |
 | --- | --- | --- |
 | OpenAI GPT-4o | Best instruction-following, wide ecosystem, streaming support, function calling | Cost at scale, data leaves EU by default (GDPR consideration) |
-| Anthropic Claude Sonnet 3.5 | Strong reasoning, large context window, good at staying in character, EU data processing available | Smaller ecosystem, fewer native integrations |
+| Anthropic Claude Sonnet 4.6 | Strong reasoning, large context window, good at staying in character, EU data processing available | Smaller ecosystem, fewer native integrations |
 | Mistral Large (self-hosted) | Full data control, EU infrastructure, no per-token cost at scale | Higher infrastructure overhead, weaker instruction-following than GPT-4o |
 
 **Key evaluation criteria:** instruction-following quality, GDPR compliance posture,

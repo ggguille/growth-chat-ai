@@ -8,7 +8,7 @@ description: "Defines which qualification signals the chat must detect — compa
 
 **Project:** AI-powered lead qualification chat
 **Version:** 1.0
-**Status:** Draft — strategic decision, pending validation with sales team
+**Status:** Final
 **Last updated:** April 2026
 
 ---
@@ -244,13 +244,70 @@ For example: describes a large-scale initiative but mentions being a solo develo
 
 ---
 
-## Open Questions for Sales Team Validation
+## Sales Team Findings
 
-- [ ] What is the minimum signal set that makes a lead worth a sales team conversation?
-- [ ] Are there industries or company types that consistently underperform even when signals are strong?
-- [ ] What is the most common reason a qualified lead does not convert after the first sales call?
-- [ ] Should company size be a hard filter or a soft signal? (i.e. is a 10-person team ever a good lead?)
-- [ ] How should the system handle visitors who identify as freelancers or independent consultants evaluating the company for a client?
+The following questions were raised during the design phase and validated by the sales team.
+
+---
+
+### What is the minimum signal set that makes a lead worth a sales team conversation?
+
+Problem fit + Authority fit is the hard minimum. A sales call without both is a waste — no problem means no engagement, and no authority means no decision. Company fit and timing are useful but not blocking: a competent rep can qualify company size and timeline in the first five minutes of a call.
+
+The "hot lead" definition in the scoring model (problem + authority + one more dimension) is one notch above the minimum, which is the right bar for *immediate* escalation. But if problem and authority are both confirmed and the picture is otherwise incomplete, the lead should still be handed off. The rep handles the rest.
+
+**Implication for the chat:** The escalation threshold in the scoring model is correct. Do not lower it to problem-only, but do not hold leads back if authority is confirmed alongside a clear problem.
+
+---
+
+### Are there industries or company types that consistently underperform even when signals are strong?
+
+Three patterns stand out:
+
+1. **Pre-funding early stage** — founders with a genuine problem but no secured budget. Strong qualification signals, no near-term deal. Treat as P2 and nurture; do not escalate to sales.
+2. **Companies recovering from a bad outsourcing experience** — need and budget are present but trust is not. Longer close cycles than average. Worth escalating, but the sales team should set expectations accordingly.
+3. **Enterprise with rigid procurement** — signals are strong but the procurement process adds 60–120 days regardless of fit. Worth escalating, but not a fast conversion.
+
+Industries are not strong predictors on their own. Fintech and healthcare involve more compliance questions but convert well when fit is confirmed.
+
+---
+
+### What is the most common reason a qualified lead does not convert after the first sales call?
+
+Three causes, in order of frequency:
+
+1. **Budget not yet secured** — the contact has authority to evaluate but not to commit. They are exploring before asking their CFO. The fix is a budget-timeline question on the call, not a budget-amount question.
+2. **Internal politics** — the contact underestimated how many stakeholders are involved. The decision is more complex than the initial conversation suggested.
+3. **Competitor won on price or vertical specificity** — usually a competitor with more case studies in the visitor's exact industry.
+
+The scoring model does not account for the first case — a visitor can satisfy all four dimensions and still lack internal budget approval. This is a sales call issue, not a chat qualification issue. The chat logic does not need to change.
+
+---
+
+### Should company size be a hard filter or a soft signal?
+
+**Soft signal.** A 10-person team is a good lead when:
+
+- They are well-funded (post-Seed or Series A with clear runway)
+- The founder or CTO is directly involved in the conversation
+- The problem is specific and urgent
+
+The target ranges in the Company Fit dimension (50–500 for P1, 10–80 for P2) are probability guides, not gates. The chat should not disqualify based on company size alone. Small companies with strong problem and authority fit should be flagged as P2-profile and routed through the nurture path — email capture first, no immediate push for a call — rather than disqualified outright.
+
+---
+
+### How should the system handle visitors who identify as freelancers or independent consultants evaluating the company for a client?
+
+Treat them as a warm lead with multiplier potential. A consultant recommending vendors to a client is a credible influencer and sometimes a more efficient path than going direct.
+
+Handling sequence:
+
+1. Clarify with one question, not a form: *"Are you evaluating this for a specific client's project?"*
+2. If yes — qualify on the **client's** context, not the consultant's. Company size, industry, and initiative scope all refer to the client.
+3. Offer materials they can share: relevant case studies, a one-pager, or a short deck.
+4. Propose a three-way intro call (consultant + client contact) rather than a consultant-only call.
+
+The qualification state passed to the sales team should flag the consultant pattern explicitly so the rep does not pitch the consultant as the buyer.
 
 ---
 
