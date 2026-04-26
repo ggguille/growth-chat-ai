@@ -339,10 +339,9 @@ Requires Phase 2 complete and CRM platform confirmed (OQ-04):
 
 - Slack webhook integration (#new-leads)
 - CRM integration
-- Calendly link integration (hot lead path only, 2-day advance booking minimum)
 - Outside-hours capture flow
 - Email fallback (sales@ for dual-channel failure)
-- End-to-end handoff test: hot lead detected → Slack + CRM delivered within 5 minutes
+- End-to-end handoff test: hot lead detected → Slack + CRM delivered successfully
 
 ---
 
@@ -361,7 +360,7 @@ Requires real content deliverable from OQ-01:
 
 - Hallucination test suite: 70–80 structured conversations across all personas + adversarial cases (EC-11)
 - Performance load test: TTFT p95 < 3s (EC-09)
-- End-to-end handoff test: Slack + CRM within 5 minutes
+- End-to-end handoff test: Slack + CRM delivery verified
 - Graceful degradation test: AI service down → fallback form captures lead independently
 - Analytics event audit: all defined events firing with correct schema
 - GDPR data notice verified on first interaction

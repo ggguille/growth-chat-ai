@@ -275,15 +275,11 @@ The outside-hours flow must not imply 24/7 availability. The specific availabili
 
 ### Should the chat offer self-serve calendar booking (e.g. Calendly) for hot leads?
 
-Use Calendly for hot leads, not for warm leads.
+No. Self-serve booking is not included in v1.
 
-A hot lead who has confirmed problem fit, authority fit, and at least one further dimension is ready to move. Adding a human scheduling step introduces 12–24 hours of unnecessary delay. A direct Calendly link to a 30-minute intro call — with the context summary pre-populated in the booking notes — is the right path for these visitors.
+All handoff flows — hot, warm, and cold — end with email collection. The sales rep follows up by email or phone within 2 business hours (during CET business hours) to schedule a call directly. This is simpler to build, removes a third-party integration dependency, and avoids locking the visitor into a booking slot before the rep has reviewed the context packet.
 
-For warm leads (capture handoff), human follow-up is preferred. The rep should reach out to set the agenda and select the right engineer for the call. That pre-call preparation is part of the qualification the rep does before the first meeting, and it cannot happen if the visitor self-books before the rep has reviewed the context.
-
-The Calendly link should route to a shared calendar with two-day advance booking minimum, to give the assigned rep time to review the context packet before the call.
-
-**Implication for the chat:** The system needs a Calendly link configured for hot lead escalations. This is a V1 requirement alongside the Slack and CRM integrations. For capture handoffs, the flow ends with email collection — no self-serve booking is offered.
+**Implication for the chat:** The handoff flow ends when the visitor's email is captured and the context packet is delivered to Slack and CRM. No booking link is presented. The sales rep owns the scheduling step.
 
 ---
 

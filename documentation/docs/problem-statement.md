@@ -130,7 +130,7 @@ of launch:
 | --- | --- | --- |
 | Lead qualification rate | Chat leads reach sales call at a higher rate than form submissions | CRM comparison: chat leads vs. form leads over 90 days |
 | Contact capture rate | % of chat conversations that result in an email captured | Chat analytics |
-| Hot lead response time | < 5 minutes during business hours from detection to sales notification | Handoff system logs |
+| Hot lead response time | Sales team follows up within 2 business hours of Slack notification | Handoff system logs |
 | Visitor satisfaction signal | Conversations reach Stage 3 (proposal) in > 30% of qualifying interactions | Conversation state analytics |
 
 A formal go/no-go decision on v2 investment will be made at the 90-day mark
