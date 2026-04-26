@@ -191,6 +191,7 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 The DPA must cover: lawful processing purposes, EU data residency guarantee, sub-processor disclosure, and deletion timelines.
 
 **Provider status:**
+
 - OpenAI: DPA available; EU data residency via Azure OpenAI.
 - Anthropic: DPA available for enterprise; EU residency via Claude on AWS/Azure EU regions.
 - Mistral (self-hosted): No third-party processing — DPA not required.
@@ -218,6 +219,7 @@ The DPA must cover: lawful processing purposes, EU data residency guarantee, sub
 ### EC-10 — Content Audit (OQ-01) Must Run as a Parallel Workstream
 
 **Concern:** The knowledge base content (case studies, service descriptions, team profiles) does not exist yet. Treating OQ-01 as a prerequisite that delays engineering start blocks:
+
 - All FR-14 through FR-18 (RAG requirements)
 - Relevance threshold tuning (EC-05)
 - S3 proactive case study surfacing
@@ -235,6 +237,7 @@ The DPA must cover: lawful processing purposes, EU data residency guarantee, sub
 **Concern:** The DoD requires "No hallucination verified by manual review of 20 test conversations." 20 is not an adequate sample for a system routing real sales leads.
 
 **Recommendation:** The test suite should include:
+
 - 10 structured conversations per persona (5 personas) = 50 conversations
 - 20–30 adversarial cases: out-of-scope questions, competitor probes, questions about content absent from the knowledge base
 - Total: 70–80 conversations minimum
@@ -250,12 +253,14 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 **Concern:** The PRD has no mention of LLM API token budgets, per-session rate limits, cost alerting, or bot prevention. For a publicly-accessible widget, all four are required before production.
 
 **Gaps:**
+
 1. No maximum tokens per conversation — a bot or long session consumes credits without limit.
 2. No per-IP or per-session rate limit.
 3. No cost alerting — a traffic spike generates unexpected API costs silently.
 4. No bot/crawler fingerprinting.
 
 **Recommendation:** Define in the TRD:
+
 - Max tokens per session (e.g. 4,000 context tokens) and truncation strategy (see EC-13)
 - Rate limit per IP: e.g. 30 messages per 10 minutes
 - Monthly cost cap with alerting at 80% of threshold
@@ -270,6 +275,7 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 **Concern:** No maximum conversation length is defined. As conversation history grows, each turn becomes more expensive and the context window eventually overflows — at which point the conversation fails silently. Conversation depth is a success metric, so long conversations are expected.
 
 **Options:**
+
 1. Hard limit (e.g. 30 turns): close gracefully, offer handoff.
 2. Sliding window: drop oldest exchanges, keep recent turns and system prompt.
 3. Summarisation: periodically summarise older turns and inject the summary.
@@ -296,6 +302,7 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 ### Phase 1 — Foundation (Weeks 1–2)
 
 **Backend:**
+
 - Conversation orchestration graph (LangGraph or chosen framework), placeholder LLM responses
 - Qualification state object: schema and persistence backend (EC-02)
 - Programmatic escalation trigger graph node (EC-03)
@@ -305,6 +312,7 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 - Context packet generator as a deterministic function of session state
 
 **Frontend:**
+
 - Chat widget embed (script tag or React component per ADR-004)
 - Streaming response rendering
 - Stateless session management (FR-07a)
