@@ -302,7 +302,7 @@ rep directly — no Calendly or equivalent integration in v1.
 | FR-04 | The system asks a maximum of one qualifying question per exchange | Must |
 | FR-05 | The system detects maturity signals and triggers a Stage 3 proposal proactively when all three signals are present | Must |
 | FR-06 | The system adapts its register to the detected persona profile | Should |
-| FR-07 | The system recognises when a conversation has stalled (6+ exchanges without qualification progress) and offers a human | Must |
+| FR-07 | The system recognises when a conversation has stalled (6+ exchanges without a Stage 3 proposal being triggered) and offers a human. A turn counter per session resets when a Stage 3 proposal is issued; at 6 it activates the stall handoff path. | Must |
 | FR-07a | The system treats each session as stateless — no cross-session memory is maintained in v1. Each visit starts fresh regardless of prior conversations | Must |
 
 ### 5.2 Qualification and Escalation
@@ -324,14 +324,14 @@ rep directly — no Calendly or equivalent integration in v1.
 | FR-14 | The system maintains two distinct knowledge layers: a prompt layer (behaviour and instructions only) and a RAG layer (company domain content only). No domain content lives in the system prompt. | Must |
 | FR-15 | The system performs a retrieval step when the visitor's message contains a question about the company's work, services, case studies, or expertise. It responds from instructions only when the question is about process, pricing, or conversation mechanics. | Must |
 | FR-16 | The system does not fabricate information not present in the retrieved context or the instruction layer. If retrieval returns no relevant result, the system acknowledges the limit and offers to connect the visitor with a human. | Must |
-| FR-17 | Retrieved chunks are ranked by relevance score. Only chunks above a minimum relevance threshold are used in the response. Below-threshold results are treated as no result. | Must |
+| FR-17 | Retrieved chunks are ranked by relevance score. Only chunks above a minimum relevance threshold are used in the response. Below-threshold results are treated as no result. The threshold must be a configurable environment variable, not hardcoded; the value is determined during RAG tuning in Phase 4. | Must |
 | FR-18 | The system surfaces a relevant case study proactively — without being asked — when the visitor's described problem matches a retrieved case study with high relevance score. | Should |
 
 ### 5.4 Handoff and Capture
 
 | ID | Requirement | Priority |
 | --- | --- | --- |
-| FR-19 | At the point of any escalation handoff, the system delivers the context packet to two destinations: a Slack message to `#new-leads` and a new CRM lead record. Email to `sales@` is used only if both primary channels are unavailable | Must |
+| FR-19 | At the point of any escalation handoff, the system delivers the context packet to two destinations: a Slack message to `#new-leads` and a new CRM lead record. Email to `sales@` is used only if both primary channels are unavailable. If one destination fails and the other succeeds, the failure is logged, an alert is triggered, and the failed delivery is retried; the handoff is not considered complete until both destinations confirm delivery or the retry limit is reached. | Must |
 | FR-20 | The system captures email with a clear, value-attached reason — never as a standalone request | Must |
 | FR-21 | The system detects outside-hours context and executes the outside-hours capture flow | Must |
 | FR-22 | The outside-hours flow states the specific follow-up time commitment (next business day before 10am CET). The system does not offer same-day follow-up for conversations that begin after 4pm CET | Must |
@@ -376,7 +376,7 @@ rep directly — no Calendly or equivalent integration in v1.
 | Conversation logging | All conversations logged with session ID, timestamp, persona classification, qualification state at close, and outcome |
 | Escalation logging | All handoff events logged with trigger type, lead level, and response time |
 | Error logging | LLM errors, timeout events, and fallback activations logged with sufficient context to diagnose |
-| Analytics events | Defined event schema for: chat opened, first message sent, qualification state change, contact captured, escalation triggered, conversation ended |
+| Analytics events | Defined event schema for: chat opened, first message sent, qualification state change, contact captured, escalation triggered, conversation ended. The full schema with field names and types must be specified in the TRD before implementation — category-level definitions only (as listed here) are insufficient to ensure consistent event shapes across frontend and backend. |
 
 ---
 
@@ -491,6 +491,16 @@ simplicity, cost at MVP scale.
 
 ---
 
+#### Rate Limiting, Cost Controls, and Context Window Management
+
+> *Required before production launch — EC-12, EC-13. Decisions to be recorded in the TRD.*
+
+**Rate limiting and cost controls (EC-12):** No LLM API token budgets, per-session rate limits, cost alerting, or bot prevention are specified. For a publicly-accessible widget all four are required before production. The TRD must define: max tokens per session and truncation strategy, per-IP rate limit, monthly cost cap with alerting threshold, and basic bot fingerprinting approach.
+
+**Context window management (EC-13):** No maximum conversation length is defined. As conversation history grows, each turn becomes more expensive and the context window eventually overflows. The TRD must define the strategy (sliding window recommended for v1) and configurable window size before conversation orchestration is implemented.
+
+---
+
 #### Cloud Provider
 
 > *Decision owner: Engineering Lead + Operations — ADR-006 (pending)*
@@ -546,13 +556,14 @@ A feature is complete when it meets all of the following:
 - [ ] Conversation tested against all five persona profiles with at least 10 simulated conversations each
 - [ ] Edge cases documented and handled (stall, frustration, out-of-scope, negative persona)
 - [ ] Analytics events firing correctly for all defined event types
-- [ ] No hallucination on company knowledge base content (verified by manual review of 20 test conversations)
+- [ ] No hallucination on company knowledge base content (verified by manual review of 70–80 structured test conversations: 10 per persona × 5 personas + 20–30 adversarial cases covering out-of-scope questions, competitor probes, and absent-content queries). Test cases must have defined expected outputs and be run through a repeatable eval framework.
 - [ ] RAG retrieval verified: relevant questions return above-threshold results; irrelevant questions do not trigger retrieval
 - [ ] Prompt layer and RAG layer correctly separated — no domain content in system prompt
-- [ ] Response latency p95 < 3 seconds verified under simulated load
+- [ ] p95 TTFT (time-to-first-token) < 3 seconds verified under simulated load at the request rate defined in the TRD performance test plan. Streaming must be enabled; full-response latency is not the target metric.
 - [ ] GDPR data notice displayed on first interaction
 - [ ] Graceful degradation tested (AI service down → fallback form)
 - [ ] Sales notification (Slack + CRM) received and verified end-to-end on hot lead detection
+- [ ] Conversation end is consistently defined in code and analytics as: explicit close action, 15-minute inactivity timeout, or session expiry — all three cases fire the conversation-ended event with the correct termination type field.
 
 ---
 
@@ -562,7 +573,7 @@ These questions remain unresolved and require input before or during development
 
 | # | Question | Owner | Needed by |
 | --- | --- | --- | --- |
-| OQ-01 | Which specific company case studies should be included in the v1 knowledge base? Requires a content audit. **Constraint resolved: v1 is restricted to publicly available content only — no NDA-protected case studies.** | marketing / PM | Before build starts |
+| OQ-01 | Which specific company case studies should be included in the v1 knowledge base? Requires a content audit. **Constraint resolved: v1 is restricted to publicly available content only — no NDA-protected case studies.** **Sequencing resolved: the content audit must begin immediately at kickoff as a parallel workstream with a hard two-week deadline — it is not a prerequisite that blocks engineering start. Engineering builds the ingestion pipeline against a synthetic placeholder knowledge base; real content replaces it when delivered. Content format: Markdown or plain text files.** | marketing / PM | Kickoff + 2 weeks |
 | OQ-03 | ~~What is the current form submission volume and qualification rate?~~ **Resolved:** 30-day analytics export (form submission count + form-to-sales-call rate) to be completed before deployment. Responsibility: Product Owner. | sales / analytics | Before deployment |
 | OQ-04 | Is there an existing CRM? If so, which one? (CRM integration is required in V1 — M10 — this determines the implementation path) | ops | Before build starts |
 | OQ-05 | Are there specific topics that must never be discussed — beyond pricing and internal operations? | leadership | Before build starts |

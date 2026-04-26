@@ -7,7 +7,7 @@ description: "Engineering team review of the PRD for the AI-powered lead qualifi
 **Document type:** Engineering review
 **PRD reviewed:** [Product Requirements Document v1.0](./index.md)
 **Review date:** April 2026
-**Status:** Pending sign-off
+**Status:** Pending sign-off — PRD updated April 2026 to propagate resolved engineering concerns
 
 ---
 
@@ -21,7 +21,7 @@ description: "Engineering team review of the PRD for the AI-powered lead qualifi
 
 **FR-05 — Stage 3 maturity detection:** The qualification-signals.md principle that escalation must be programmatic applies here too. Stage 3 gating should not be left to LLM judgement — the orchestrator should track each maturity signal as a boolean and trigger Stage 3 independently.
 
-**FR-07 — Stall detection:** "6+ exchanges without qualification progress" is ambiguous. Precise definition needed — see EC-06.
+**FR-07 — Stall detection:** "6+ exchanges without qualification progress" is ambiguous. Precise definition needed — see EC-06. **Resolved in PRD:** FR-07 now defines stall as 6+ exchanges without a Stage 3 proposal being triggered; a session turn counter resets when a Stage 3 proposal is issued.
 
 **FR-09 — Programmatic escalation trigger:** Correctly required as programmatic. The mechanism is not described — see EC-03.
 
@@ -29,9 +29,9 @@ description: "Engineering team review of the PRD for the AI-powered lead qualifi
 
 **FR-15 — RAG retrieval decision:** "The system decides per turn whether to retrieve" — the decision mechanism is not specified — see EC-01.
 
-**FR-17 — Relevance threshold:** Specified as a requirement but no value given. Must be a configurable environment variable, not hardcoded — see EC-05.
+**FR-17 — Relevance threshold:** Specified as a requirement but no value given. Must be a configurable environment variable, not hardcoded — see EC-05. **Resolved in PRD:** FR-17 now requires the threshold to be a configurable environment variable; value to be determined during Phase 4 RAG tuning.
 
-**FR-19 — Dual destination delivery:** Clear. Undefined behaviour: if one of the two destinations (Slack, CRM) fails and the other succeeds, is the handoff considered complete? A partial failure needs a defined behaviour — log it, alert, retry the failed destination.
+**FR-19 — Dual destination delivery:** Clear. Undefined behaviour: if one of the two destinations (Slack, CRM) fails and the other succeeds, is the handoff considered complete? A partial failure needs a defined behaviour — log it, alert, retry the failed destination. **Resolved in PRD:** FR-19 now defines partial failure behaviour: failure is logged, an alert is triggered, the failed delivery is retried, and the handoff is not considered complete until both destinations confirm delivery or the retry limit is reached.
 
 **FR-22 — Outside-hours commitment:** Clear. The business hours detection implementation has edge cases that must be addressed before building — see EC-04.
 
@@ -39,13 +39,13 @@ description: "Engineering team review of the PRD for the AI-powered lead qualifi
 
 ## Non-Functional Requirements Analysis
 
-**Performance — < 3s p95:** Achievable with streaming, but the target definition is ambiguous — see EC-09. The DoD load test criterion is untestable until this is resolved.
+**Performance — < 3s p95:** Achievable with streaming, but the target definition is ambiguous — see EC-09. The DoD load test criterion is untestable until this is resolved. **Resolved in PRD DoD:** The DoD criterion has been updated to "p95 TTFT < 3s with streaming enabled"; load level to be defined in the TRD performance test plan. See EC-09.
 
 **Availability — Graceful degradation:** The fallback contact form must submit through a path independent of the AI backend. If the form submits to the same process that serves the AI, it is not a fallback — see EC-07.
 
 **Security — GDPR / LLM provider:** A Data Processing Agreement with the chosen LLM provider is a hard legal requirement before any real visitor data is sent to the API — see EC-08.
 
-**Observability — Analytics event schema:** Defined at category level only (e.g. "contact captured"). The full event schema with field names and types must be specified in the TRD before implementation. Without it, the backend and frontend will log inconsistent shapes that break any downstream analytics.
+**Observability — Analytics event schema:** Defined at category level only (e.g. "contact captured"). The full event schema with field names and types must be specified in the TRD before implementation. Without it, the backend and frontend will log inconsistent shapes that break any downstream analytics. **PRD updated:** The observability section now explicitly requires the full field-level schema to be specified in the TRD before implementation.
 
 ---
 
@@ -57,19 +57,19 @@ description: "Engineering team review of the PRD for the AI-powered lead qualifi
 
 **Vector store:** Chroma is sufficient for MVP development but not for production at any meaningful scale. Pinecone or pgvector (if PostgreSQL is already in the stack) should be the production target. Avoid building against Chroma if a migration to pgvector can be planned from the start.
 
-**Missing from stack candidates — rate limiting and cost controls:** No mention of LLM API token budgets, per-session rate limits, or cost alerting. Required before production — see EC-12.
+**Missing from stack candidates — rate limiting and cost controls:** No mention of LLM API token budgets, per-session rate limits, or cost alerting. Required before production — see EC-12. **PRD updated:** Section 7.1 now includes a rate limiting and cost controls subsection acknowledging EC-12; values and implementation to be defined in the TRD.
 
-**Missing from stack candidates — context window management:** No mention of conversation turn limits or truncation strategy. Required before building the orchestration layer — see EC-13.
+**Missing from stack candidates — context window management:** No mention of conversation turn limits or truncation strategy. Required before building the orchestration layer — see EC-13. **PRD updated:** Section 7.1 now includes a context window management subsection acknowledging EC-13; strategy and window size to be defined in the TRD.
 
 ---
 
 ## Definition of Done Analysis
 
-**20 test conversations for hallucination check:** Insufficient for a production system — see EC-11. The DoD must be updated before it can serve as a quality gate.
+**20 test conversations for hallucination check:** Insufficient for a production system — see EC-11. The DoD must be updated before it can serve as a quality gate. **Resolved in PRD:** DoD updated to 70–80 structured test conversations (10 per persona × 5 personas + 20–30 adversarial cases) with defined expected outputs and a repeatable eval framework.
 
-**Performance criterion:** "Response latency p95 < 3 seconds verified under simulated load" — load level is undefined, and the TTFT vs. full-response ambiguity (EC-09) makes this criterion untestable as written. Both must be resolved before Phase 5 testing begins.
+**Performance criterion:** "Response latency p95 < 3 seconds verified under simulated load" — load level is undefined, and the TTFT vs. full-response ambiguity (EC-09) makes this criterion untestable as written. Both must be resolved before Phase 5 testing begins. **Resolved in PRD:** DoD updated to "p95 TTFT < 3s with streaming enabled"; load level to be defined in the TRD performance test plan.
 
-**Conversation end definition:** The "conversation depth" metric depends on reliably detecting session end. Browser `beforeunload` events are unreliable. Define what constitutes conversation end (explicit close, inactivity timeout, or session expiry) before the analytics schema is built.
+**Conversation end definition:** The "conversation depth" metric depends on reliably detecting session end. Browser `beforeunload` events are unreliable. Define what constitutes conversation end (explicit close, inactivity timeout, or session expiry) before the analytics schema is built. **Resolved in PRD:** DoD now defines conversation end as explicit close action, 15-minute inactivity timeout, or session expiry; all three must fire the conversation-ended event with the correct termination type field.
 
 ---
 
@@ -83,15 +83,15 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 | EC-02 | Qualification state object persistence backend not specified | Blocks architecture finalisation |
 | EC-03 | Programmatic escalation trigger mechanism not specified | Blocks orchestration design |
 | EC-04 | Business hours detection edge cases (DST, public holidays) | Must define before building that module |
-| EC-05 | Relevance threshold undefined — must be configurable | Blocks RAG tuning |
-| EC-06 | "Qualification progress" not precisely defined for stall detection | Low complexity; must define before building stall logic |
+| EC-05 | Relevance threshold undefined — must be configurable | Resolved in PRD — FR-17 updated; value via Phase 4 tuning |
+| EC-06 | "Qualification progress" not precisely defined for stall detection | Resolved in PRD — FR-07 updated |
 | EC-07 | Graceful degradation form submission destination not specified | Blocks frontend widget build |
 | EC-08 | GDPR DPA with LLM provider required | Hard blocker for production launch |
-| EC-09 | Performance target ambiguity: TTFT vs. full response | Must clarify before performance testing |
-| EC-10 | Content audit (OQ-01) must run as parallel workstream, not prerequisite | Blocks M2 and all RAG features |
-| EC-11 | DoD hallucination test count (20) insufficient | Blocks DoD as a quality gate |
-| EC-12 | Missing: API rate limiting, cost controls, abuse prevention | Required before production launch |
-| EC-13 | Missing: conversation turn limit and context window strategy | Must define before orchestration build |
+| EC-09 | Performance target ambiguity: TTFT vs. full response | Resolved in PRD — DoD updated to TTFT; load level in TRD |
+| EC-10 | Content audit (OQ-01) must run as parallel workstream, not prerequisite | Resolved in PRD — OQ-01 updated |
+| EC-11 | DoD hallucination test count (20) insufficient | Resolved in PRD — DoD updated to 70–80 conversations |
+| EC-12 | Missing: API rate limiting, cost controls, abuse prevention | Acknowledged in PRD Section 7.1 — values in TRD |
+| EC-13 | Missing: conversation turn limit and context window strategy | Acknowledged in PRD Section 7.1 — strategy in TRD |
 
 ---
 
@@ -159,6 +159,8 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 
 **Blocker level:** Cannot be finalised until the knowledge base exists (OQ-01). Must be configurable before any RAG testing begins.
 
+**Status:** Resolved in PRD — FR-17 now requires the threshold to be a configurable environment variable; value to be determined during Phase 4 RAG tuning.
+
 ---
 
 ### EC-06 — "Qualification Progress" Not Precisely Defined (FR-07 Gap)
@@ -171,6 +173,8 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 **Recommendation:** Use interpretation 2 (no Stage 3 proposal in 6+ exchanges), consistent with chat-behaviour.md. Implementation: a turn counter per session that resets when a Stage 3 proposal is issued. If the counter reaches 6 without a Stage 3 trigger, the stall handoff path is activated. Document as the precise implementation contract in the TRD.
 
 **Blocker level:** Low complexity once defined. Must resolve before the stall detection logic is built.
+
+**Status:** Resolved in PRD — FR-07 now defines stall as 6+ exchanges without a Stage 3 proposal being triggered, with a session turn counter that resets on Stage 3 proposal.
 
 ---
 
@@ -214,6 +218,8 @@ The DPA must cover: lawful processing purposes, EU data residency guarantee, sub
 
 **Blocker level:** Must clarify before performance testing is designed.
 
+**Status:** Resolved in PRD — DoD updated to "p95 TTFT < 3s with streaming enabled"; load level to be defined in the TRD performance test plan.
+
 ---
 
 ### EC-10 — Content Audit (OQ-01) Must Run as a Parallel Workstream
@@ -230,6 +236,8 @@ The DPA must cover: lawful processing purposes, EU data residency guarantee, sub
 
 **Blocker level:** Blocks M2 and all RAG features. Does not block the widget skeleton, qualification state machine, handoff logic, or conversation model.
 
+**Status:** Resolved in PRD — OQ-01 updated to require a parallel workstream from kickoff with a two-week hard deadline; engineering builds against a synthetic placeholder knowledge base in the interim.
+
 ---
 
 ### EC-11 — Definition of Done: 20 Conversations Insufficient for Hallucination Testing
@@ -245,6 +253,8 @@ The DPA must cover: lawful processing purposes, EU data residency guarantee, sub
 Test cases should have defined expected outputs, not be unscripted runs. Implement a repeatable eval framework (`promptfoo` or a lightweight custom harness) from day one so the suite can be re-run whenever the knowledge base changes.
 
 **Blocker level:** Does not block development. The DoD must be updated before it is used as a quality gate.
+
+**Status:** Resolved in PRD — DoD updated to 70–80 structured test conversations (10 per persona × 5 personas + 20–30 adversarial cases) with defined expected outputs and a repeatable eval framework.
 
 ---
 
@@ -268,6 +278,8 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 
 **Blocker level:** Required before production launch. Not needed in a non-public dev environment.
 
+**Status:** Acknowledged in PRD — Section 7.1 now includes a rate limiting and cost controls subsection; specific values and implementation to be defined in the TRD.
+
 ---
 
 ### EC-13 — Missing: Conversation Turn Limit and Context Window Strategy
@@ -283,6 +295,8 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 **Recommendation:** Sliding window in v1, configurable window size (e.g. last 10 exchanges + system prompt + qualification state object). The qualification state object is a persistent summary of key facts — it does not need to be re-derived from raw history, so the sliding window does not lose qualification context. Define the window size in the TRD.
 
 **Blocker level:** Must define before conversation orchestration is implemented.
+
+**Status:** Acknowledged in PRD — Section 7.1 now includes a context window management subsection recommending a sliding window for v1; window size to be defined in the TRD.
 
 ---
 
@@ -383,7 +397,7 @@ Requires real content deliverable from OQ-01:
 - [ ] ADR-001 completed (LLM provider)
 - [ ] ADR-002 completed (orchestration framework)
 - [ ] TRD drafted covering EC-01, EC-02, EC-03, EC-06, EC-07, EC-09, EC-12, EC-13
-- [ ] DoD updated: hallucination test count and TTFT definition
+- [x] DoD updated: hallucination test count raised to 70–80 and TTFT definition added (April 2026)
 - [ ] CRM platform confirmed — external dependency, blocks handoff subsystem build
 - [ ] Topic restrictions list received — external dependency, blocks system prompt
 
