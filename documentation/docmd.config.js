@@ -112,6 +112,14 @@ export default defineConfig({
         { title: 'N2 — Curious Researcher', path: '/user-personas/n2-curious-researcher' },
       ]
     },
+    {
+      title: 'Architecture Decisions',
+      path: '/architecture-decisions',
+      icon: 'layout',
+      children: [
+        { title: 'ADR-001 — LLM Provider', path: '/architecture-decisions/ADR-001-llm-provider' },
+      ]
+    },
   ],
 
   // --- Plugins ---
