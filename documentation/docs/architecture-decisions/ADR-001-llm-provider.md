@@ -1,5 +1,5 @@
 ---
-description: "ADR-001: Decision to use Anthropic Claude Haiku 4.5 via the direct API as the sole production LLM for the website chat MVP — covers alternatives considered, rationale, fallback behaviour, and constraints on future decisions."
+description: "ADR-001: Decision to use Anthropic Claude Haiku 4.5 via the direct API as the sole production LLM for the website chat MVP — covers alternatives considered, rationale, and constraints on future decisions."
 ---
 
 # ADR-001 — Use Anthropic Claude Haiku 4.5 as the LLM Provider
@@ -118,8 +118,8 @@ price.
   model updates) without waiting for Bedrock propagation lag.
 - Manual upgrade path to Claude Sonnet 4.6 is a one-line config change if
   Haiku proves insufficient in production — no reintegration required.
-- No managed service dependency means cloud provider choice (ADR-006) is fully
-  decoupled from LLM choice. Any cloud provider is equally viable.
+- The Anthropic API is provider-agnostic: the cloud infrastructure decision
+  is fully decoupled from the LLM choice. Any cloud provider is equally viable.
 
 ### Negative / Trade-offs
 
@@ -127,72 +127,21 @@ price.
   Haiku can provide (e.g. a P1 CTO asking highly technical architecture questions),
   the chat cannot escalate to a more capable model automatically. This is a
   known limitation accepted for MVP scope.
-- Vendor dependency on Anthropic for production availability. Mitigated by the
-  degraded fallback flow defined below and the 99.5% uptime SLA in the PRD.
-
-### Fallback Behaviour on Anthropic API Failure
-
-When the Anthropic API is unavailable or returns an unrecoverable error, the
-system does not attempt to maintain the full conversational experience with an
-alternative model. Instead it redirects the visitor to the existing contact
-form — which operates fully independently of the AI backend and
-satisfies EC-07 without requiring any additional infrastructure.
-
-**Trigger conditions:**
-
-- Anthropic API returns 5xx error or connection timeout after 1 retry
-- API response latency exceeds 10 seconds (hard timeout)
-
-**Fallback sequence:**
-
-1. The chat displays a transparent message to the visitor before redirecting:
-   > *"I'm having a technical issue and can't continue our conversation right now.
-   > You can reach us directly through our contact form — the team will get
-   > back to you shortly."*
-
-2. The widget surfaces a direct link to the existing contact form.
-   The visitor completes the form through the standard submission path —
-   no new endpoint, no new infrastructure required.
-
-3. If the failure occurs mid-conversation and the visitor has already provided
-   their email, the system attempts to send a fallback notification to the
-   sales team flagged with `trigger: system_fallback` and whatever conversation
-   context was collected before the failure. This is best-effort — if the
-   backend is down, the notification may not be delivered.
-
-**Why the existing contact form, not an inline fallback form:**
-The company website already has a working contact form with its own independent
-submission path. Redirecting to it solves EC-07 (graceful degradation form
-must be independent of the AI backend) without building or maintaining a
-second capture mechanism. It is the simplest solution that meets the requirement.
-
-**Why not a secondary LLM model:**
-Three alternatives were evaluated — a secondary cloud model (GPT-4o-mini),
-a local model (Llama 4 8B via Ollama), and the degraded redirect flow above.
-For an MVP where Anthropic's API uptime is 99.9%+, the incremental value of
-maintaining a full conversational fallback does not justify the added complexity
-of a second model integration, a second DPA, or a local model deployment
-requirement. Model fallback is deferred to v2 if production data shows API
-unavailability is a meaningful problem.
+- Vendor dependency on Anthropic for production availability. The graceful
+  degradation behaviour required when the API is unavailable is a separate
+  architectural decision, pending resolution.
 
 ### Constraints on future decisions
 
-- **ADR-003 (RAG architecture):** Must design the RAG triage mechanism around
-  Claude Haiku 4.5's function calling API — specifically the `tools` parameter
-  in the Anthropic Messages API. The `retrieve_knowledge` tool definition must
-  be validated against Haiku's tool use behaviour during Phase 2 development.
-  If Haiku shows unreliable tool use in testing, ADR-003 must consider a
-  rule-based fallback triage mechanism.
-- **ADR-006 (Cloud provider):** This decision is now fully decoupled from the
-  LLM choice. The Anthropic API is provider-agnostic — Claude Haiku 4.5 works
-  identically regardless of the cloud provider chosen. ADR-006 should be
-  evaluated purely on infrastructure criteria.
-- **v2 model strategy:** If conversation volume grows significantly and cost
-  becomes a meaningful constraint, the v2 options are: (a) upgrade to prompt
-  caching for the static system prompt sections, reducing effective input token
-  cost by ~80% on cached content, or (b) evaluate Llama 4 Scout as a cheaper
-  alternative once its instruction following on complex system prompts is better
-  documented in production use cases.
+- The RAG triage mechanism must be designed around Claude Haiku 4.5's function
+  calling API — specifically the `tools` parameter in the Anthropic Messages API.
+  If Haiku shows unreliable tool use during Phase 2 development, a rule-based
+  fallback triage mechanism must be considered before implementation proceeds.
+- If conversation volume grows significantly and cost becomes a meaningful
+  constraint, the v2 options are: (a) prompt caching for static system prompt
+  sections, reducing effective input token cost by ~80% on cached content, or
+  (b) evaluate Llama 4 Scout as a cheaper alternative once its instruction
+  following on complex system prompts is better documented in production use cases.
 
 ---
 
@@ -225,13 +174,14 @@ This decision should be revisited if:
 
 ## References
 
-- [PRD Section 7.1 — LLM Provider candidates and evaluation criteria](../product-requirements/index.md#product-requirements-document-prd-7-technical-constraints-and-candidates-71-stack-candidates-v1)
-- [PRD Section 7.2 — Key technical risks (hallucination, latency)](../product-requirements/index.md#product-requirements-document-prd-7-technical-constraints-and-candidates-72-key-technical-risks)
-- [PRD NFR 6.3 — Security and privacy requirements](../product-requirements/index.md#product-requirements-document-prd-6-non-functional-requirements-63-security-and-privacy)
-- [Engineering Review EC-01 — RAG triage mechanism (tool use recommendation)](../product-requirements/engineering-review.md#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-01-rag-triage-mechanism-not-specified-fr-15-gap)
-- [Engineering Review EC-08 — GDPR DPA requirement](../product-requirements/engineering-review.md#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-08-gdpr-data-processing-agreement-with-llm-provider)
-- [Chat Behaviour](../considerations/chat-behaviour.md) — Conversation model complexity that drives instruction following requirements
-- [Qualification Signals](../considerations/qualification-signals.md) — Qualification logic that the LLM must execute reliably across turns
+- [PRD § 7.1 — LLM Provider candidates and evaluation criteria](../../product-requirements/#product-requirements-document-prd-7-technical-constraints-and-candidates-71-stack-candidates-v1)
+- [PRD § 7.2 — Key Technical Risks](../../product-requirements/#product-requirements-document-prd-7-technical-constraints-and-candidates-72-key-technical-risks) — hallucination, latency, and retrieval failure
+- [PRD § 6.3 — Security and Privacy](../../product-requirements/#product-requirements-document-prd-6-non-functional-requirements-63-security-and-privacy) — PII handling and GDPR data notice requirements
+- [Engineering Review § EC-01 — RAG Triage Mechanism](../../product-requirements/engineering-review/#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-01-rag-triage-mechanism-not-specified-fr-15-gap) — tool use recommendation for selective retrieval
+- [Engineering Review § EC-07 — Graceful Degradation Form](../../product-requirements/engineering-review/#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-07-graceful-degradation-form-submission-destination-not-specified-nfr-gap) — fallback form submission destination
+- [Engineering Review § EC-08 — GDPR Data Processing Agreement with LLM Provider](../../product-requirements/engineering-review/#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-08-gdpr-data-processing-agreement-with-llm-provider) — DPA requirement and provider status
+- [Chat Behaviour](../../considerations/chat-behaviour/) — three-stage conversation model driving instruction following complexity
+- [Qualification Signals](../../considerations/qualification-signals/) — four-dimension qualification logic the LLM must execute reliably across turns
 
 ---
 
