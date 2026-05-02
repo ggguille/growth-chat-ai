@@ -138,4 +138,5 @@ create a new ADR and update the Status field above to
 - Do not leave any section with unfilled placeholder text in the final output.
 - Do not omit the Alternatives Considered table to save space.
 - Do not write vague consequences or review triggers.
+- Do not add sections beyond the template. The template is designed to be comprehensive — if you find yourself adding a new section, it's likely that content belongs in one of the existing sections instead.
 - Do not edit an ADR marked `Accepted` — create a new one and update the status of the old one to `Superseded by ADR-NNN`.
