@@ -118,6 +118,7 @@ export default defineConfig({
       icon: 'layout',
       children: [
         { title: 'ADR-001 — LLM Provider', path: '/architecture-decisions/ADR-001-llm-provider' },
+        { title: 'ADR-002 — Conversation Orchestrator', path: '/architecture-decisions/ADR-002-conversation-orchestrator' },
       ]
     },
   ],

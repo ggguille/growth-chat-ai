@@ -20,6 +20,7 @@ Architecture Decision Records (ADRs) capture significant technical decisions mad
 | ID | Title | Status | Date | Owner |
 | --- | --- | --- | --- | --- |
 | [ADR-001](./ADR-001-llm-provider.md) | Use Anthropic Claude Haiku 4.5 as the LLM Provider | Accepted | April 2026 | AI Engineering Lead |
+| [ADR-002](./ADR-002-conversation-orchestrator.md) | Use LangGraph for Conversation Orchestration | Proposed | April 2026 | AI Engineering Lead |
 
 ---
 
