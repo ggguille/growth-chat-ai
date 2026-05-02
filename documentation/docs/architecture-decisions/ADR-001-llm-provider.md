@@ -174,7 +174,7 @@ This decision should be revisited if:
 
 ## References
 
-- [PRD § 7.1 — LLM Provider candidates and evaluation criteria](../../product-requirements/#product-requirements-document-prd-7-technical-constraints-and-candidates-71-stack-candidates-v1)
+- [PRD § 7.1 — LLM Provider candidates and evaluation criteria](../../product-requirements/#product-requirements-document-prd-7-technical-constraints-and-candidates-71-stack-candidates-v1-llm-provider)
 - [PRD § 7.2 — Key Technical Risks](../../product-requirements/#product-requirements-document-prd-7-technical-constraints-and-candidates-72-key-technical-risks) — hallucination, latency, and retrieval failure
 - [PRD § 6.3 — Security and Privacy](../../product-requirements/#product-requirements-document-prd-6-non-functional-requirements-63-security-and-privacy) — PII handling and GDPR data notice requirements
 - [Engineering Review § EC-01 — RAG Triage Mechanism](../../product-requirements/engineering-review/#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-01-rag-triage-mechanism-not-specified-fr-15-gap) — tool use recommendation for selective retrieval
@@ -185,6 +185,4 @@ This decision should be revisited if:
 
 ---
 
-*ADRs are immutable once accepted. If this decision is superseded,
-create a new ADR and update the Status field above to
-`Superseded by ADR-NNN`. Do not edit the body of this document.*
+*ADRs are immutable once accepted. If this decision is superseded, create a new ADR and update the Status field above to `Superseded by ADR-NNN`. Do not edit the body of this document.*
