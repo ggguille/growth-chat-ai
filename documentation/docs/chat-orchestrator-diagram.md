@@ -363,6 +363,7 @@ This document implements behaviour and constraints defined in the project docume
 | Business hours detection — IANA timezone, DST-aware | [EC-04](./product-requirements/engineering-review.md#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-04-business-hours-detection-edge-cases) |
 | Configurable relevance threshold value | [EC-05](./product-requirements/engineering-review.md#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-05-rag-relevance-threshold-not-specified-fr-17-gap) |
 | Stall definition — 6+ turns without Stage 3 proposal | [EC-06](./product-requirements/engineering-review.md#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-06-qualification-progress-not-precisely-defined-fr-07-gap) |
+| Sliding window for context management | [EC-13](./product-requirements/engineering-review.md#engineering-review-ai-powered-lead-qualification-chat-engineering-concerns-ec-13-missing-conversation-turn-limit-and-context-window-strategy) |
 
 ---
 
