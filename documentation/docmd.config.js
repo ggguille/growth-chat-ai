@@ -100,6 +100,7 @@ export default defineConfig({
         { title: 'Human Handoff', path: '/considerations/human-handoff' },
       ]
     },
+    { title: 'Chat Orchestrator', path: '/chat-orchestrator-diagram', icon: 'share-2' },
     {
       title: 'User Personas',
       path: '/user-personas',
