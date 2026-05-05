@@ -1,4 +1,5 @@
 # Technical Requirements Document
+
 ## [System / Feature Name]
 
 **Project:** [Project name]
@@ -9,6 +10,7 @@
 **Reviewers:** [Names or roles]
 
 > **Relationship to other documents:**
+>
 > - This TRD implements the requirements defined in the PRD.
 > - Technology decisions referenced here are recorded in the corresponding ADRs.
 > - This document does not repeat the rationale for decisions — it specifies
@@ -33,16 +35,18 @@ specifications that the engineering team can implement directly.
 ### 1.2 Scope
 
 **In scope:**
+
 - [Component or subsystem 1]
 - [Component or subsystem 2]
 
 **Out of scope:**
+
 - [What this TRD does not cover, and where those decisions live]
 
 ### 1.3 Inputs
 
 | Input document | Description |
-|---|---|
+| --- | --- |
 | [PRD reference] | Product requirements and feature scope |
 | [ADR-001] | [Decision that this TRD implements] |
 | [ADR-002] | [Decision that this TRD implements] |
@@ -66,7 +70,7 @@ Identify:
 - Exit points (where data goes out — notifications, APIs, UI)
 -->
 
-```
+```text
 [Component A] → [Component B] → [Component C]
        ↓                               ↓
 [Storage]                      [External service]
@@ -75,7 +79,7 @@ Identify:
 ### 2.2 Component Responsibilities
 
 | Component | Responsibility | Technology (see ADR) |
-|---|---|---|
+| --- | --- | --- |
 | [Component A] | [What it does] | [Technology — ADR-NNN] |
 | [Component B] | [What it does] | [Technology — ADR-NNN] |
 
@@ -111,13 +115,13 @@ Each component section should specify:
 **Inputs:**
 
 | Input | Type | Source | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [field] | [type] | [component] | [what it is] |
 
 **Outputs:**
 
 | Output | Type | Destination | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [field] | [type] | [component] | [what it is] |
 
 **Internal logic:**
@@ -128,7 +132,7 @@ numbered steps. Be precise enough that an engineer can implement it
 without ambiguity.
 -->
 
-```
+```text
 if [condition]:
     [action]
 else:
@@ -138,7 +142,7 @@ else:
 **Error handling:**
 
 | Error condition | Behaviour | Recovery |
-|---|---|---|
+| --- | --- | --- |
 | [Condition] | [What the system does] | [How it recovers or fails gracefully] |
 
 ---
@@ -152,7 +156,7 @@ Define the schema for each persistent or significant transient data structure.
 Include field names, types, constraints, and descriptions.
 -->
 
-```
+```text
 [EntityName] {
   field_name    : type        // description, constraints
   field_name    : type        // description, constraints
@@ -160,7 +164,7 @@ Include field names, types, constraints, and descriptions.
 ```
 
 | Field | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [field] | [type] | Yes / No | [what it stores] |
 
 ### 4.2 State Objects
@@ -171,7 +175,7 @@ in memory or storage during a session.
 Specify allowed values, transitions, and persistence backend.
 -->
 
-```
+```text
 [StateObjectName] {
   field   : type    // allowed values: [x, y, z]
   field   : type    // default: [value]
@@ -220,7 +224,7 @@ For each API endpoint or internal interface, specify:
 **Error responses:**
 
 | Status | Code | Condition |
-|---|---|---|
+| --- | --- | --- |
 | 400 | `INVALID_INPUT` | [When this occurs] |
 | 422 | `[ERROR_CODE]` | [When this occurs] |
 | 500 | `INTERNAL_ERROR` | [When this occurs] |
@@ -232,19 +236,19 @@ For each API endpoint or internal interface, specify:
 ### 6.1 Compute
 
 | Component | Requirement | Rationale |
-|---|---|---|
+| --- | --- | --- |
 | [Service] | [CPU / memory / instance type] | [Why this spec] |
 
 ### 6.2 Storage
 
 | Store | Type | Size estimate | Retention | Backup |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | [Store name] | [Type] | [Est. size] | [How long] | [Yes/No — frequency] |
 
 ### 6.3 Networking
 
 | Requirement | Specification |
-|---|---|
+| --- | --- |
 | Encryption in transit | TLS 1.3 minimum |
 | [Other requirement] | [Specification] |
 
@@ -256,7 +260,7 @@ Do not include actual values — this is a specification, not a config file.
 -->
 
 | Variable | Description | Example value | Required |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `[VAR_NAME]` | [What it configures] | `[example]` | Yes / No |
 
 ---
@@ -272,7 +276,7 @@ Be precise. Distinguish between:
 -->
 
 | Metric | Target | Measurement method | Load condition |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [Metric name] | [Value] | [How to measure] | [Under what load] |
 
 ---
@@ -280,7 +284,7 @@ Be precise. Distinguish between:
 ## 8. Security Requirements
 
 | Requirement | Specification | Notes |
-|---|---|---|
+| --- | --- | --- |
 | Authentication | [Mechanism] | |
 | Authorisation | [Mechanism] | |
 | Data encryption at rest | [Standard] | |
@@ -296,13 +300,13 @@ Be precise. Distinguish between:
 ### 9.1 Logging
 
 | Event | Level | Fields logged | Retention |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [Event name] | INFO / WARN / ERROR | [field1, field2, ...] | [Duration] |
 
 ### 9.2 Metrics
 
 | Metric | Type | Description | Alert threshold |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [Metric name] | Counter / Gauge / Histogram | [What it measures] | [When to alert] |
 
 ### 9.3 Analytics Events
@@ -314,7 +318,7 @@ frontend and backend. Without this, downstream analytics break.
 -->
 
 | Event name | Trigger | Fields | Type |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `[event_name]` | [When it fires] | `field: type, field: type` | [Frontend / Backend] |
 
 ---
@@ -324,7 +328,7 @@ frontend and backend. Without this, downstream analytics break.
 ### 10.1 Failure Modes
 
 | Component | Failure mode | System behaviour | Recovery |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [Component] | [How it can fail] | [What the system does] | [How it recovers] |
 
 ### 10.2 Graceful Degradation
@@ -336,7 +340,7 @@ depends on the failed component is not a fallback.
 -->
 
 | Scenario | Fallback behaviour | User experience |
-|---|---|---|
+| --- | --- | --- |
 | [Primary service unavailable] | [What happens instead] | [What the user sees] |
 
 ---
@@ -349,7 +353,7 @@ each EC that belongs to the TRD.
 -->
 
 | EC | Title | Resolution |
-|---|---|---|
+| --- | --- | --- |
 | EC-01 | [Title] | [How it is resolved in this TRD — section reference] |
 | EC-02 | [Title] | [How it is resolved in this TRD — section reference] |
 
@@ -358,7 +362,7 @@ each EC that belongs to the TRD.
 ## 12. Open Questions
 
 | # | Question | Owner | Needed by |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | TRD-OQ-01 | [Question] | [Owner] | [Phase / date] |
 
 ---
@@ -366,7 +370,7 @@ each EC that belongs to the TRD.
 ## 13. Revision History
 
 | Version | Date | Author | Changes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1.0 | YYYY-MM-DD | [Author] | Initial version |
 
 ---
