@@ -21,7 +21,7 @@ Architecture Decision Records (ADRs) capture significant technical decisions mad
 | --- | --- | --- | --- | --- |
 | [ADR-001](./ADR-001-llm-provider.md) | Use Anthropic Claude Haiku 4.5 as the LLM Provider | Accepted | April 2026 | AI Engineering Lead |
 | [ADR-002](./ADR-002-conversation-orchestrator.md) | Use LangGraph for Conversation Orchestration | Accepted | April 2026 | AI Engineering Lead |
-| [ADR-003](./ADR-003-use-pgvector-and-openai-embeddings-for-knowledge-retrieval.md) | Use pgvector and OpenAI Embeddings for Knowledge Retrieval | Proposed | May 2026 | AI Engineering Lead |
+| [ADR-003](./ADR-003-use-pgvector-and-openai-embeddings-for-knowledge-retrieval.md) | Use pgvector and OpenAI Embeddings for Knowledge Retrieval | Accepted | May 2026 | AI Engineering Lead |
 
 ---
 

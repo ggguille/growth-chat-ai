@@ -1,6 +1,6 @@
 # ADR-003 — Use pgvector and OpenAI Embeddings for Knowledge Retrieval
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** 2026-05-05
 **Decision owner:** AI Engineering Lead
 **Participants:** AI Engineering Lead, Backend Engineer
