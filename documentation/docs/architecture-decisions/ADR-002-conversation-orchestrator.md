@@ -4,7 +4,7 @@ description: "ADR-002: Decision to use LangGraph as the conversation orchestrati
 
 # ADR-002 — Use LangGraph for Conversation Orchestration
 
-**Status:** Proposed
+**Status:** Accepted
 **Date:** April 2026
 **Decision owner:** AI Engineering Lead
 **Participants:** AI Engineering Lead, Engineering Lead, Product Manager
