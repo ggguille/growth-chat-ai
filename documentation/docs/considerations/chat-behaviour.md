@@ -87,10 +87,12 @@ Bad examples:
 
 When the conversation has produced enough signal — a specific problem, a company context, and some indication of timeline or urgency — the chat proactively proposes the next step without waiting for the visitor to ask.
 
-The proposal should be concrete and low-friction:
+The proposal content is determined by the qualification score at the moment Stage 3 is triggered:
 
-- *"Based on what you've described, it sounds like a 20-minute call with one of our engineers would be more useful than more back-and-forth here. Want me to set that up?"*
-- *"I can share the case study that's most relevant to what you're building — just need an email to send it to."*
+| Score | Proposal content | Business hours condition |
+| --- | --- | --- |
+| **Hot** (Problem + Authority + Company or Timing confirmed) | Offer a direct connection with an engineer or a call booking | During business hours (Mon–Fri 09:00–18:00 CET/CEST): *"Based on what you've described, it sounds like a 20-minute call with one of our engineers would be more useful than more back-and-forth here. Want me to set that up?"* / Outside hours: *"It sounds like this is worth a proper conversation. The team is offline right now — leave me your email and someone will get back to you first thing tomorrow morning."* |
+| **Warm** (Problem confirmed + one additional dimension) | Offer a relevant case study, resource, or email capture for follow-up | Business hours are not relevant — the proposal is always an email capture: *"I can share the case study that's most relevant to what you're building — just need an email to send it to."* |
 
 **Rule:** The chat proposes. It does not wait to be asked. But it only proposes when the conversation has earned it.
 
@@ -100,11 +102,13 @@ The proposal should be concrete and low-friction:
 
 The chat should recognise when a conversation has matured enough to move to Stage 3. A conversation is mature when the visitor has expressed all three of the following:
 
-| Signal | Examples |
-| --- | --- |
-| A specific problem or initiative | "We're building a recommendation engine", "We need to augment our ML team", "We're evaluating RAG for our product" |
-| A company or role context | Company name, team size, role, or stage mentioned |
-| Urgency or timeline | "We need to move in Q3", "This is blocking our roadmap", "I'm presenting options to the board next week" |
+| Signal | Qualification dimension | Examples |
+| --- | --- | --- |
+| A specific problem or initiative | Problem Fit | "We're building a recommendation engine", "We need to augment our ML team", "We're evaluating RAG for our product" |
+| A company or role context | Company Fit (size, stage, industry) **and** Authority Fit (role, seniority, or decision-making capacity mentioned) | Company name, team size, role, or stage mentioned |
+| Urgency or timeline | Timing Fit | "We need to move in Q3", "This is blocking our roadmap", "I'm presenting options to the board next week" |
+
+The "company or role context" signal covers two qualification dimensions: Company Fit when the visitor describes their organisation (size, stage, industry), and Authority Fit when they reveal their role or decision-making capacity. Both can be confirmed from the same exchange.
 
 If only one or two signals are present, the chat continues in Stage 2 — asking one more question to complete the picture — before proposing.
 
@@ -120,7 +124,7 @@ Not every visitor is a fit. The chat should recognise this early and respond wit
 
 A visitor is likely not a fit when they clearly express:
 
-- **Individual scope** — looking for personal freelance work, not a staffing or engineering partner.
+- **Individual scope** — looking for personal freelance work, not a staffing or engineering partner. *Exception: consultants or agency professionals evaluating for a client project are not individual scope — see the consultant handling defined in [qualifications signals](../qualification-signals/#qualification-signals-sales-team-findings-how-should-the-system-handle-visitors-who-identify-as-freelancers-or-independent-consultants-evaluating-the-company-for-a-client)*
 - **Research or academic purpose** — a student, journalist, or researcher with no hiring intent.
 - **Competitor or vendor** — someone representing another agency or tool vendor.
 - **Geography or regulatory mismatch** — a context where the company does not operate or cannot engage.

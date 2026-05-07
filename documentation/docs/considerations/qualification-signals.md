@@ -152,7 +152,8 @@ Without a timeline, there is no near-term conversion. A visitor with strong prob
 | Asks about team availability directly | Has a start date in mind |
 | Mentions having already tried to solve the problem | Urgency is real — the workaround is not working |
 | Mentions a competitor or alternative by name | Is in an active evaluation process |
-| Returns to the site multiple times in a short period | High intent, building confidence before reaching out |
+
+> **V2 signal — not available in V1:** Detecting return visits requires cross-session memory, which is explicitly deferred to V2 (see [Chat Behaviour — Multi-Session Continuity](../chat-behaviour/#chat-behaviour-multi-session-continuity)). The "returns to the site multiple times" signal cannot be collected by the V1 system and is excluded from the V1 qualification logic.
 
 ---
 
@@ -189,6 +190,18 @@ graph TD
     FitCheck -- At least one confirmed --> Hot[Hot: Escalate to sales.]
 ```
 
+### Confirmation levels
+
+Each dimension is scored at one of three levels. The level determines how the warm/hot thresholds apply.
+
+| Level | Definition | Example |
+| --- | --- | --- |
+| **Not detected** | No signal for this dimension has been observed in the conversation | No mention of role, company size, or authority |
+| **Partially confirmed** | At least one **implicit** signal observed — behaviour or indirect language that suggests the dimension without stating it directly | Visitor asks detailed questions about a specific case study — implies a similar problem without naming one |
+| **Confirmed** | At least one **explicit** signal stated by the visitor | "We're building a RAG system for our knowledge base" (Problem Fit confirmed) |
+
+The warm lead condition ("one additional dimension partially confirmed") requires at least one implicit signal for that dimension. Absence of a signal means the picture is incomplete — it is not the same as disconfirmation.
+
 ---
 
 ## Signal Extraction — Explicit vs. Implicit
@@ -222,7 +235,10 @@ Treat as warm-to-hot. Capture email and offer to connect them with the right per
 
 ### Visitor has strong authority but no clear problem
 
-This is the P3 pattern — referred decision-maker who is confirming fit, not describing a problem. Treat as hot based on referral context and authority alone. Ask one open question to surface the initiative rather than disqualifying.
+This is the P3 pattern — a referred decision-maker who is confirming fit rather than describing a problem. Referral context is only detectable when the visitor explicitly mentions it.
+
+- **If the visitor mentions having been referred** (e.g., "a colleague suggested I reach out", "I was recommended to contact you", "someone from [name] told me to get in touch"): treat as hot based on stated referral context and confirmed authority. Ask one open question to surface the initiative rather than disqualifying.
+- **If referral is not mentioned**: treat as warm. Capture email and nurture — do not escalate on authority alone without a stated problem or stated referral context.
 
 ### Visitor is a P2 (Exploring Founder) with no timing fit
 

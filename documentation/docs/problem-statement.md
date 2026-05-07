@@ -131,7 +131,9 @@ of launch:
 | Lead qualification rate | Chat leads reach sales call at a higher rate than form submissions | CRM comparison: chat leads vs. form leads over 90 days |
 | Contact capture rate | % of chat conversations that result in an email captured | Chat analytics |
 | Hot lead response time | Sales team follows up within 2 business hours of Slack notification | Handoff system logs |
-| Visitor satisfaction signal | Conversations reach Stage 3 (proposal) in > 30% of qualifying interactions | Conversation state analytics |
+| Visitor satisfaction signal | Conversations reach Stage 3 (proposal) in > 30% of qualifying interactions¹ | Conversation state analytics |
+
+¹ *A qualifying interaction is any session in which the visitor sends at least one message containing a qualification-relevant signal (problem, role, company, or timing), as detected by the orchestrator's qualification state machine. Sessions consisting only of general questions with no extractable qualification signals do not count.*
 
 A formal go/no-go decision on v2 investment will be made at the 90-day mark
 based on these metrics.
