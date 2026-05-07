@@ -1,3 +1,7 @@
+---
+description: "ADR-003: Decision to use PostgreSQL with the pgvector extension for the vector store and OpenAI text-embedding-3-small for production embeddings — covers alternatives considered (ChromaDB, Pinecone, Cohere), rationale, and constraints on future decisions."
+---
+
 # ADR-003 — Use pgvector and OpenAI Embeddings for Knowledge Retrieval
 
 **Status:** `Accepted`
@@ -24,7 +28,7 @@ The system requires a vector store to support knowledge retrieval (FR-14 to FR-1
 **Vector store:**
 
 | Option | Description | Why considered | Why not chosen |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **pgvector (Chosen)** | PostgreSQL extension adding vector column types and HNSW/IVFFlat indexes | Reuses the Postgres instance already required for session state; LangChain native via `PGVector`; EU deployable on any cloud Postgres offering | — Chosen |
 | ChromaDB | Lightweight embedded or standalone vector DB | Simplest local dev setup; LangChain native integration | The engineering review explicitly recommends against building for ChromaDB if pgvector can be planned from the start — the migration cost at production launch outweighs the setup convenience; not production-grade at any meaningful scale |
 | Pinecone | Fully managed vector DB with EU region support | High query performance at scale; zero operational overhead | Adds a paid managed service (~$70/month minimum) and a new failure domain; does not reuse existing infrastructure; requires a Pinecone-specific client alongside LangChain |
@@ -32,7 +36,7 @@ The system requires a vector store to support knowledge retrieval (FR-14 to FR-1
 **Embedding model:**
 
 | Option | Description | Why considered | Why not chosen |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **OpenAI text-embedding-3-small (Production)** | Managed API; 1536-dim vectors; $0.02/1M tokens | Very low cost; strong quality on technical B2B content; first-class LangChain support via `OpenAIEmbeddings` | — Chosen for production |
 | **sentence-transformers all-MiniLM-L6-v2 (Development)** | Open-source model run in-process via `HuggingFaceEmbeddings`; 384-dim vectors; free | Zero cost; no API key required; runs offline; LangChain native | — Chosen for development |
 | Cohere embed-v3 | Managed API with native EU data processing | Multilingual; EU residency without DPA negotiation | Adds a second vendor API alongside Anthropic; LangChain integration is less mature; multilingual capability is not needed for an English-only knowledge base |
