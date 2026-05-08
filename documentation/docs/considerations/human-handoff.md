@@ -210,7 +210,7 @@ This framing converts a potential objection (they're not available right now) in
 | Trigger | Visitor type | Business hours | Outside hours |
 | --- | --- | --- | --- |
 | Hot lead detected | P1, P2, P3 | Immediate escalation — offer call or connection | Capture handoff — specific follow-up commitment + resource |
-| Explicit human request | Any (including N1, N2) | Immediate escalation | Capture handoff — explain availability, commit to follow-up |
+| Explicit human request | P1, P2, P3 | Immediate escalation | Capture handoff — explain availability, commit to follow-up |
 | Out of scope question | Any | Route to appropriate contact (sales / account mgmt / legal) | Capture handoff with routing note for the right person |
 | Conversation stall / frustration | Any | Offer human immediately | Acknowledge, capture email, offer resource |
 | Warm lead after 6+ exchanges | P2 primarily | Soft escalation — offer lower-friction option (case study, resource) | Capture email with nurture resource |
