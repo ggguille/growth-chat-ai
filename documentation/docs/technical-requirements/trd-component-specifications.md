@@ -12,7 +12,7 @@ The orchestrator does **not** make content decisions (what to say), routing deci
 
 ---
 
-### Inputs
+### Orchestrator Inputs
 
 | Input | Type | Source | Description |
 | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ The orchestrator does **not** make content decisions (what to say), routing deci
 
 ---
 
-### Outputs
+### Orchestrator Outputs
 
 | Output | Type | Destination | Description |
 | --- | --- | --- | --- |
@@ -598,3 +598,378 @@ The access pattern — one read at turn start, one write at turn end — does no
 ---
 
 *Engineering concern resolved by this section: EC-02 (qualification state persistence backend — `MemorySaver` for development, `langgraph-checkpoint-postgres` for production, both via `BaseCheckpointSaver` interface as specified in ADR-004).*
+
+---
+
+## RAG Triage Module
+
+**Responsibility:** Executes knowledge base retrieval when invoked by the `generate_response` node via the `retrieve_knowledge` tool call — embedding the query, searching the vector store, filtering results by relevance threshold, and returning ranked chunks for LLM context injection.
+
+The RAG Triage Module does **not** decide when to retrieve — that decision is delegated to the LLM via tool-use (EC-01, ADR-003). It does not generate responses, modify `SessionState`, or communicate with the handoff subsystem. Its sole concern is: given a query string, return the highest-quality relevant chunks above the configured threshold, or signal that no qualifying result exists.
+
+---
+
+### Overview: The Two-Layer Knowledge Architecture
+
+Before specifying the module, the two-layer architecture required by FR-14 must be stated explicitly, as it defines the boundary of what the RAG Triage Module handles and what it does not.
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 1 — Prompt Layer (system prompt)                         │
+│                                                                 │
+│  Content: conversation behaviour, qualification logic,          │
+│  stage rules, persona tone, prohibited behaviours,              │
+│  handoff instructions, pricing deflection                       │
+│                                                                 │
+│  Stable across turns. Never contains domain facts.              │
+│  Managed by: Conversation Orchestrator (Section 3.1)            │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│  Layer 2 — RAG Layer (vector store)                             │
+│                                                                 │
+│  Content: case studies, service descriptions, team profiles,    │
+│  engagement model documentation, FAQs                           │
+│                                                                 │
+│  Retrieved selectively per turn. The only source of             │
+│  company-specific domain facts.                                 │
+│  Managed by: RAG Triage Module (this section)                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Hard rule (FR-14):** No domain content lives in the system prompt. No behaviour instructions live in the vector store. The boundary between the two layers is an architectural constraint, not a convention — violating it collapses the hallucination control mechanism.
+
+---
+
+### RAG Triage Inputs
+
+| Input | Type | Source | Description |
+| --- | --- | --- | --- |
+| `query` | `str` | `generate_response` node via `retrieve_knowledge` tool call | The search query produced by the LLM; a precise restatement of what the visitor needs to know |
+| `top_k` | `int` | Configuration (`RAG_TOP_K`) | Maximum number of chunks to retrieve before threshold filtering |
+| `threshold` | `float` | Configuration (`RAG_RELEVANCE_THRESHOLD`) | Minimum cosine similarity score for a chunk to be returned |
+
+---
+
+### RAG Triage Outputs
+
+| Output | Type | Destination | Description |
+| --- | --- | --- | --- |
+| `retrieval_result` | `RetrievalResult` | `generate_response` node | Ranked list of qualifying chunks, or a `no_result` signal with reason |
+
+```text
+RetrievalResult {
+  status   : "ok" | "no_result" | "error"
+  chunks   : list[RetrievedChunk]   // empty when status != "ok"
+  reason   : str | None             // populated when status != "ok"
+}
+
+RetrievedChunk {
+  chunk_id    : str        // unique identifier in the vector store
+  content     : str        // raw text of the chunk
+  score       : float      // cosine similarity score [0.0, 1.0]
+  source      : str        // document title or URL slug (e.g. "case-study-fintech-rag")
+  chunk_index : int        // position of this chunk within the source document
+}
+```
+
+---
+
+### Per-Turn Retrieval Flow
+
+```mermaid
+flowchart TD
+    TOOL_CALL([LLM invokes retrieve_knowledge\nquery: str]) --> EMBED_QUERY
+
+    EMBED_QUERY["`**Embed query**
+    Encode query string using
+    the configured embedding model.
+    → query_vector: float[]`"]
+
+    EMBED_QUERY --> VECTOR_SEARCH
+
+    VECTOR_SEARCH["`**Vector search**
+    Run HNSW ANN search on pgvector.
+    Retrieve top_k candidates
+    ranked by cosine similarity.`"]
+
+    VECTOR_SEARCH --> THRESHOLD_FILTER
+
+    THRESHOLD_FILTER{"`**Threshold filter**
+    score ≥ RAG_RELEVANCE_THRESHOLD?`"}
+
+    THRESHOLD_FILTER -- all below threshold --> NO_RESULT
+
+    THRESHOLD_FILTER -- at least one above --> RANK_AND_CAP
+
+    RANK_AND_CAP["`**Rank and cap**
+    Sort passing chunks by score desc.
+    Cap at RAG_TOP_K results.
+    Assemble RetrievalResult.`"]
+
+    RANK_AND_CAP --> PROACTIVE_CHECK
+
+    PROACTIVE_CHECK{"`**Proactive case study check**
+    Top chunk is a case study
+    AND score ≥ RAG_PROACTIVE_THRESHOLD?`"}
+
+    PROACTIVE_CHECK -- yes --> FLAG_PROACTIVE
+
+    PROACTIVE_CHECK -- no --> RETURN_RESULT
+
+    FLAG_PROACTIVE["`**Flag proactive surfacing**
+    Set proactive_case_study = True
+    on RetrievalResult.
+    LLM instruction layer handles
+    surfacing in the response.`"]
+
+    FLAG_PROACTIVE --> RETURN_RESULT
+
+    NO_RESULT["`**Return no_result**
+    status = 'no_result'
+    reason = 'below_threshold'
+    LLM acknowledges limit and
+    offers human connection.`"]
+
+    RETURN_RESULT([Return RetrievalResult\nto generate_response node])
+    NO_RESULT --> RETURN_RESULT
+```
+
+---
+
+### Retrieval Decision Mechanism (EC-01)
+
+The retrieval decision — whether to call `retrieve_knowledge` at all on a given turn — belongs to the LLM, not to the RAG Triage Module. This is the Option C resolution of EC-01: tool-use in the main LLM call.
+
+The `generate_response` node makes the `retrieve_knowledge` tool available to the LLM on every turn. The LLM is instructed to invoke it when the visitor's message requires company-specific domain knowledge. It does not invoke it for questions about conversation process, pricing deflection, or handoff mechanics — those are handled from the prompt layer alone.
+
+**When the LLM should call `retrieve_knowledge`:**
+
+| Question type | Expected LLM behaviour | Rationale |
+| --- | --- | --- |
+| "What case studies do you have in fintech?" | Call `retrieve_knowledge` | Requires domain content — case study library |
+| "How does your team structure work?" | Call `retrieve_knowledge` | Requires domain content — engagement model documentation |
+| "What AI expertise does your team have?" | Call `retrieve_knowledge` | Requires domain content — team profiles |
+| "How much does it cost to work with you?" | Do NOT call | Pricing deflection is handled entirely from the prompt layer |
+| "Can I speak to someone?" | Do NOT call | Handoff mechanics handled from the prompt layer |
+| "What's your process for onboarding?" | Call `retrieve_knowledge` | May have domain content — engagement model documentation |
+
+This boundary is enforced through the system prompt instruction layer, not programmatically. If the LLM calls `retrieve_knowledge` for a question that should be handled from the prompt layer (e.g. pricing), the module will return a `no_result` because the knowledge base contains no pricing content — the fallback behaviour (acknowledge limit, offer human) is appropriate either way. There is no hard error path for unnecessary tool calls in v1.
+
+**Single tool call per turn:** The orchestrator enforces `MAX_TOOL_CALLS_PER_TURN = 1`. If the LLM attempts a second `retrieve_knowledge` call within the same turn, it is ignored and logged as `rag_extra_tool_call_ignored`.
+
+---
+
+### Embedding Pipeline
+
+#### Query embedding (per turn)
+
+| Environment | Model | Dimensions | API |
+| --- | --- | --- | --- |
+| Local development | `all-MiniLM-L6-v2` via `sentence-transformers` | 384 | Local — no API key required |
+| Staging / Production | `text-embedding-3-small` via OpenAI API | 1,536 | OpenAI API — EU endpoint |
+
+The embedding interface is uniform across environments via the LangChain `Embeddings` abstraction (`HuggingFaceEmbeddings` locally, `OpenAIEmbeddings` in staging/production). Swapping the implementation is a configuration change, not a code change.
+
+**PII note:** Query strings sent to the OpenAI embedding API may contain visitor message content. The same PII scrubbing rules that apply to LLM API calls (PRD NFR 6.3) apply here. Visitor email addresses and names must be stripped from the query before embedding. The query is a restatement of the visitor's information need, constructed by the LLM — in practice it will rarely contain PII, but the scrubbing rule is unconditional.
+
+#### Knowledge base indexing (offline, not per-turn)
+
+Indexing runs as an offline batch process, not as part of the per-turn pipeline. It is triggered manually or by CI when the knowledge base content changes.
+
+```text
+Indexing pipeline:
+  1. Load source documents (Markdown / plain text files — OQ-01 format)
+  2. Chunk: RecursiveCharacterTextSplitter
+       chunk_size    = CHUNK_SIZE tokens (configurable, default: 512)
+       chunk_overlap = CHUNK_OVERLAP tokens (configurable, default: 64)
+  3. Embed each chunk using the production embedding model (text-embedding-3-small)
+  4. Upsert vectors into pgvector with metadata:
+       chunk_id, source_document, chunk_index, content_hash
+  5. Rebuild HNSW index if total vector count has changed materially
+```
+
+**Local vs. production index separation:** Because `all-MiniLM-L6-v2` (384 dimensions) and `text-embedding-3-small` (1,536 dimensions) produce incompatible vector spaces, the local development index and the production index are separate tables in the same PostgreSQL instance (`knowledge_chunks_dev` and `knowledge_chunks_prod`). Local indexes are never promoted to production. The production index is built in CI against the production embedding model before each deployment that changes the knowledge base.
+
+---
+
+### Vector Store and Search
+
+**Backend:** pgvector extension on the shared PostgreSQL instance (ADR-003, ADR-004).
+
+**Index type:** HNSW (`ivfflat` is not used — HNSW offers better recall at query time without requiring a vacuum/rebuild cycle as the table grows).
+
+**Schema:**
+
+```sql
+CREATE TABLE knowledge_chunks (
+  chunk_id        TEXT PRIMARY KEY,
+  source          TEXT NOT NULL,        -- document title or slug
+  chunk_index     INT  NOT NULL,        -- position within source document
+  content         TEXT NOT NULL,        -- raw text of the chunk
+  content_hash    TEXT NOT NULL,        -- SHA-256 of content; used for deduplication
+  embedding       VECTOR(1536) NOT NULL, -- text-embedding-3-small dimensions
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX ON knowledge_chunks
+  USING hnsw (embedding vector_cosine_ops)
+  WITH (m = 16, ef_construction = 64);
+```
+
+**Query:**
+
+```sql
+SELECT
+  chunk_id,
+  content,
+  source,
+  chunk_index,
+  1 - (embedding <=> $query_vector) AS score
+FROM knowledge_chunks
+ORDER BY embedding <=> $query_vector
+LIMIT $top_k;
+```
+
+The `<=>` operator computes cosine distance; `1 - distance` converts to cosine similarity in `[0.0, 1.0]`. Results are returned in ascending distance order (highest similarity first). The threshold filter is applied in application code, not in SQL, so that the raw scores are available for logging regardless of whether results pass.
+
+**HNSW tuning parameters:** Default values (`m = 16`, `ef_construction = 64`) are appropriate for corpora under ~100K vectors. `ef_search` (query-time recall/latency trade-off) defaults to `40` and is configurable via `RAG_HNSW_EF_SEARCH`. These values should be re-evaluated during Phase 4 RAG tuning once the production knowledge base is indexed.
+
+---
+
+### Relevance Threshold and Result Filtering (EC-05, FR-17)
+
+The relevance threshold is the primary quality gate. Only chunks with `score >= RAG_RELEVANCE_THRESHOLD` are included in the `RetrievalResult`. Chunks below the threshold are discarded before the result is returned to the orchestrator.
+
+**Configuration:** `RAG_RELEVANCE_THRESHOLD` is a required environment variable. There is no hardcoded default — the service will not start if this variable is unset. This is an intentional constraint: deploying without a tuned threshold is a misconfiguration, not a safe default.
+
+**Tuning process (Phase 4):**
+
+```text
+1. Ingest the production knowledge base (OQ-01 content)
+2. Construct a representative test query set covering:
+   - Questions with known relevant chunks (expected: score above threshold)
+   - Questions with no relevant chunk (expected: score below threshold, no result returned)
+   - Paraphrased versions of well-covered questions (tests recall robustness)
+3. Run all queries, collect raw score distributions
+4. Plot score histogram; identify the natural gap between relevant and irrelevant result clusters
+5. Set RAG_RELEVANCE_THRESHOLD at the midpoint of that gap
+6. Validate: false positive rate (irrelevant chunks above threshold) < 5%;
+             false negative rate (relevant chunks below threshold) < 10%
+7. Document the selected value and the score distribution plot in a configuration changelog
+```
+
+**Placeholder value for development:** `RAG_RELEVANCE_THRESHOLD = 0.70` is used during Phase 1 and Phase 2 against the synthetic placeholder knowledge base. This value is provisional and will be replaced by the tuned value in Phase 4. It must not be used in production without Phase 4 validation.
+
+---
+
+### No-Result Handling (FR-16)
+
+When `RetrievalResult.status == "no_result"`, the `generate_response` node receives an empty chunk list. The system prompt instructs the LLM to handle this case explicitly:
+
+> *"If no relevant information was retrieved from the knowledge base for this question, acknowledge the limit honestly. Do not fabricate an answer. Offer to connect the visitor with a member of the team who can give them a proper answer."*
+
+Example compliant response:
+
+> *"I don't have specific information on that to hand — it's not something I can answer accurately from here. The best thing would be to speak directly with one of the engineers who can give you a proper answer. Want me to arrange that?"*
+
+The no-result path does not trigger a programmatic handoff — it is a prompt-layer instruction. If the visitor accepts the offer to speak with the team, that response becomes an `explicit_human_request` signal detected by `update_state` on the next turn, which then routes through the normal escalation path.
+
+---
+
+### Proactive Case Study Surfacing (FR-18)
+
+FR-18 requires the system to surface a relevant case study proactively — without being asked — when the visitor's described problem matches a retrieved case study at high confidence.
+
+The RAG Triage Module supports this through a secondary threshold (`RAG_PROACTIVE_THRESHOLD`) evaluated after the standard threshold filter. If the top-ranked chunk originates from a case study document (identifiable by source prefix, e.g. `"case-study-"`) and its score exceeds `RAG_PROACTIVE_THRESHOLD`, the `RetrievalResult` is flagged with `proactive_case_study = True`.
+
+The `generate_response` node passes this flag to the LLM via the context injection. The system prompt instructs the LLM to surface the case study naturally within the response when the flag is set:
+
+> *"If proactive_case_study is True in the retrieved context, mention the case study naturally within your response — not as a separate recommendation, but as a relevant example of similar work."*
+
+**Configuration:** `RAG_PROACTIVE_THRESHOLD` is set higher than `RAG_RELEVANCE_THRESHOLD` to reduce false positives on proactive surfacing. Recommended starting ratio: `RAG_PROACTIVE_THRESHOLD = RAG_RELEVANCE_THRESHOLD + 0.10`. Final values determined during Phase 4 tuning.
+
+**v1 scope note:** FR-18 is a Should requirement. The proactive surfacing mechanism is implemented in v1 if capacity allows (S3 in the MoSCoW). If deferred, the RAG Triage Module returns chunks without the `proactive_case_study` flag and S3 is tracked in the v2 backlog.
+
+---
+
+### Knowledge Base Content Scope (v1)
+
+The v1 knowledge base is restricted to **publicly available content only** — content already published on the company website. No NDA-protected case studies, internal methodology documents, or unpublished material is ingested (PRD OQ-01).
+
+**v1 knowledge base categories:**
+
+| Category | Source | Notes |
+| --- | --- | --- |
+| Case studies | Public website — case study section | Summaries only if full studies are behind NDA |
+| Service descriptions | Public website — services pages | |
+| Team and location profile | Public website — about/team pages | No individual employee PII |
+| Engagement model documentation | Public website or published blog posts | |
+| FAQ content | Public website — FAQ or blog | |
+
+**Placeholder knowledge base (Phase 1–2):** Engineering builds the ingestion pipeline and RAG architecture against a synthetic placeholder knowledge base (10–15 representative documents covering the categories above) before OQ-01 content is delivered. The placeholder is replaced by production content in Phase 4 without changes to the pipeline or schema.
+
+---
+
+### Performance Requirements
+
+| Metric | Target | Notes |
+| --- | --- | --- |
+| p95 retrieval latency (query embedding + vector search + threshold filter) | < 500ms | Measured from tool call received to `RetrievalResult` returned |
+| Embedding API call (OpenAI) | < 200ms p95 | Network-dependent; EU endpoint reduces variance |
+| HNSW vector search (pgvector) | < 100ms p95 | At MVP corpus size (< 10K vectors); re-evaluate if corpus grows past 1M |
+
+The 500ms p95 retrieval target is derived from the overall TTFT budget of 3s (PRD NFR 6.1). With streaming enabled, the remaining budget after retrieval (~2.5s) is sufficient for LLM first-token delivery under normal conditions.
+
+---
+
+### RAG Triage Error Handling
+
+| Error condition | Behaviour | Recovery |
+| --- | --- | --- |
+| OpenAI embedding API call fails or times out | Log `embedding_api_failure`; return `RetrievalResult(status="error", reason="embedding_failure")`; `generate_response` proceeds without retrieved context (prompt-layer response only) | Next turn retries normally — no session-level impact |
+| pgvector query fails (DB connection error) | Log `vector_search_failure` at ERROR; return `RetrievalResult(status="error", reason="search_failure")`; same fallback as above | Monitor DB connectivity; alert on sustained failures |
+| All retrieved chunks below threshold | Return `RetrievalResult(status="no_result", reason="below_threshold")`; LLM uses prompt-layer instruction to acknowledge limit | Not an error — normal operating condition for out-of-scope questions |
+| `RAG_RELEVANCE_THRESHOLD` not set at startup | Raise `ConfigurationError`; prevent service from starting | Fix configuration and redeploy |
+| Chunk content is empty or corrupted in the DB | Log `corrupt_chunk_skipped` at WARN; exclude the chunk from results; continue with remaining chunks | Re-index the affected document |
+| LLM issues more than `MAX_TOOL_CALLS_PER_TURN` retrieve calls | Ignore additional calls; log `rag_extra_tool_call_ignored` at WARN | Prompt engineering review; no session impact |
+
+---
+
+### RAG Triage Configuration
+
+| Variable | Required | Default (dev) | Description |
+| --- | --- | --- | --- |
+| `RAG_RELEVANCE_THRESHOLD` | **Yes — no default** | `0.70` (provisional, Phase 1–2 only) | Minimum cosine similarity score for a chunk to be included in results. Must be tuned in Phase 4 before production deployment. |
+| `RAG_PROACTIVE_THRESHOLD` | No | `RAG_RELEVANCE_THRESHOLD + 0.10` | Minimum score for a case study chunk to trigger proactive surfacing (FR-18) |
+| `RAG_TOP_K` | No | `5` | Maximum number of chunks retrieved from the vector store before threshold filtering |
+| `RAG_HNSW_EF_SEARCH` | No | `40` | HNSW query-time recall/latency trade-off parameter. Higher = better recall, higher latency. |
+| `CHUNK_SIZE` | No | `512` | Token size for document chunking during indexing |
+| `CHUNK_OVERLAP` | No | `64` | Token overlap between adjacent chunks during indexing |
+| `OPENAI_EMBEDDING_MODEL` | No | `text-embedding-3-small` | OpenAI embedding model identifier (staging/production) |
+| `OPENAI_EU_ENDPOINT` | No | `https://api.openai.com/v1` | Set to OpenAI EU endpoint for data residency compliance |
+| `KNOWLEDGE_TABLE_NAME` | No | `knowledge_chunks` | pgvector table name; allows environment-specific tables without schema changes |
+
+---
+
+### RAG Triage Dependencies
+
+| Dependency | Component | Interface |
+| --- | --- | --- |
+| Conversation Orchestrator | Section 3.1 — `generate_response` node | Invoked via LangGraph tool-use callback; returns `RetrievalResult` |
+| PostgreSQL + pgvector | ADR-003, ADR-004 | SQL via `asyncpg` / SQLAlchemy async; LangChain `PGVector` wrapper |
+| OpenAI Embeddings API | External — OpenAI | `OpenAIEmbeddings` (LangChain wrapper); EU endpoint configured via `OPENAI_EU_ENDPOINT` |
+| sentence-transformers | Local dev only | `HuggingFaceEmbeddings` (LangChain wrapper); no API key |
+| Indexing pipeline | Offline batch process | CLI script; not part of the per-turn request path |
+
+---
+
+### Compliance Notes
+
+- Embedding requests to the OpenAI API transmit text content that may constitute personal data under GDPR Article 4. A Data Processing Addendum (DPA) with OpenAI must be executed before processing real visitor data (EC-08 equivalent for the embedding provider — distinct from the Anthropic DPA for the LLM).
+- The OpenAI EU API endpoint (`api.openai.com` with EU data residency configuration) must be used in all environments that process EU visitor data.
+- PII scrubbing applied to LLM API calls (PRD NFR 6.3) applies equally to embedding API calls. Visitor email addresses and names must not appear in query strings sent to the embedding API.
+
+---
+
+*Engineering concerns resolved by this section: EC-01 (RAG triage mechanism — `retrieve_knowledge` tool-use in the main LLM call; no separate classifier; the RAG Triage Module executes only when invoked by the LLM), EC-05 (relevance threshold — `RAG_RELEVANCE_THRESHOLD` is a required env variable with no hardcoded default; provisional value 0.70 for Phase 1–2 dev only; tuning process defined for Phase 4).*
