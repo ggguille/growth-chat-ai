@@ -270,7 +270,7 @@ The `propose_handoff` node routes unconditionally to `write_state` after executi
 
 ---
 
-### Error Handling
+### Orchestrator Error Handling
 
 | Error condition | Behaviour | Recovery |
 | --- | --- | --- |
@@ -283,7 +283,7 @@ The `propose_handoff` node routes unconditionally to `write_state` after executi
 
 ---
 
-### Configuration
+### Orchestrator Configuration
 
 All thresholds and limits are configurable environment variables. Default values are specified here; tuned values are determined during Phase 4 and documented in the ADR or a separate configuration changelog.
 
@@ -296,7 +296,7 @@ All thresholds and limits are configurable environment variables. Default values
 
 ---
 
-### Dependencies
+### Orchestrator Dependencies
 
 | Dependency | Component | Interface |
 | --- | --- | --- |
@@ -574,7 +574,7 @@ The access pattern — one read at turn start, one write at turn end — does no
 
 ---
 
-### Error Handling
+### State Machine Error Handling
 
 | Error condition | Behaviour | Recovery |
 | --- | --- | --- |
@@ -586,7 +586,7 @@ The access pattern — one read at turn start, one write at turn end — does no
 
 ---
 
-### Dependencies
+### State Machine Dependencies
 
 | Dependency | Component | Interface |
 | --- | --- | --- |

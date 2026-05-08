@@ -4,7 +4,7 @@ description: "Eight-component architecture, component responsibilities, and happ
 
 # System Architecture
 
-##  High-Level Architecture
+## High-Level Architecture
 
 The system consists of eight components. The chat widget is the sole entry point for visitor traffic. All AI processing runs server-side; the widget receives a token stream. The Knowledge Retriever executes vector search when the LLM determines domain content is required. Two external notification channels (Slack and CRM) are exit points for lead data. The fallback form operates independently of the AI backend.
 

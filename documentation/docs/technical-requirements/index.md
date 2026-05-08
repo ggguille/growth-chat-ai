@@ -52,15 +52,12 @@ This document is the authoritative technical specification. Any change to the ar
 
 | Input document | Description |
 | --- | --- |
-| PRD v1.0 — AI-Powered Lead Qualification Chat | Product requirements, functional and non-functional requirements, definition of done |
-| Engineering Review — April 2026 | 13 engineering concerns assessed against the PRD; several resolved in the PRD update, remainder resolved in this TRD |
-| ADR-001 — LLM Provider | Decision to use Anthropic Claude Haiku 4.5 via direct API as sole production LLM |
-| ADR-002 — Conversation Orchestrator | Decision on orchestration framework and graph structure |
-| ADR-003 — pgvector + OpenAI Embeddings | Decision on vector store and embedding model for RAG |
-| chat-behaviour.md | Three-stage conversation model, maturity signals, disqualification paths |
-| qualification-signals.md | Qualification dimensions, programmatic escalation rules |
-| human-handoff.md | Context packet schema, handoff routing logic, outside-hours handling |
-| chat-orchestrator-diagram.md | Orchestrator flowchart — MVP control flow and state reference |
+| [PRD v1.0 — AI-Powered Lead Qualification Chat](../product-requirements/) | Product requirements, functional and non-functional requirements, definition of done |
+| [Engineering Review — April 2026](../product-requirements/engineering-review) | 13 engineering concerns assessed against the PRD; several resolved in the PRD update, remainder resolved in this TRD |
+| [Architecture Decision Records](../architecture-decisions/) | Decisions that affect system architecture |
+| [Chat Behaviour](../considerations/chat-behaviour) | Three-stage conversation model, maturity signals, disqualification paths |
+| [Qualification Signals](../considerations/qualification-signals) | Qualification dimensions, programmatic escalation rules |
+| [Human Handoff](../considerations/human-handoff) | Context packet schema, handoff routing logic, outside-hours handling |
 
 ---
 
