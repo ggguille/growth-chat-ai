@@ -127,7 +127,10 @@ export default defineConfig({
       title: 'Technical Requirements',
       path: '/technical-requirements',
       icon: 'file-text',
-      children: []
+      children: [
+        { title: 'System Architecture', path: '/technical-requirements/trd-system-architecture' },
+        { title: 'Component Specifications', path: '/technical-requirements/trd-component-specifications' },
+      ]
     },
   ],
 
