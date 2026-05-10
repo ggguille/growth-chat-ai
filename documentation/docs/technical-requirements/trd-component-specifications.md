@@ -1603,3 +1603,258 @@ The DST cases verify that `zoneinfo` handles the transition correctly and that a
 ---
 
 *Engineering concern resolved by this section: EC-04 (DST — handled via `zoneinfo` and IANA identifier, no fixed UTC offset; public holidays — no awareness in v1, documented as known limitation with v2 plan; timezone perspective — check is explicitly against team timezone, enforced by naming convention and absence of any visitor timezone reference in the module).*
+
+---
+
+## Context Packet Generator
+
+**Responsibility:** Transforms a `SessionState` snapshot into a `ContextPacket` — the structured artefact transferred to the sales team at the point of any handoff. The generator is a pure, deterministic function: the same `SessionState` always produces the same `ContextPacket`, with no LLM call, no external dependency, and no side effects.
+
+This component is specified as a standalone section because it is independently testable, independently deployable as a utility function, and referenced by two consumers: the Human Handoff Subsystem (Section 3.4) and any future integration that needs to reconstruct handoff data from a stored `SessionState` (e.g. a v2 admin dashboard or replay tool).
+
+The generator does **not** deliver the packet, emit analytics events, or modify `SessionState`. Those responsibilities belong to Section 3.4.
+
+---
+
+### Interface
+
+```python
+def generate_context_packet(state: SessionState) -> ContextPacket:
+    """
+    Pure function. No I/O. No LLM call.
+    Raises ContextPacketGenerationError if required state fields are missing
+    or in an invalid format. Does not raise on missing optional fields
+    (visitor_name, visitor_company, visitor_role) — those are None in output.
+    """
+```
+
+**Caller:** `propose_handoff` node in the Conversation Orchestrator (Section 3.1),
+via the Human Handoff Subsystem (Section 3.4).
+
+**Input:** `SessionState` — full snapshot at the moment of handoff trigger.
+The snapshot is taken by the orchestrator before the response stream closes,
+ensuring the packet reflects the state at the exact point of escalation.
+
+**Output:** `ContextPacket` — see schema below.
+
+---
+
+### Output Schema
+
+```text
+ContextPacket {
+
+  # ── Identity ────────────────────────────────────────────────────
+  session_id          : str           // from SessionState.session_id
+  triggered_at        : datetime      // UTC — from SessionState.last_updated_at
+  lead_level          : "hot" | "warm" | "cold"
+  handoff_reason      : "hot_lead" | "explicit_request" | "stall" | "llm_failure"
+
+  # ── Qualification state ──────────────────────────────────────────
+  qualification : {
+    problem_fit         : "not_detected" | "partially_confirmed" | "confirmed"
+    authority_fit       : "not_detected" | "partially_confirmed" | "confirmed"
+    company_fit         : "not_detected" | "partially_confirmed" | "confirmed"
+    timing_fit          : "not_detected" | "partially_confirmed" | "confirmed"
+    is_consultant       : bool      // FR-13: consultant/evaluator flag
+    referral_mentioned  : bool
+  }
+
+  # ── Visitor data ─────────────────────────────────────────────────
+  visitor : {
+    email    : str | None           // None if not captured
+    name     : str | None           // None if not volunteered
+    company  : str | None           // None if not mentioned
+    role     : str | None           // None if not stated or inferable
+  }
+
+  # ── Conversation metadata ────────────────────────────────────────
+  conversation : {
+    turn_count              : int   // absolute turn index of the last message
+    stage3_proposals_issued : int
+    signals_observed        : list[SignalEntry]
+    // Full append-only signal log — used by sales rep for context,
+    // not for routing. See SignalEntry schema in Section 3.2.
+  }
+
+  # ── Summary ──────────────────────────────────────────────────────
+  conversation_summary : str
+  // 2-4 sentence template-generated summary.
+  // See build_summary() specification below.
+}
+```
+
+---
+
+### Field Derivation
+
+Every field is derived mechanically from `SessionState`. There is no interpretation, inference, or generation.
+
+| `ContextPacket` field | Derived from | Notes |
+| --- | --- | --- |
+| `session_id` | `SessionState.session_id` | Direct copy |
+| `triggered_at` | `SessionState.last_updated_at` | UTC; reflects the turn at which handoff was triggered |
+| `lead_level` | `SessionState.lead_level` | Last computed value — see Section 3.2.4 |
+| `handoff_reason` | `SessionState.handoff_reason` | Set by `propose_handoff` node before generator is called |
+| `qualification.*` | `SessionState.qualification.*` | Direct copy of all four dimensions and flags |
+| `visitor.*` | `SessionState.visitor_*` fields | Direct copy; None for any uncollected field |
+| `conversation.turn_count` | `SessionState.messages[-1].turn_index` | 0 if `messages` is empty |
+| `conversation.stage3_proposals_issued` | `SessionState.stage3_proposals_issued` | Direct copy |
+| `conversation.signals_observed` | `SessionState.qualification.signals_observed` | Full list — not filtered or summarised |
+| `conversation_summary` | `build_summary(SessionState.qualification.signals_observed)` | Template function — see below |
+
+---
+
+### `build_summary()` — Template Specification
+
+`build_summary()` is a deterministic template function that produces a 2–4 sentence plain-text summary from the `signals_observed` list. It uses no LLM. It is a separate named function to make it independently testable.
+
+#### Input
+
+`signals_observed: list[SignalEntry]` — the full signal log from `QualificationState`.
+
+For each dimension, `build_summary()` finds the **most recent confirmed signal** (explicit preferred over implicit, most recent turn preferred over earlier). If no confirmed signal exists for a dimension, it falls back to the most recent partially-confirmed signal.
+
+#### Template
+
+```text
+Sentence 1 — Problem (emitted if problem_fit != "not_detected"):
+
+  if most recent problem signal is explicit:
+    "Visitor is building / evaluating [evidence text]."
+
+  if most recent problem signal is implicit:
+    "Visitor appears to have a requirement related to [evidence text],
+     though the specific initiative was not stated directly."
+
+  if problem_fit == "not_detected":
+    (sentence omitted)
+
+
+Sentence 2 — Authority and Company (combined when both detected):
+
+  if authority_fit confirmed AND company_fit detected:
+    "They are [visitor_role or 'in a senior role'] at a [company evidence] company."
+
+  if authority_fit detected, company_fit not:
+    "They identified as [visitor_role or authority evidence]."
+
+  if company_fit detected, authority_fit not:
+    "They are at a [company evidence] company; their role was not stated."
+
+  if neither detected:
+    (sentence omitted)
+
+
+Sentence 3 — Timing (emitted if timing_fit != "not_detected"):
+
+  if timing_fit confirmed:
+    "They have a concrete timeline: [timing evidence]."
+
+  if timing_fit partially_confirmed:
+    "There are signals of urgency: [timing evidence]."
+
+
+Sentence 4 — Flags (emitted if is_consultant or referral_mentioned):
+
+  if is_consultant:
+    "Note: this visitor is a consultant evaluating on behalf of a client."
+
+  if referral_mentioned (and not is_consultant):
+    "Note: the visitor mentioned a referral."
+
+  if both:
+    "Note: this visitor is a consultant evaluating on behalf of a client
+     and mentioned a referral."
+```
+
+#### Default (no signals detected)
+
+When `signals_observed` is empty or all dimensions are `not_detected`:
+
+```text
+"Conversation did not produce sufficient qualification signals before
+handoff was triggered. Trigger reason: [handoff_reason]."
+```
+
+#### Evidence text extraction
+
+`[evidence text]` in the templates above is the `SignalEntry.evidence` field of the selected signal — the raw visitor phrase or behaviour description captured by `update_state`. It is inserted verbatim, without transformation, surrounded by quotes if it is a direct visitor statement.
+
+Example:
+
+- `SignalEntry(dimension="problem_fit", signal_type="explicit", evidence="we're building a RAG system for our knowledge base", turn_index=2)`
+- Sentence 1 output: `"Visitor is building / evaluating 'we're building a RAG system for our knowledge base'."`
+
+The output is functional, not polished. Its purpose is to give the sales rep immediate context in the first three seconds of reading the Slack notification — not to read as marketing copy.
+
+---
+
+### Validation
+
+The generator validates the following preconditions before producing output. If any check fails, it raises `ContextPacketGenerationError` with a descriptive message.
+
+| Precondition | Check | Error if violated |
+| --- | --- | --- |
+| `session_id` is present | `state.session_id` is a non-empty string | `"session_id missing or empty"` |
+| `handoff_reason` is set | `state.handoff_reason` is not `None` | `"handoff_reason not set — must be set by propose_handoff before generator is called"` |
+| `lead_level` is valid | `state.lead_level in ["hot", "warm", "cold"]` | `"invalid lead_level: [value]"` |
+| `triggered_at` is present | `state.last_updated_at` is a valid datetime | `"last_updated_at missing"` |
+
+Optional fields (`visitor_email`, `visitor_name`, etc.) are not validated — `None` is a valid value for any of them and is passed through to the output unchanged.
+
+---
+
+### Testing Requirements
+
+The Context Packet Generator must be tested in isolation from all other components. Because it is a pure function, all test cases are simple input → output assertions with no mocking required.
+
+**Required test cases:**
+
+| ID | Input condition | Expected output |
+| --- | --- | --- |
+| CPG-001 | All four dimensions confirmed, all visitor fields populated, explicit signals for all | Full 4-sentence summary; all qualification fields `"confirmed"`; all visitor fields populated |
+| CPG-002 | Problem confirmed, authority partially confirmed, company and timing not detected | 2-sentence summary (problem + authority); company and timing `"not_detected"` |
+| CPG-003 | No signals detected, handoff_reason = `"stall"` | Default fallback summary string with reason |
+| CPG-004 | `is_consultant = True` | Sentence 4 present: "Note: this visitor is a consultant..." |
+| CPG-005 | `referral_mentioned = True`, `is_consultant = False` | Sentence 4 present: "Note: the visitor mentioned a referral." |
+| CPG-006 | `visitor_email = None`, all other visitor fields populated | `visitor.email = None` in output; no error |
+| CPG-007 | `handoff_reason = None` | Raises `ContextPacketGenerationError` |
+| CPG-008 | `session_id = ""` | Raises `ContextPacketGenerationError` |
+| CPG-009 | Same `SessionState` input passed twice | Identical output both times (determinism assertion) |
+| CPG-010 | Mixed implicit and explicit signals for same dimension | Most recent explicit signal preferred in summary |
+
+---
+
+### Error Handling
+
+| Error condition | Behaviour |
+| --- | --- |
+| Precondition validation fails | Raises `ContextPacketGenerationError` with descriptive message. Caller (Section 3.4) catches, logs `context_packet_generation_failure` at ERROR, aborts delivery, and emits a CRITICAL ops alert. |
+| `build_summary()` raises an unexpected exception | Caught within `generate_context_packet()`; logs `context_packet_summary_failure` at WARN; `conversation_summary` is set to the default fallback string; generation continues. |
+| `signals_observed` is `None` instead of empty list | Treated as empty list; default fallback summary produced; no error raised. |
+
+---
+
+### Dependencies
+
+| Dependency | Notes |
+| --- | --- |
+| `SessionState` | Defined in Section 3.2. The generator imports the type but has no runtime dependency on the persistence backend — it operates on an in-memory snapshot. |
+| No external services | Pure function. No network calls, no database reads, no LLM API calls. |
+
+---
+
+### Why This Is a Separate Component
+
+The generator could be inlined into the Human Handoff Subsystem (Section 3.4). It is specified separately for three reasons:
+
+1. **Independent testability.** A pure function with a defined schema is testable without standing up any infrastructure. Inlining it into the delivery subsystem couples the test to Slack and CRM mocks.
+
+2. **Auditability.** The engineering review (FR-13) requires the context packet to be a deterministic function of session state. Making this explicit in the architecture — as a named, isolated component — makes it enforceable in code review and verifiable in the eval framework.
+
+3. **Future consumers.** An admin dashboard, a replay tool, or a reporting pipeline may need to reconstruct the context packet from a stored `SessionState` without triggering a delivery. The generator as a standalone function supports this without modification.
+
+---
+
+*This section specifies the Context Packet Generator as a pure function of `SessionState`. No decisions were left open — all field derivations are mechanical, `build_summary()` is fully specified by template, and the validation rules are exhaustive. The component is ready to implement from this specification alone.*
