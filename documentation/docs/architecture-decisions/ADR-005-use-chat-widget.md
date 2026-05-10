@@ -38,7 +38,7 @@ a script-tag integration path for any host site.**
 ## Alternatives Considered
 
 | Option | Description | Why considered | Why not chosen |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **`@assistant-ui/react` + Web Component wrapper — Chosen** | MIT-licenced React chat library with native LangGraph integration, wrapped in a Custom Element with Shadow DOM for universal embedding | Strongest feature set for production AI chat; LangGraph integration matches the backend; composable primitives allow full UI customisation | — Chosen |
 | `@helixml/chat-widget` | Lighter React component also packaged as a standalone IIFE script tag; OpenAI-compatible API | Self-contained, smaller bundle, no wrapper needed | Designed for direct OpenAI-compatible endpoints; adapting it to the custom LangGraph streaming backend requires more modification than using assistant-ui from the start; fewer community resources and less active development |
 | Vanilla JS widget (from scratch) | Custom element with no framework dependency; minimal bundle | Full control; no framework overhead (~0KB beyond product code) | Rebuilds solved problems (streaming rendering, auto-scroll, accessibility, markdown parsing); estimated 3–4× engineering effort vs. assistant-ui for equivalent quality; no meaningful performance advantage for a widget that loads lazily after page interaction |
