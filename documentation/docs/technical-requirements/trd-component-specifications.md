@@ -1858,3 +1858,379 @@ The generator could be inlined into the Human Handoff Subsystem (Section 3.4). I
 ---
 
 *This section specifies the Context Packet Generator as a pure function of `SessionState`. No decisions were left open — all field derivations are mechanical, `build_summary()` is fully specified by template, and the validation rules are exhaustive. The component is ready to implement from this specification alone.*
+
+---
+
+## Frontend Chat Widget
+
+**Responsibility:** Delivers the conversational UI to the visitor's browser,
+manages streaming token rendering, fires analytics events, handles the GDPR
+notice on first interaction, and degrades gracefully when the AI backend is
+unavailable.
+
+The widget is a Web Component (`<growth-chat>`) built on `@assistant-ui/react`
+and distributed as a self-contained IIFE bundle loaded via a `<script>` tag.
+React mounts inside a Shadow DOM — the host page requires no framework, no npm
+install, and no build step. Full rationale in ADR-005.
+
+The widget does **not** implement qualification logic, session persistence, RAG
+retrieval, or handoff delivery. Those responsibilities belong to the backend
+components (Sections 3.1–3.6). The widget is a display and transport layer: it
+sends visitor messages to the Chat API and renders the response stream.
+
+---
+
+### Integration Contract for Host Sites
+
+The complete integration is two HTML lines:
+
+```html
+<script src="https://widget.domain.com/chat.js" defer></script>
+<growth-chat api-url="https://api.domain.com/chat"></growth-chat>
+```
+
+The `<growth-chat>` element accepts the following HTML attributes, all
+configurable without a code change:
+
+| Attribute | Required | Default | Description |
+| --- | --- | --- | --- |
+| `api-url` | Yes | — | Chat API streaming endpoint URL |
+| `fallback-url` | Yes | — | URL opened in a new tab when the AI backend is unavailable (EC-07) |
+| `position` | No | `"bottom-right"` | Widget launcher position: `"bottom-right"` or `"bottom-left"` |
+| `proactive-delay-ms` | No | `45000` | Milliseconds of inactivity before the proactive prompt appears (S1) |
+| `proactive-message` | No | `"Have a question about AI engineering?"` | Text shown in the proactive prompt bubble (S1) |
+
+---
+
+### Widget Architecture
+
+```text
+Host page (any stack)
+│
+│  <script src="chat.js" defer></script>
+│  <growth-chat api-url="..." fallback-url="..."></growth-chat>
+│
+└── ZartisChatElement extends HTMLElement
+    │  (Custom Element — registered by chat.js on load)
+    │
+    └── Shadow DOM (mode: "open")
+        │  (CSS encapsulation — host page styles cannot leak in or out)
+        │
+        └── React root (createRoot)
+            │
+            ├── <ChatLauncher />        — floating button, proactive prompt
+            ├── <ChatPanel />           — conversation window (hidden until opened)
+            │   ├── <GDPRNotice />      — shown on first interaction only
+            │   ├── <MessageList />     — streaming token rendering (assistant-ui)
+            │   └── <MessageInput />    — visitor input field + send button
+            └── <FallbackBanner />      — shown only when AI backend is unavailable
+```
+
+---
+
+### Web Component Wrapper
+
+The wrapper is ~100 lines of TypeScript. Its sole responsibility is bridging the
+Custom Element lifecycle to the React component tree.
+
+```typescript
+class ZartisChatElement extends HTMLElement {
+  private root: ReturnType<typeof createRoot> | null = null;
+
+  connectedCallback() {
+    // Shadow DOM — open mode required for React event delegation (see ADR-005)
+    const shadow = this.attachShadow({ mode: "open" });
+
+    // React mounts into a plain div inside the shadow root
+    const container = document.createElement("div");
+    shadow.appendChild(container);
+
+    this.root = createRoot(container);
+    this.root.render(
+      <ChatWidget
+        apiUrl={this.getAttribute("api-url") ?? ""}
+        fallbackUrl={this.getAttribute("fallback-url") ?? ""}
+        position={(this.getAttribute("position") as Position) ?? "bottom-right"}
+        proactiveDelayMs={Number(this.getAttribute("proactive-delay-ms") ?? 45000)}
+        proactiveMessage={this.getAttribute("proactive-message") ?? DEFAULT_PROACTIVE_MESSAGE}
+      />
+    );
+  }
+
+  disconnectedCallback() {
+    this.root?.unmount();
+    this.root = null;
+  }
+}
+
+customElements.define("growth-chat", ZartisChatElement);
+```
+
+**React event delegation note (ADR-005):** React attaches event listeners to
+`document` by default. Inside a Shadow DOM, events do not bubble past the shadow
+boundary to `document`, which silently breaks React's synthetic event system.
+Using `mode: "open"` and mounting with `createRoot(container)` — where `container`
+is inside the shadow root — correctly scopes event delegation to the shadow tree.
+This must be verified with a click/input event test in Phase 1 before any other
+widget work proceeds.
+
+---
+
+### 3.7.2 Streaming Token Rendering
+
+The widget connects to the Chat API streaming endpoint via the `assistant-ui`
+runtime adapter. The adapter must be implemented against the `assistant-ui`
+`RuntimeAdapter` interface and the SSE format emitted by the FastAPI backend.
+
+**SSE format contract (to be agreed with backend before Phase 2):**
+
+The FastAPI endpoint emits Server-Sent Events. The runtime adapter consumes
+these events and feeds them into `assistant-ui`'s message state. The event
+format must be defined jointly by frontend and backend engineers before Phase 2
+integration begins — this is the cross-cutting constraint identified in ADR-005.
+
+Provisional format (subject to agreement):
+
+```text
+event: delta
+data: {"type": "text_delta", "content": "Hello"}
+
+event: delta
+data: {"type": "text_delta", "content": ", how"}
+
+event: done
+data: {"session_id": "abc123", "lead_level": "warm"}
+```
+
+The `done` event carries session metadata used to update the frontend's local
+session state (not persisted — the backend is the system of record).
+
+**Streaming requirements:**
+
+- Tokens are rendered incrementally as they arrive — no buffering of the full
+  response before display.
+- The widget must display a typing indicator from the moment the request is sent
+  until the first token arrives.
+- If no first token arrives within `STREAM_TIMEOUT_MS` (default: 10000ms), the
+  widget transitions to the fallback state (Section 3.7.4).
+
+---
+
+### 3.7.3 GDPR Notice (PRD NFR 6.3)
+
+The GDPR notice is displayed **once per browser session**, on the visitor's
+first interaction with the widget (opening the chat panel for the first time).
+It is not shown on subsequent opens within the same session.
+
+**Trigger:** `ChatPanel` opens for the first time in the session.
+
+**Display:** An inline notice within the chat panel, above the message input,
+before the first message can be sent. The notice must be acknowledged (clicked
+through) before the input is enabled.
+
+**Content (configurable via `GDPR_NOTICE_TEXT` env variable on the CDN build,
+or via a future `gdpr-notice` attribute on the element):**
+
+> *"This chat is powered by AI. Conversations may be stored for up to 90 days
+> to improve our service. By continuing, you agree to our
+> [Privacy Policy](https://domain.com/privacy)."*
+
+**Implementation:**
+
+- Stored in `sessionStorage` (key: `zartis_chat_gdpr_acknowledged`) — not
+  `localStorage`, so it resets on each browser session.
+- The message input is disabled until the visitor clicks "Got it" or equivalent.
+- No personal data is transmitted to the Chat API before the notice is
+  acknowledged.
+- `sessionStorage` is inside the Shadow DOM's document context — it behaves
+  identically to the host page's `sessionStorage`. If cross-session persistence
+  of the acknowledgement is required (v2), `localStorage` with the same key
+  is the mechanism.
+
+---
+
+### 3.7.4 Graceful Degradation — Fallback State (EC-07)
+
+When the AI backend is unavailable, the widget does not show an error message
+and disappear. It degrades to a fallback state that still offers the visitor
+a path to contact the team.
+
+**Fallback activation criteria:**
+
+| Condition | Behaviour |
+| --- | --- |
+| Connection error on first turn of a new session | Activate fallback immediately |
+| HTTP 5xx response on first turn of a new session | Activate fallback immediately |
+| `STREAM_TIMEOUT_MS` exceeded on first turn (no first token received) | Activate fallback after timeout |
+| Error or timeout on a subsequent turn (session already active) | Do not activate fallback — show inline error message for that turn only; session continues |
+
+Fallback is **session-permanent**: once activated, the widget remains in fallback
+state for the duration of the browser session. No retry logic is attempted from
+the widget — if the backend is down, repeated retries generate noise in the error
+logs without improving the visitor experience.
+
+**Fallback UI:**
+
+The chat panel displays a friendly fallback message with a prominent link:
+
+> *"Our chat assistant isn't available right now. You can still reach us using
+> our contact form."*
+> **[Contact us →]** *(opens `fallback-url` in a new tab)*
+
+The fallback message is shown in place of the message input — the visitor cannot
+send a message in fallback state. The launcher button remains visible and
+clickable; reopening the panel shows the same fallback message.
+
+**`fallback-url` is a required attribute** (validated on `connectedCallback`).
+If it is missing or empty, the widget logs a `ConfigurationError` to the console
+and renders a generic fallback without a link — degraded but not broken.
+
+---
+
+### 3.7.5 Proactive Greeting Trigger (S1)
+
+When the visitor has been on the page for `proactive-delay-ms` milliseconds
+without opening the chat, a subtle prompt bubble appears above the launcher
+button.
+
+**Implementation:**
+
+```typescript
+// Timer starts when the widget connects to the DOM
+const timer = setTimeout(() => {
+  if (!chatHasBeenOpened) {
+    setShowProactivePrompt(true);
+  }
+}, proactiveDelayMs);
+
+// Timer is cleared if the visitor opens the chat before it fires
+onChatOpen(() => {
+  clearTimeout(timer);
+  setShowProactivePrompt(false);
+});
+```
+
+**Behaviour rules:**
+
+- Does **not** auto-open the chat panel — only shows the prompt bubble above
+  the launcher. The visitor must click to open.
+- Prompt disappears when the visitor clicks the launcher or clicks away from
+  the bubble.
+- Prompt is shown at most once per session — if dismissed, it does not reappear.
+- If the visitor is already in an active chat session, the proactive timer does
+  not fire.
+- S1 is a Should requirement — if deferred, the timer logic is simply not
+  initialised and the launcher renders without the prompt.
+
+---
+
+### 3.7.6 Analytics Events (PRD NFR 6.4)
+
+The widget is responsible for firing client-side analytics events. These events
+must be emitted with consistent field names and types — the full schema is
+specified here as required by the PRD observability section.
+
+All events are dispatched as `CustomEvent` on the `<growth-chat>` element,
+allowing the host page to listen and forward to any analytics platform
+(GA4, Segment, Plausible, etc.) without the widget having a direct dependency
+on any analytics SDK.
+
+```javascript
+// Host page can listen:
+document.querySelector("growth-chat").addEventListener("zgc:chat_opened", (e) => {
+  analytics.track("chat_opened", e.detail);
+});
+```
+
+**Event schema:**
+
+| Event name | Trigger | `detail` fields |
+| --- | --- | --- |
+| `zgc:chat_opened` | Visitor opens the chat panel | `{ session_id: string, timestamp: string (ISO 8601) }` |
+| `zgc:first_message_sent` | Visitor sends their first message in a session | `{ session_id: string, timestamp: string }` |
+| `zgc:qualification_state_changed` | Backend `done` event signals a lead level change | `{ session_id: string, lead_level: "hot"\|"warm"\|"cold", timestamp: string }` |
+| `zgc:contact_captured` | Visitor provides their email in the chat | `{ session_id: string, timestamp: string }` *(no email in the event — PII stays server-side)* |
+| `zgc:escalation_triggered` | Backend `done` event signals a Stage 3 proposal | `{ session_id: string, handoff_reason: string, lead_level: string, timestamp: string }` |
+| `zgc:conversation_ended` | Explicit close, 15-min inactivity, or session expiry | `{ session_id: string, termination_type: "explicit_close"\|"inactivity_timeout"\|"session_expiry", turn_count: number, timestamp: string }` |
+| `zgc:fallback_activated` | Widget enters fallback state | `{ session_id: string, reason: "connection_error"\|"http_error"\|"stream_timeout", timestamp: string }` |
+| `zgc:gdpr_acknowledged` | Visitor clicks through the GDPR notice | `{ session_id: string, timestamp: string }` |
+
+**Session ID:** Generated client-side as a UUID v4 on `connectedCallback` and
+included in every API request as the `ZGC-Session-ID` header. The backend uses
+this as the LangGraph `thread_id`. The widget does not persist the session ID
+across page loads (FR-07a — stateless across visits).
+
+**Inactivity timeout:** The 15-minute inactivity timer is managed client-side.
+A `zgc:conversation_ended` event with `termination_type: "inactivity_timeout"`
+fires after 15 minutes without a visitor message. The timer resets on each
+visitor message.
+
+---
+
+### 3.7.7 Bundle and Load Performance (PRD NFR 6.1)
+
+**Build target:** Single self-contained IIFE bundle (`chat.js`), built with
+Vite in `lib` mode. No external dependencies at runtime — React, react-dom,
+and `@assistant-ui/react` are all bundled.
+
+**Load strategy:** The `<script>` tag uses `defer` — the bundle is downloaded
+in parallel with page parsing and executed after the DOM is ready. The widget
+does not block page rendering or the host page's critical path.
+
+**Bundle size target:** ≤ 200KB gzipped. Measure the actual bundle size at
+the end of Phase 1 and record it here. If it exceeds 250KB gzipped, evaluate:
+
+1. Tree-shaking unused `@assistant-ui/react` components
+2. Dynamic import of the React runtime if the host page already loads React
+
+**CDN delivery:** `chat.js` is served from `widget.domain.com` with:
+
+- `Cache-Control: public, max-age=31536000, immutable` for versioned builds
+  (e.g. `chat.v1.2.3.js`)
+- Brotli compression preferred; gzip fallback
+- The `<growth-chat>` element URL always points to the latest stable version
+  alias (`chat.js`) with a shorter TTL for the alias redirect
+
+---
+
+### Chat Widget Error Handling
+
+| Error condition | Behaviour |
+| --- | --- |
+| `api-url` attribute missing | Log `ConfigurationError` to console; widget renders in permanent fallback state |
+| `fallback-url` attribute missing | Log `ConfigurationError` to console; fallback state renders without a link |
+| React event delegation broken (events not firing) | Detectable in Phase 1 testing — fix wrapper before proceeding |
+| `sessionStorage` unavailable (private browsing, strict cookie settings) | GDPR acknowledgement state is lost; notice re-displays on each panel open within the session — acceptable degradation |
+| Custom Element not supported by browser | `customElements.define` is supported in all modern browsers (Chrome 67+, Firefox 63+, Safari 12.1+, Edge 79+). No polyfill required for v1. |
+
+---
+
+### Configuration
+
+All widget configuration is via HTML attributes on the `<growth-chat>` element
+(documented in the integration contract above). There are no environment
+variables for the widget itself — it is a static bundle. Any build-time
+constants (e.g. the GDPR notice text, the default proactive message) are
+injected by Vite at build time via `define`.
+
+| Build-time constant | Default | Description |
+| --- | --- | --- |
+| `VITE_DEFAULT_PROACTIVE_MESSAGE` | `"Have a question about AI engineering?"` | Default proactive prompt text |
+| `VITE_GDPR_NOTICE_TEXT` | See Section 3.7.3 | GDPR notice copy |
+| `VITE_STREAM_TIMEOUT_MS` | `10000` | Milliseconds before stream timeout activates fallback |
+
+---
+
+### Chat Widget Dependencies
+
+| Dependency | Version constraint | Notes |
+| --- | --- | --- |
+| `@assistant-ui/react` | Latest stable | MIT licence; runtime adapter must be implemented against its `RuntimeAdapter` interface |
+| `react` + `react-dom` | 18 or 19 | Bundled into `chat.js`; not loaded from CDN |
+| `vite` | Build tool only | Not bundled into `chat.js` |
+| Custom Element API | Browser native | No polyfill; see browser support note above |
+| `sessionStorage` | Browser native | Used for GDPR acknowledgement state |
+
+---
+
+*Engineering concern resolved by this section: EC-07 (graceful degradation fallback destination — the fallback is a UI state displaying a link to `fallback-url`,which points to the existing Zartis contact form or any external form URL. No SMTP, no embedded form, no infrastructure dependency. The path is completely independent of the AI backend).*
