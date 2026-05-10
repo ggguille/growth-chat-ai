@@ -1976,7 +1976,7 @@ widget work proceeds.
 
 ---
 
-### 3.7.2 Streaming Token Rendering
+### Streaming Token Rendering
 
 The widget connects to the Chat API streaming endpoint via the `assistant-ui`
 runtime adapter. The adapter must be implemented against the `assistant-ui`
@@ -2016,7 +2016,7 @@ session state (not persisted — the backend is the system of record).
 
 ---
 
-### 3.7.3 GDPR Notice (PRD NFR 6.3)
+### GDPR Notice (PRD NFR 6.3)
 
 The GDPR notice is displayed **once per browser session**, on the visitor's
 first interaction with the widget (opening the chat panel for the first time).
@@ -2049,7 +2049,7 @@ or via a future `gdpr-notice` attribute on the element):**
 
 ---
 
-### 3.7.4 Graceful Degradation — Fallback State (EC-07)
+### Graceful Degradation — Fallback State (EC-07)
 
 When the AI backend is unavailable, the widget does not show an error message
 and disappear. It degrades to a fallback state that still offers the visitor
@@ -2087,7 +2087,7 @@ and renders a generic fallback without a link — degraded but not broken.
 
 ---
 
-### 3.7.5 Proactive Greeting Trigger (S1)
+### Proactive Greeting Trigger (S1)
 
 When the visitor has been on the page for `proactive-delay-ms` milliseconds
 without opening the chat, a subtle prompt bubble appears above the launcher
@@ -2124,7 +2124,7 @@ onChatOpen(() => {
 
 ---
 
-### 3.7.6 Analytics Events (PRD NFR 6.4)
+### Analytics Events (PRD NFR 6.4)
 
 The widget is responsible for firing client-side analytics events. These events
 must be emitted with consistent field names and types — the full schema is
@@ -2167,7 +2167,7 @@ visitor message.
 
 ---
 
-### 3.7.7 Bundle and Load Performance (PRD NFR 6.1)
+### Bundle and Load Performance (PRD NFR 6.1)
 
 **Build target:** Single self-contained IIFE bundle (`chat.js`), built with
 Vite in `lib` mode. No external dependencies at runtime — React, react-dom,
