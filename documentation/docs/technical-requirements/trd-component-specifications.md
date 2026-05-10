@@ -1394,3 +1394,212 @@ N1/N2 blocking (FR-11) is enforced in `score_router` (Section 3.1). Every `Hando
 ---
 
 *Engineering concern resolved by this section: EC-03 (programmatic escalation trigger — routing decision is made by `score_router` in Section 3.1; this subsystem executes delivery only after that deterministic decision). Delivery confirmation decisions: Slack HTTP 200; CRM HTTP 2xx + `record_id`; 3 retries with 1s → 3s → 9s backoff; partial failure silent to visitor, handled internally via fallback email to `sales@`.*
+
+---
+
+## Business Hours Detection Module
+
+**Responsibility:** Determines, at the moment of invocation, whether the current wall-clock time falls within the company team's business hours window. Returns a single boolean consumed by the `propose_handoff` node and the Human Handoff Subsystem (Section 3.4) to select the correct handoff path and notification framing.
+
+The module does **not** store state, modify `SessionState`, communicate with any external service, or make decisions about what to do with the result. It is a pure function of the current UTC time and the configured business hours parameters.
+
+---
+
+### Business Hours Interface
+
+```python
+def is_business_hours() -> bool:
+    """
+    Returns True if the current moment falls within the configured
+    business hours window in the team timezone.
+    Returns False for weekends, outside the daily window, and — in v1 —
+    public holidays (not detected; documented as a known limitation).
+    """
+```
+
+Called once per handoff trigger, immediately before `HandoffRequest` is constructed in the `propose_handoff` node. The result is passed as `HandoffRequest.business_hours`.
+
+---
+
+### Business Hours Implementation
+
+```python
+from zoneinfo import ZoneInfo
+from datetime import datetime
+
+TEAM_TIMEZONE  = ZoneInfo(BUSINESS_HOURS_TIMEZONE)   # e.g. "Europe/Madrid"
+BUSINESS_START = int(BUSINESS_HOURS_START)            # e.g. 9  (hour, 24h)
+BUSINESS_END   = int(BUSINESS_HOURS_END)              # e.g. 18 (hour, 24h)
+# BUSINESS_END is exclusive: 18 means up to 17:59:59, not including 18:00:00
+
+def is_business_hours() -> bool:
+    now_team = datetime.now(tz=TEAM_TIMEZONE)
+
+    # Weekend check — Monday=0, Sunday=6
+    if now_team.weekday() >= 5:
+        return False
+
+    # Daily window check
+    if now_team.hour < BUSINESS_START or now_team.hour >= BUSINESS_END:
+        return False
+
+    return True
+```
+
+**Why `zoneinfo` and an IANA identifier, not a fixed UTC offset (EC-04):**
+CET is UTC+1 in winter and CEST is UTC+2 in summer (last Sunday of March to last Sunday of October). A hardcoded `+01:00` offset produces one-hour errors for approximately seven months of the year. Using the IANA identifier `Europe/Madrid` (or `Europe/Paris`, `Europe/Berlin` — all equivalent for this purpose) delegates DST handling to the operating system's timezone database, which is authoritative and automatically updated. The `zoneinfo` module (Python 3.9+) is the correct standard library mechanism; no third-party dependency is required.
+
+**Why the check is against team timezone, not visitor timezone (EC-04):**
+Business hours are defined from the perspective of the team's availability, not the visitor's local time. A visitor in New York at 3pm EST is interacting with a team in Madrid at 9pm CET — outside hours. The check must be on the team side. This is made explicit in the implementation by naming the variable `now_team` and never referencing visitor timezone in this module.
+
+---
+
+### The 4pm CET Cutoff (FR-22)
+
+FR-22 specifies that the system must not offer same-day follow-up for conversations that begin after 4pm CET, because the sales team cannot guarantee a response before end of business.
+
+This is implemented as a second threshold evaluated within `is_business_hours()` when a handoff is triggered — not at conversation start. The function signature gains an optional `handoff_context` parameter:
+
+```python
+def is_business_hours(same_day_followup: bool = False) -> bool:
+    now_team = datetime.now(tz=TEAM_TIMEZONE)
+
+    if now_team.weekday() >= 5:
+        return False
+
+    if now_team.hour < BUSINESS_START or now_team.hour >= BUSINESS_END:
+        return False
+
+    # For handoffs where a same-day commitment would be made,
+    # apply the earlier cutoff
+    if same_day_followup:
+        cutoff = int(BUSINESS_HOURS_SAME_DAY_CUTOFF)  # default: 16
+        if now_team.hour >= cutoff:
+            return False
+
+    return True
+```
+
+The `propose_handoff` node calls `is_business_hours(same_day_followup=True)` when constructing a `HandoffRequest` for a hot lead or explicit request (where a "we'll call you today" commitment would be made). It calls `is_business_hours()` (default) for stall handoffs, where the commitment is always next-business-morning regardless of time.
+
+In practice, this means:
+
+| Time (CET) | Day | `is_business_hours()` | `is_business_hours(same_day_followup=True)` |
+| --- | --- | --- | --- |
+| 10:00 Mon | Weekday | `True` | `True` |
+| 16:30 Wed | Weekday | `True` | `False` — 4pm cutoff exceeded |
+| 17:45 Thu | Weekday | `True` | `False` — 4pm cutoff exceeded |
+| 08:30 Fri | Weekday | `False` — before 9am | `False` |
+| 14:00 Sat | Weekend | `False` | `False` |
+
+---
+
+### Next Business Day Calculation (FR-22)
+
+When `is_business_hours()` returns `False`, the Human Handoff Subsystem (Section 3.4) sets the CRM task due date to "next business day at 10:00 CET". This calculation is a responsibility of the Business Hours Detection Module, exposed as a helper:
+
+```python
+def next_business_day_opening(reference_dt: datetime | None = None) -> datetime:
+    """
+    Returns the datetime of the next business day opening at BUSINESS_HOURS_START
+    in the team timezone, relative to reference_dt (defaults to now).
+
+    "Business day" in v1 means Monday-Friday — no public holiday awareness.
+    """
+    now_team = (reference_dt or datetime.now(tz=TEAM_TIMEZONE)).astimezone(TEAM_TIMEZONE)
+    candidate = now_team.replace(
+        hour=BUSINESS_START, minute=0, second=0, microsecond=0
+    )
+
+    # If we are before opening on a weekday, today's opening is the answer
+    if now_team.weekday() < 5 and now_team < candidate:
+        return candidate
+
+    # Otherwise advance to the next day and skip weekends
+    candidate = candidate + timedelta(days=1)
+    while candidate.weekday() >= 5:
+        candidate = candidate + timedelta(days=1)
+
+    return candidate
+```
+
+The returned datetime is timezone-aware (team timezone). The Human Handoff Subsystem converts it to UTC for storage and to the appropriate local time for display in Slack and CRM.
+
+---
+
+### Public Holidays — v1 Known Limitation (EC-04)
+
+The module has no public holiday awareness in v1. A visitor interacting on a public holiday in Spain (or wherever the team is located) will receive an in-hours response if the time falls within the Monday–Friday 09:00–18:00 window, even if no one is actually available.
+
+**Accepted risk:** Public holidays represent a small fraction of total interaction volume. The cost of a missed same-day commitment on a holiday is lower than the implementation complexity of maintaining a configurable holiday calendar in v1.
+
+**v1 mitigation:** The sales team is responsible for monitoring `#new-leads` and handling situations where a lead arrives on a public holiday. The system cannot distinguish this case — the team must.
+
+**v2 plan:** A configurable holiday calendar (list of date strings per year, injectable via environment variable or admin UI) that `is_business_hours()` checks before returning `True`. The interface is unchanged; only the implementation extends.
+
+This limitation must be documented in the chat's outside-hours message if it becomes a recurring issue — e.g. "our team may have reduced availability on local public holidays."
+
+---
+
+### Business Hours Configuration
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `BUSINESS_HOURS_TIMEZONE` | Yes | — | IANA timezone identifier for the team. Must be a valid `zoneinfo` key. Example: `Europe/Madrid` |
+| `BUSINESS_HOURS_START` | No | `9` | Start of business hours, 24h integer hour (inclusive). Example: `9` = 09:00 |
+| `BUSINESS_HOURS_END` | No | `18` | End of business hours, 24h integer hour (exclusive). Example: `18` = up to 17:59:59 |
+| `BUSINESS_HOURS_SAME_DAY_CUTOFF` | No | `16` | Hour after which same-day follow-up is not offered (FR-22). Example: `16` = after 16:00 |
+
+`BUSINESS_HOURS_TIMEZONE` has no default and the service will not start if it is unset — a missing timezone identifier produces incorrect behaviour that is not detectable at runtime.
+
+All hour values are integers in 24h format. Non-integer or out-of-range values raise a `ConfigurationError` at startup.
+
+---
+
+### Business Hours Error Handling
+
+| Error condition | Behaviour | Recovery |
+| --- | --- | --- |
+| `BUSINESS_HOURS_TIMEZONE` not set at startup | Raise `ConfigurationError`; service does not start | Fix configuration and redeploy |
+| `BUSINESS_HOURS_TIMEZONE` set to an invalid IANA key | Raise `ConfigurationError` on first call (zoneinfo raises `ZoneInfoNotFoundError`); service does not start if validated at startup | Fix configuration and redeploy |
+| `BUSINESS_HOURS_START >= BUSINESS_HOURS_END` | Raise `ConfigurationError` at startup | Fix configuration and redeploy |
+| `datetime.now()` raises an unexpected exception | Log `business_hours_detection_failure` at ERROR; default to `False` (outside hours) | Safe default — visitor receives the outside-hours flow rather than a broken in-hours flow |
+
+---
+
+### Business Hours Testing Requirements
+
+Because this module is a pure function of time and configuration, it is fully unit-testable by injecting a fixed `reference_dt`. The test suite must cover:
+
+| Case | Input | Expected |
+| --- | --- | --- |
+| Mid-morning weekday, CET winter | Monday 10:00 UTC+1 | `True` |
+| Mid-morning weekday, CEST summer | Monday 10:00 UTC+2 | `True` |
+| Before opening | Monday 08:45 CET | `False` |
+| After closing | Friday 18:01 CET | `False` |
+| Exactly at closing | Friday 18:00:00 CET | `False` (BUSINESS_END is exclusive) |
+| Saturday | Saturday 11:00 CET | `False` |
+| Sunday | Sunday 14:00 CET | `False` |
+| After 4pm cutoff, same_day_followup=True | Wednesday 16:30 CET | `False` |
+| Before 4pm cutoff, same_day_followup=True | Wednesday 15:59 CET | `True` |
+| DST transition day (last Sunday March) | Sunday 02:00 — clocks spring forward | `False` (Sunday) |
+| Day after DST transition (Monday) | Monday 09:30 CEST (= 07:30 UTC) | `True` |
+
+The DST cases verify that `zoneinfo` handles the transition correctly and that a hardcoded UTC offset would have produced the wrong answer.
+
+---
+
+### Business Hours Dependencies
+
+| Dependency | Component | Interface |
+| --- | --- | --- |
+| Conversation Orchestrator | Section 3.1 — `propose_handoff` node | `is_business_hours(same_day_followup: bool) → bool` |
+| Human Handoff Subsystem | Section 3.4 | `next_business_day_opening() → datetime` — used for CRM task due date |
+| Python standard library | `zoneinfo`, `datetime` | No third-party dependency required |
+| OS timezone database | System | `zoneinfo` reads from the system's `tzdata`; production container must include an up-to-date `tzdata` package |
+
+**`tzdata` in production containers:** Alpine Linux and some minimal Docker base images do not include `tzdata` by default. The production Dockerfile must explicitly install it (`apk add tzdata` for Alpine, `apt-get install -y tzdata` for Debian/Ubuntu) or use the Python `tzdata` backport package (`pip install tzdata`). Failure to do so causes `zoneinfo` to raise `ZoneInfoNotFoundError` at runtime.
+
+---
+
+*Engineering concern resolved by this section: EC-04 (DST — handled via `zoneinfo` and IANA identifier, no fixed UTC offset; public holidays — no awareness in v1, documented as known limitation with v2 plan; timezone perspective — check is explicitly against team timezone, enforced by naming convention and absence of any visitor timezone reference in the module).*
