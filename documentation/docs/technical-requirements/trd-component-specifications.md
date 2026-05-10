@@ -2205,7 +2205,7 @@ the end of Phase 1 and record it here. If it exceeds 250KB gzipped, evaluate:
 
 ---
 
-### Configuration
+### Chat Widget Configuration
 
 All widget configuration is via HTML attributes on the `<growth-chat>` element
 (documented in the integration contract above). There are no environment
