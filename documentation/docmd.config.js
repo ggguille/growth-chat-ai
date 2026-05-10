@@ -121,6 +121,7 @@ export default defineConfig({
         { title: 'ADR-002 — Conversation Orchestrator', path: '/architecture-decisions/ADR-002-conversation-orchestrator' },
         { title: 'ADR-003 — Knowledge Retrieval', path: '/architecture-decisions/ADR-003-use-pgvector-and-openai-embeddings-for-knowledge-retrieval' },
         { title: 'ADR-004 — State Persistence', path: '/architecture-decisions/ADR-004-use-memorysaver-and-postgres-for-state-persistence' },
+        { title: 'ADR-005 — Chat Widget', path: '/architecture-decisions/ADR-005-use-chat-widget' },
       ]
     },
     {

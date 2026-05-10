@@ -23,6 +23,7 @@ Architecture Decision Records (ADRs) capture significant technical decisions mad
 | [ADR-002](./ADR-002-conversation-orchestrator.md) | Use LangGraph for Conversation Orchestration | Accepted | April 2026 | AI Engineering Lead |
 | [ADR-003](./ADR-003-use-pgvector-and-openai-embeddings-for-knowledge-retrieval.md) | Use pgvector and OpenAI Embeddings for Knowledge Retrieval | Accepted | May 2026 | AI Engineering Lead |
 | [ADR-004](./ADR-004-use-memorysaver-and-postgres-for-state-persistence.md) | Use MemorySaver for development and PostgreSQL checkpointer for production state persistence | Accepted | May 2026 | AI Engineering Lead |
+| [ADR-005](./ADR-005-use-chat-widget.md) | Use assistant-ui wrapped as a Web Component for the chat widget | Accepted | May 2026 | AI Engineering Lead |
 
 ---
 
