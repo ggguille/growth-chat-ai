@@ -964,7 +964,7 @@ The 500ms p95 retrieval target is derived from the overall TTFT budget of 3s (PR
 
 ---
 
-### Compliance Notes
+### RAG Triage Compliance Notes
 
 - Embedding requests to the OpenAI API transmit text content that may constitute personal data under GDPR Article 4. A Data Processing Addendum (DPA) with OpenAI must be executed before processing real visitor data (EC-08 equivalent for the embedding provider — distinct from the Anthropic DPA for the LLM).
 - The OpenAI EU API endpoint (`api.openai.com` with EU data residency configuration) must be used in all environments that process EU visitor data.
@@ -973,3 +973,424 @@ The 500ms p95 retrieval target is derived from the overall TTFT budget of 3s (PR
 ---
 
 *Engineering concerns resolved by this section: EC-01 (RAG triage mechanism — `retrieve_knowledge` tool-use in the main LLM call; no separate classifier; the RAG Triage Module executes only when invoked by the LLM), EC-05 (relevance threshold — `RAG_RELEVANCE_THRESHOLD` is a required env variable with no hardcoded default; provisional value 0.70 for Phase 1–2 dev only; tuning process defined for Phase 4).*
+
+---
+
+## Human Handoff Subsystem
+
+**Responsibility:** Receives a `HandoffRequest` from the Conversation Orchestrator, generates the `ContextPacket` as a deterministic function of `SessionState`, and delivers it simultaneously to two primary destinations (Slack `#new-leads` and CRM). Manages retry logic, partial failure, and email fallback. Does not generate conversational responses — that remains the `propose_handoff` node's responsibility.
+
+The subsystem does **not** decide when to escalate (that is `score_router`'s responsibility), does not generate the visitor-facing proposal message (that is `propose_handoff`'s responsibility), and does not determine business hours (that is the Business Hours Detection Module's responsibility, Section 3.5). Its sole concern is reliable delivery of the context packet once a handoff has been triggered.
+
+---
+
+### Human Handoff Inputs
+
+| Input | Type | Source | Description |
+| --- | --- | --- | --- |
+| `handoff_request` | `HandoffRequest` | `propose_handoff` node (Section 3.1) | Trigger reason, current `SessionState`, and business hours flag |
+
+```text
+HandoffRequest {
+  session_id        : str
+  handoff_reason    : "hot_lead" | "explicit_request" | "stall" | "llm_failure"
+  lead_level        : "hot" | "warm" | "cold"
+  business_hours    : bool
+  session_state     : SessionState     // full snapshot at point of handoff
+  triggered_at      : datetime         // UTC timestamp
+}
+```
+
+---
+
+### Human Handoff Outputs
+
+| Output | Type | Destination | Description |
+| --- | --- | --- | --- |
+| `handoff_record` | `HandoffRecord` | PostgreSQL (audit log) | Persisted record of the handoff attempt, delivery status per channel, and final outcome |
+| `slack_notification` | Slack Block Kit message | Slack `#new-leads` | Immediate notification for the sales team |
+| `crm_lead_record` | CRM API payload | CRM platform (OQ-04) | Structured lead record pre-populated with the full context packet |
+| `fallback_email` | SMTP email | `sales@` | Sent only when both primary channels have exhausted retries |
+
+---
+
+### Human Handoff Subsystem Flow
+
+```mermaid
+flowchart TD
+    RECEIVE([Receive HandoffRequest from propose_handoff node])
+    RECEIVE --> GENERATE_PACKET
+
+    GENERATE_PACKET["Generate ContextPacket — deterministic function of SessionState, no LLM call"]
+
+    GENERATE_PACKET --> DISPATCH
+
+    DISPATCH["Dispatch in parallel — fire Slack and CRM concurrently"]
+
+    DISPATCH --> SLACK_ATTEMPT & CRM_ATTEMPT
+
+    SLACK_ATTEMPT["Slack delivery — POST to webhook, retry up to 3x, backoff 1s/3s/9s"]
+    CRM_ATTEMPT["CRM delivery — POST to CRM API, retry up to 3x, backoff 1s/3s/9s"]
+
+    SLACK_ATTEMPT --> SLACK_RESULT{HTTP 200?}
+    CRM_ATTEMPT --> CRM_RESULT{HTTP 2xx + record_id?}
+
+    SLACK_RESULT -- yes --> SLACK_OK([Slack confirmed])
+    SLACK_RESULT -- no after 3 retries --> SLACK_FAIL([Slack failed])
+    CRM_RESULT -- yes --> CRM_OK([CRM confirmed])
+    CRM_RESULT -- no after 3 retries --> CRM_FAIL([CRM failed])
+
+    SLACK_OK & CRM_OK --> COMPLETE["Handoff complete — set handoff_triggered = True"]
+    SLACK_FAIL & CRM_OK --> PARTIAL_FAILURE["Partial failure — log ERROR, alert ops, send fallback email, set handoff_triggered = True"]
+    SLACK_OK & CRM_FAIL --> PARTIAL_FAILURE
+    SLACK_FAIL & CRM_FAIL --> TOTAL_FAILURE["Total failure — log CRITICAL, alert ops, send fallback email, set handoff_triggered = False"]
+
+    COMPLETE & PARTIAL_FAILURE & TOTAL_FAILURE --> PERSIST_RECORD["Persist HandoffRecord — write delivery status and outcome to audit log"]
+```
+
+---
+
+### Context Packet Generation (FR-12, FR-13)
+
+The `ContextPacket` is generated as a **deterministic function of `SessionState`** — no LLM call, no natural language generation. Every field is derived directly from structured state fields. This ensures consistency, testability, and auditability: the same `SessionState` always produces the same `ContextPacket`.
+
+```python
+def generate_context_packet(state: SessionState) -> ContextPacket:
+    return ContextPacket(
+        session_id     = state.session_id,
+        triggered_at   = state.last_updated_at,
+        lead_level     = state.lead_level,
+        handoff_reason = state.handoff_reason,
+
+        qualification  = QualificationSummary(
+            problem_fit        = state.qualification.problem_fit,
+            authority_fit      = state.qualification.authority_fit,
+            company_fit        = state.qualification.company_fit,
+            timing_fit         = state.qualification.timing_fit,
+            is_consultant      = state.is_consultant,
+            referral_mentioned = state.referral_mentioned,
+        ),
+
+        visitor = VisitorData(
+            email   = state.visitor_email,
+            name    = state.visitor_name,
+            company = state.visitor_company,
+            role    = state.visitor_role,
+        ),
+
+        conversation = ConversationMeta(
+            turn_count              = state.messages[-1].turn_index if state.messages else 0,
+            stage3_proposals_issued = state.stage3_proposals_issued,
+            signals_observed        = state.qualification.signals_observed,
+        ),
+
+        # build_summary is a deterministic template function — see Section 3.4.2
+        conversation_summary = build_summary(state.qualification.signals_observed),
+    )
+```
+
+**`ContextPacket` schema:**
+
+```text
+ContextPacket {
+  session_id           : str
+  triggered_at         : datetime        // UTC
+  lead_level           : "hot" | "warm" | "cold"
+  handoff_reason       : "hot_lead" | "explicit_request" | "stall" | "llm_failure"
+
+  qualification : QualificationSummary {
+    problem_fit          : ConfidenceLevel
+    authority_fit        : ConfidenceLevel
+    company_fit          : ConfidenceLevel
+    timing_fit           : ConfidenceLevel
+    is_consultant        : bool
+    referral_mentioned   : bool
+  }
+
+  visitor : VisitorData {
+    email    : str | None
+    name     : str | None
+    company  : str | None
+    role     : str | None
+  }
+
+  conversation : ConversationMeta {
+    turn_count              : int
+    stage3_proposals_issued : int
+    signals_observed        : list[SignalEntry]
+  }
+
+  conversation_summary : str    // 2-4 sentences, template-generated (Section 3.4.2)
+}
+```
+
+---
+
+### Conversation Summary — Template Specification
+
+`build_summary()` is a deterministic template function — no LLM. It assembles a 2–4 sentence summary from the confirmed signals in `signals_observed`, using fixed sentence templates keyed on dimension and confidence level.
+
+**Template structure:**
+
+```text
+Sentence 1 — Problem (present if problem_fit != "not_detected"):
+  confirmed:           "Visitor is building/evaluating [most recent problem signal evidence]."
+  partially_confirmed: "Visitor appears to have a requirement related to [evidence], though details are unclear."
+  not_detected:        (omitted)
+
+Sentence 2 — Authority + Company (combined if both detected):
+  both confirmed:      "They are [visitor_role] at a [company_fit evidence] company."
+  authority only:      "They identified as [visitor_role] with [authority signal evidence]."
+  company only:        "They are at a [company_fit evidence] company; role is unclear."
+  neither:             (omitted)
+
+Sentence 3 — Timing (present if timing_fit != "not_detected"):
+  confirmed:           "They have a concrete timeline: [most recent timing signal evidence]."
+  partially_confirmed: "There are signals of urgency: [timing signal evidence]."
+
+Sentence 4 — Flags (present if is_consultant or referral_mentioned):
+  is_consultant:       "Note: visitor is a consultant evaluating on behalf of a client."
+  referral_mentioned:  "Note: visitor mentioned a referral."
+```
+
+**Default (no signals detected):**
+`"Conversation did not produce sufficient qualification signals. Handoff triggered by: [handoff_reason]."`
+
+---
+
+### Slack Delivery
+
+**Destination:** Incoming webhook to `#new-leads`. Configured via `SLACK_WEBHOOK_URL`.
+
+**Confirmation criterion:** HTTP 200 response from the Slack webhook endpoint.
+
+**Payload format (Slack Block Kit):**
+
+```json
+{
+  "blocks": [
+    {
+      "type": "header",
+      "text": { "type": "plain_text", "text": "[EMOJI] [lead_level] Lead — [visitor_company or Unknown]" }
+    },
+    {
+      "type": "section",
+      "fields": [
+        { "type": "mrkdwn", "text": "*Email:*\n[visitor_email or Not captured]" },
+        { "type": "mrkdwn", "text": "*Role:*\n[visitor_role or Unknown]" },
+        { "type": "mrkdwn", "text": "*Trigger:*\n[handoff_reason]" },
+        { "type": "mrkdwn", "text": "*Turns:*\n[turn_count]" }
+      ]
+    },
+    {
+      "type": "section",
+      "text": { "type": "mrkdwn", "text": "*Summary:*\n[conversation_summary]" }
+    },
+    {
+      "type": "section",
+      "text": { "type": "mrkdwn", "text": "*Qualification:* Problem: [problem_fit] | Authority: [authority_fit] | Company: [company_fit] | Timing: [timing_fit]" }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        { "type": "button", "text": { "type": "plain_text", "text": "View CRM Record" }, "url": "[crm_record_url]" }
+      ]
+    }
+  ]
+}
+```
+
+Lead level emoji mapping: hot → 🔥 | warm → 🌡️ | cold → ❄️. Outside-hours header prefix: 📬.
+
+The CRM record URL in the actions block is populated only after CRM delivery succeeds. If Slack delivery completes before the CRM record ID is available (parallel dispatch), the Slack message is sent without the button first, then updated via `chat.update` once the ID is received. If CRM delivery fails entirely, the button is omitted.
+
+**Retry logic (pseudocode):**
+
+```text
+backoff = [1, 3]  // seconds between attempts 1→2 and 2→3
+for attempt in range(1, 4):
+    response = POST SLACK_WEBHOOK_URL with payload
+    if response.status == 200:
+        return SUCCESS
+    log WARN slack_delivery_attempt_failed(attempt=attempt, status=response.status)
+    if attempt < 3:
+        sleep(backoff[attempt - 1])
+return FAILURE
+```
+
+---
+
+### CRM Delivery
+
+**Destination:** CRM platform API — platform pending OQ-04. This section specifies the integration contract. Concrete endpoints and authentication are defined in a supplementary ADR once OQ-04 is resolved.
+
+**Confirmation criterion:** HTTP 2xx response with a non-null `record_id` in the response body. A 202 Accepted without a `record_id` does not count — it may indicate an async creation that could fail silently.
+
+**Payload (platform-agnostic schema):**
+
+```json
+{
+  "contact": {
+    "email":   "[visitor_email]",
+    "name":    "[visitor_name]",
+    "company": "[visitor_company]",
+    "role":    "[visitor_role]"
+  },
+  "lead": {
+    "source":         "website-chat",
+    "lead_level":     "[hot | warm | cold]",
+    "handoff_reason": "[hot_lead | explicit_request | stall | llm_failure]",
+    "triggered_at":   "[ISO 8601 UTC]",
+    "session_id":     "[session_id]"
+  },
+  "qualification": {
+    "problem_fit":        "[not_detected | partially_confirmed | confirmed]",
+    "authority_fit":      "[not_detected | partially_confirmed | confirmed]",
+    "company_fit":        "[not_detected | partially_confirmed | confirmed]",
+    "timing_fit":         "[not_detected | partially_confirmed | confirmed]",
+    "is_consultant":      "[bool]",
+    "referral_mentioned": "[bool]"
+  },
+  "notes": {
+    "summary":          "[conversation_summary]",
+    "signals_observed": "[serialised SignalEntry list]",
+    "turn_count":       "[int]"
+  }
+}
+```
+
+**Retry logic:** identical to Slack — 3 attempts, backoff 1s → 3s → 9s.
+
+**OQ-04 dependency:** Engineering builds against an abstract `CRMClient` interface with a stub in Phase 1–2. Concrete implementation is a Phase 3 deliverable.
+
+---
+
+### Partial Failure and Email Fallback (FR-19)
+
+**Partial failure:** one channel confirms, one exhausts retries.
+
+**Total failure:** both channels exhaust retries.
+
+The visitor is not informed in either case. The `propose_handoff` node has already delivered the proposal and collected the email. The failure is purely operational.
+
+**Internal handling:**
+
+```text
+1. Log failed channel(s) at ERROR:
+     fields: session_id, failed_channel, last_http_status, attempt_count, triggered_at
+
+2. Emit ops alert:
+     partial failure → WARN-level alert
+     total failure   → CRITICAL-level alert
+
+3. Send fallback email to FALLBACK_EMAIL_ADDRESS:
+     Subject: "[HANDOFF FALLBACK] [lead_level] lead — [visitor_email or session_id]"
+     Body: full ContextPacket as plain text
+
+4. Persist HandoffRecord (see schema below)
+
+5. Set SessionState.handoff_triggered:
+     complete | partial_failure → True
+     total_failure              → False
+     // False allows re-attempt if visitor returns (v2 feature)
+```
+
+**`HandoffRecord` schema:**
+
+```text
+HandoffRecord {
+  session_id        : str
+  triggered_at      : datetime
+  lead_level        : "hot" | "warm" | "cold"
+  handoff_reason    : str
+  visitor_email     : str | None
+
+  slack_status      : "ok" | "failed"
+  slack_attempts    : int
+  slack_last_status : int | None
+
+  crm_status        : "ok" | "failed"
+  crm_attempts      : int
+  crm_record_id     : str | None       // populated on CRM success
+  crm_last_status   : int | None
+
+  fallback_sent     : bool
+  outcome           : "complete" | "partial_failure" | "total_failure"
+  completed_at      : datetime
+}
+```
+
+---
+
+### Business Hours Routing
+
+The `business_hours` flag on `HandoffRequest` (set by Section 3.5 before dispatch) affects notification framing only — the delivery mechanism is identical regardless of time.
+
+**Slack header framing:**
+
+| `business_hours` | Header | Expected rep action |
+| --- | --- | --- |
+| `True` | `"🔥 [lead_level] Lead — [company]"` | Within 2 business hours |
+| `False` | `"📬 Lead captured (outside hours) — [company]"` | Next business morning |
+
+**CRM task due date:**
+
+| `business_hours` | Due |
+| --- | --- |
+| `True` | 2 hours from `triggered_at` |
+| `False` | Next business day at 10:00 CET (FR-22) |
+
+The 4pm CET cutoff for same-day follow-up commitments (FR-22) is enforced upstream in Section 3.5. `business_hours = False` is already set correctly when `HandoffRequest` arrives here.
+
+---
+
+### Negative Persona Escalation Gate
+
+N1/N2 blocking (FR-11) is enforced in `score_router` (Section 3.1). Every `HandoffRequest` this subsystem receives is pre-authorised. The explicit human request override (FR-10) is also resolved upstream — this subsystem does not re-evaluate persona classification.
+
+---
+
+### Human Handoff Error Handling
+
+| Error condition | Behaviour | Recovery |
+| --- | --- | --- |
+| `SLACK_WEBHOOK_URL` not set at startup | Raise `ConfigurationError`; service does not start | Fix config and redeploy |
+| CRM credentials not set at startup | Raise `ConfigurationError`; service does not start | Fix config and redeploy |
+| `build_summary()` raises exception | Log `context_packet_summary_failure` WARN; use default fallback summary; continue delivery | Not blocking |
+| `generate_context_packet()` raises exception | Log `context_packet_generation_failure` ERROR; abort delivery; emit CRITICAL alert; `handoff_triggered = False` | Manual ops recovery via raw session log |
+| Fallback SMTP fails | Log `fallback_email_failure` CRITICAL; no further automated recovery in v1 | Ops alert triggers manual follow-up |
+| `HandoffRecord` persistence fails | Log `handoff_record_write_failure` ERROR; delivery outcome unaffected | Analytics gap only |
+
+---
+
+### Human Handoff Configuration
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `SLACK_WEBHOOK_URL` | Yes | Incoming webhook URL for `#new-leads` |
+| `CRM_API_URL` | Yes (Phase 3) | CRM platform base URL — pending OQ-04 |
+| `CRM_API_KEY` | Yes (Phase 3) | CRM API authentication credential — pending OQ-04 |
+| `FALLBACK_EMAIL_ADDRESS` | Yes | Fallback recipient — `sales@` |
+| `SMTP_HOST` | Yes | SMTP server for fallback email |
+| `SMTP_PORT` | No | Default: `587` |
+| `SMTP_USERNAME` | Yes | SMTP auth username |
+| `SMTP_PASSWORD` | Yes | SMTP auth password |
+| `HANDOFF_RETRY_BACKOFF_SECONDS` | No | Comma-separated retry wait times. Default: `1,3,9` |
+
+---
+
+### Human Handoff Dependencies
+
+| Dependency | Component | Interface |
+| --- | --- | --- |
+| Conversation Orchestrator | Section 3.1 — `propose_handoff` node | `dispatch_handoff(HandoffRequest)` — fire-and-forget |
+| Business Hours Detection Module | Section 3.5 | `HandoffRequest.business_hours` flag set before dispatch |
+| Context Packet Generator | Section 3.6 | `generate_context_packet(SessionState) → ContextPacket` |
+| PostgreSQL | ADR-004 | `HandoffRecord` audit log writes |
+| Slack Webhooks API | External | HTTPS POST; Block Kit payload |
+| CRM platform API | External — pending OQ-04 | HTTPS POST via `CRMClient` interface; Phase 3 |
+| SMTP | External | Fallback email — path independent of AI backend (EC-07) |
+
+---
+
+*Engineering concern resolved by this section: EC-03 (programmatic escalation trigger — routing decision is made by `score_router` in Section 3.1; this subsystem executes delivery only after that deterministic decision). Delivery confirmation decisions: Slack HTTP 200; CRM HTTP 2xx + `record_id`; 3 retries with 1s → 3s → 9s backoff; partial failure silent to visitor, handled internally via fallback email to `sales@`.*
