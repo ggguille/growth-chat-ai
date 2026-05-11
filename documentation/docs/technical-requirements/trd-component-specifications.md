@@ -970,7 +970,7 @@ def generate_context_packet(state: SessionState) -> ContextPacket:
 
 ### Conversation Summary
 
-`build_summary()` is a deterministic template function — no LLM. Full specification is in [Section 3.6 — `build_summary()` Template Specification](#buildsummary--template-specification).
+`build_summary()` is a deterministic template function — no LLM. Full specification is in [`build_summary()` Template Specification](#component-specifications-context-packet-generator-build_summary-template-specification).
 
 ---
 
