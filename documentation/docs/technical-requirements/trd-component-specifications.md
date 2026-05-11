@@ -311,11 +311,11 @@ All thresholds and limits are configurable environment variables. Default values
 
 *Engineering concerns resolved by this section: EC-01 (RAG triage mechanism — `retrieve_knowledge` tool use in `generate_response`), EC-03 (programmatic escalation trigger — `score_router` node with no LLM participation), EC-06 (stall detection — PRD definition adopted: counter resets on Stage 3 proposal; threshold configurable via `STALL_TURN_THRESHOLD`).*
 
-> - **3.3 RAG Triage Module** — mecanismo de decisión por turno, function calling, threshold (resuelve EC-01, EC-05)
-> - **3.4 Human Handoff Subsystem** — escalation trigger programático, generación de context packet, entrega dual, partial failure (resuelve EC-03)
-> - **3.5 Business Hours Detection Module** — lógica timezone-aware con IANA identifier, edge cases DST (resuelve EC-04)
-> - **3.6 Context Packet Generator** — función determinista sobre session state, schema fijo
-> - **3.7 Frontend Chat Widget** — embedding, streaming, fallback form (resuelve EC-07)
+> - **RAG Triage Module** — per-turn decision mechanism, function calling, threshold (resolves EC-01, EC-05)
+> - **Human Handoff Subsystem** — programmatic escalation trigger, context packet generation, dual delivery, partial failure (resolves EC-03)
+> - **Business Hours Detection Module** — timezone-aware logic with IANA identifier, DST edge cases (resolves EC-04)
+> - **Context Packet Generator** — deterministic function over session state, fixed schema
+> - **Frontend Chat Widget** — embedding, streaming, fallback form (resuelve EC-07)
 
 ---
 
@@ -323,7 +323,7 @@ All thresholds and limits are configurable environment variables. Default values
 
 **Responsibility:** Defines the complete schema of the `SessionState` object — the single source of truth for all per-session data — and specifies the rules governing state transitions, persistence, and session lifecycle.
 
-The qualification state machine does **not** decide what to say to the visitor, generate responses, or trigger side effects. It is a pure data contract. The Conversation Orchestrator (Section 3.1) reads and writes this state; the `score_router` node evaluates it to make routing decisions; the Context Packet Generator (Section 3.6) reads it to produce handoff data.
+The qualification state machine does **not** decide what to say to the visitor, generate responses, or trigger side effects. It is a pure data contract. The Conversation Orchestrator reads and writes this state; the `score_router` node evaluates it to make routing decisions; the Context Packet Generator reads it to produce handoff data.
 
 ---
 
@@ -331,45 +331,7 @@ The qualification state machine does **not** decide what to say to the visitor, 
 
 `SessionState` is the typed dict passed as LangGraph graph state. All fields are present from session initialisation; no field is nullable unless explicitly marked.
 
-```text
-SessionState {
-
-  # ── Session identity ────────────────────────────────────────────
-  session_id          : str          // UUID; used as LangGraph thread_id
-  created_at          : datetime     // UTC timestamp of first turn
-  last_updated_at     : datetime     // UTC timestamp of last completed turn
-
-  # ── Conversation history (sliding window) ───────────────────────
-  messages            : list[Message]
-  // Sliding window of the last CONTEXT_WINDOW_TURNS exchanges.
-  // Each entry is a Message (see 3.2.2).
-  // Oldest entries are evicted when the window is full (EC-13).
-
-  # ── Qualification state ──────────────────────────────────────────
-  qualification       : QualificationState
-  // See 3.2.3 for full schema and transition rules.
-
-  # ── Session control ──────────────────────────────────────────────
-  lead_level          : "hot" | "warm" | "cold"   // default: "cold"
-  current_stage       : 1 | 2 | 3                 // default: 1
-  turn_counter        : int                        // default: 0; resets on Stage 3 proposal
-  stage3_proposals_issued : int                    // default: 0; incremented in propose_handoff
-  explicit_human_request  : bool                   // default: False; set by update_state
-
-  # ── Visitor data ─────────────────────────────────────────────────
-  visitor_email       : str | None                 // default: None; set when captured
-  visitor_name        : str | None                 // default: None; set when volunteered
-  visitor_company     : str | None                 // default: None; set when mentioned
-  visitor_role        : str | None                 // default: None; inferred or stated
-  is_consultant       : bool                       // default: False; see edge case below
-  referral_mentioned  : bool                       // default: False
-
-  # ── Session outcome ──────────────────────────────────────────────
-  handoff_triggered   : bool                       // default: False
-  handoff_reason      : "hot_lead" | "explicit_request" | "stall" | "llm_failure" | None
-  termination_type    : "explicit_close" | "inactivity_timeout" | "session_expiry" | None
-}
-```
+> *Schema: see [Data Models — SessionState](trd-data-model.md#data-models-sessionstate) for the canonical field list, field notes, persistence backend, and retention rules.*
 
 ---
 
@@ -377,14 +339,7 @@ SessionState {
 
 Each entry in the `messages` sliding window follows this structure:
 
-```text
-Message {
-  role      : "visitor" | "assistant"
-  content   : str        // raw text content of the turn
-  turn_index : int       // monotonically increasing turn number within the session
-  timestamp : datetime   // UTC
-}
-```
+> *Schema: see [Data Models — Message](trd-data-model.md#data-models-message) for the canonical field list and sliding window mechanics.*
 
 `turn_index` is not reset when the sliding window evicts old messages. It always reflects the absolute position in the session, allowing analytics to reason about conversation depth even after window eviction.
 
@@ -394,35 +349,7 @@ Message {
 
 `QualificationState` is a nested object within `SessionState`. It tracks the four fit dimensions defined in `qualification-signals.md` and the three additional flags required for routing and handoff.
 
-```text
-QualificationState {
-
-  # ── Four fit dimensions ──────────────────────────────────────────
-  problem_fit         : ConfidenceLevel   // default: "not_detected"
-  authority_fit       : ConfidenceLevel   // default: "not_detected"
-  company_fit         : ConfidenceLevel   // default: "not_detected"
-  timing_fit          : ConfidenceLevel   // default: "not_detected"
-
-  # ── Disqualification flags ───────────────────────────────────────
-  is_negative_persona : bool              // default: False; N1 (competitor) or N2 (researcher)
-  is_no_fit           : bool              // default: False; individual scope, geo mismatch, etc.
-
-  # ── Signals observed (audit trail) ──────────────────────────────
-  signals_observed    : list[SignalEntry]
-  // Append-only log of signals extracted across the session.
-  // Used for context packet generation and eval debugging.
-  // Not used in routing logic.
-}
-
-ConfidenceLevel : "not_detected" | "partially_confirmed" | "confirmed"
-
-SignalEntry {
-  dimension   : "problem_fit" | "authority_fit" | "company_fit" | "timing_fit"
-  signal_type : "explicit" | "implicit"
-  evidence    : str        // the visitor phrase or behaviour that triggered the signal
-  turn_index  : int
-}
-```
+> *Schema: see [Data Models — QualificationState](trd-data-model.md#data-models-qualificationstate) for the canonical field list, including `ConfidenceLevel` and `SignalEntry` sub-types.*
 
 ---
 
@@ -448,36 +375,7 @@ The `update_state` node in the orchestrator is the only writer to `Qualification
 
 `lead_level` is derived from `QualificationState` by the `score_router` node at each turn. It is not stored as a persistent field — it is recomputed from the current `QualificationState` on every evaluation. The value stored in `SessionState.lead_level` reflects the last computed level and is used for context packet generation; it is not used in routing (routing always recomputes from raw dimensions).
 
-```text
-derive_lead_level(q: QualificationState) → "hot" | "warm" | "cold":
-
-  # Disqualified sessions never escalate regardless of qualification signals
-  if q.is_negative_persona or q.is_no_fit:
-      return "cold"
-
-  # Hot: Problem(confirmed) + Authority(confirmed) + (CompanyFit OR TimingFit)(≥ partially_confirmed)
-  if (q.problem_fit == "confirmed"
-      and q.authority_fit == "confirmed"
-      and (q.company_fit in ["partially_confirmed", "confirmed"]
-           or q.timing_fit in ["partially_confirmed", "confirmed"])):
-      return "hot"
-
-  # Special case: P3 pattern — referred visitor with confirmed authority
-  # Referral substitutes for problem_fit in the hot threshold
-  if (session_state.referral_mentioned == True
-      and q.authority_fit == "confirmed"
-      and (q.company_fit in ["partially_confirmed", "confirmed"]
-           or q.timing_fit in ["partially_confirmed", "confirmed"])):
-      return "hot"
-
-  # Warm: Problem(confirmed) + at least one additional dimension (≥ partially_confirmed)
-  if (q.problem_fit == "confirmed"
-      and any dimension in [authority_fit, company_fit, timing_fit] >= "partially_confirmed"):
-      return "warm"
-
-  # Cold: default
-  return "cold"
-```
+> *Algorithm: see [Data Models — Lead level derivation](trd-data-model.md#data-models-qualificationstate-lead-level-derivation) for the canonical implementation, including the P3 referral pattern.*
 
 #### Stage transitions
 
@@ -515,14 +413,7 @@ Stage 3 is not a terminal state. If the visitor declines or ignores the handoff 
 
 The `messages` list is a sliding window of fixed maximum size. When the window is full and a new message is added, the oldest entry is evicted.
 
-```text
-add_message(state: SessionState, new_message: Message) → SessionState:
-    state.messages.append(new_message)
-    if len(state.messages) > CONTEXT_WINDOW_TURNS * 2:
-        // Each turn = 2 messages (visitor + assistant)
-        state.messages = state.messages[-(CONTEXT_WINDOW_TURNS * 2):]
-    return state
-```
+> *Implementation: see [Data Models — Message](trd-data-model.md#data-models-message) (sliding window mechanics).*
 
 **What is not lost on eviction:** `QualificationState` dimensions, `lead_level`, `turn_counter`, `stage3_proposals_issued`, `visitor_*` fields, and `signals_observed`. These are stored independently of the message window and are never evicted. The sliding window only affects the raw message history passed to the LLM.
 
@@ -799,23 +690,7 @@ Indexing pipeline:
 
 **Index type:** HNSW (`ivfflat` is not used — HNSW offers better recall at query time without requiring a vacuum/rebuild cycle as the table grows).
 
-**Schema:**
-
-```sql
-CREATE TABLE knowledge_chunks (
-  chunk_id        TEXT PRIMARY KEY,
-  source          TEXT NOT NULL,        -- document title or slug
-  chunk_index     INT  NOT NULL,        -- position within source document
-  content         TEXT NOT NULL,        -- raw text of the chunk
-  content_hash    TEXT NOT NULL,        -- SHA-256 of content; used for deduplication
-  embedding       VECTOR(1536) NOT NULL, -- text-embedding-3-small dimensions
-  created_at      TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX ON knowledge_chunks
-  USING hnsw (embedding vector_cosine_ops)
-  WITH (m = 16, ef_construction = 64);
-```
+> *Schema and DDL: see [Data Models — KnowledgeChunk](trd-data-model.md#data-models-knowledgechunk), including HNSW index parameters and the local-dev table variant.*
 
 **Query:**
 
@@ -1089,72 +964,13 @@ def generate_context_packet(state: SessionState) -> ContextPacket:
     )
 ```
 
-**`ContextPacket` schema:**
-
-```text
-ContextPacket {
-  session_id           : str
-  triggered_at         : datetime        // UTC
-  lead_level           : "hot" | "warm" | "cold"
-  handoff_reason       : "hot_lead" | "explicit_request" | "stall" | "llm_failure"
-
-  qualification : QualificationSummary {
-    problem_fit          : ConfidenceLevel
-    authority_fit        : ConfidenceLevel
-    company_fit          : ConfidenceLevel
-    timing_fit           : ConfidenceLevel
-    is_consultant        : bool
-    referral_mentioned   : bool
-  }
-
-  visitor : VisitorData {
-    email    : str | None
-    name     : str | None
-    company  : str | None
-    role     : str | None
-  }
-
-  conversation : ConversationMeta {
-    turn_count              : int
-    stage3_proposals_issued : int
-    signals_observed        : list[SignalEntry]
-  }
-
-  conversation_summary : str    // 2-4 sentences, template-generated (Section 3.4.2)
-}
-```
+> *ContextPacket schema: see [Data Models — ContextPacket](trd-data-model.md#data-models-contextpacket).*
 
 ---
 
-### Conversation Summary — Template Specification
+### Conversation Summary
 
-`build_summary()` is a deterministic template function — no LLM. It assembles a 2–4 sentence summary from the confirmed signals in `signals_observed`, using fixed sentence templates keyed on dimension and confidence level.
-
-**Template structure:**
-
-```text
-Sentence 1 — Problem (present if problem_fit != "not_detected"):
-  confirmed:           "Visitor is building/evaluating [most recent problem signal evidence]."
-  partially_confirmed: "Visitor appears to have a requirement related to [evidence], though details are unclear."
-  not_detected:        (omitted)
-
-Sentence 2 — Authority + Company (combined if both detected):
-  both confirmed:      "They are [visitor_role] at a [company_fit evidence] company."
-  authority only:      "They identified as [visitor_role] with [authority signal evidence]."
-  company only:        "They are at a [company_fit evidence] company; role is unclear."
-  neither:             (omitted)
-
-Sentence 3 — Timing (present if timing_fit != "not_detected"):
-  confirmed:           "They have a concrete timeline: [most recent timing signal evidence]."
-  partially_confirmed: "There are signals of urgency: [timing signal evidence]."
-
-Sentence 4 — Flags (present if is_consultant or referral_mentioned):
-  is_consultant:       "Note: visitor is a consultant evaluating on behalf of a client."
-  referral_mentioned:  "Note: visitor mentioned a referral."
-```
-
-**Default (no signals detected):**
-`"Conversation did not produce sufficient qualification signals. Handoff triggered by: [handoff_reason]."`
+`build_summary()` is a deterministic template function — no LLM. Full specification is in [Section 3.6 — `build_summary()` Template Specification](#buildsummary--template-specification).
 
 ---
 
@@ -1295,30 +1111,7 @@ The visitor is not informed in either case. The `propose_handoff` node has alrea
      // False allows re-attempt if visitor returns (v2 feature)
 ```
 
-**`HandoffRecord` schema:**
-
-```text
-HandoffRecord {
-  session_id        : str
-  triggered_at      : datetime
-  lead_level        : "hot" | "warm" | "cold"
-  handoff_reason    : str
-  visitor_email     : str | None
-
-  slack_status      : "ok" | "failed"
-  slack_attempts    : int
-  slack_last_status : int | None
-
-  crm_status        : "ok" | "failed"
-  crm_attempts      : int
-  crm_record_id     : str | None       // populated on CRM success
-  crm_last_status   : int | None
-
-  fallback_sent     : bool
-  outcome           : "complete" | "partial_failure" | "total_failure"
-  completed_at      : datetime
-}
-```
+> *HandoffRecord schema: see [Data Models — HandoffRecord](trd-data-model.md#data-models-handoffrecord), including database DDL, outcome definitions, and retention rules.*
 
 ---
 
@@ -1641,48 +1434,7 @@ ensuring the packet reflects the state at the exact point of escalation.
 
 ### Output Schema
 
-```text
-ContextPacket {
-
-  # ── Identity ────────────────────────────────────────────────────
-  session_id          : str           // from SessionState.session_id
-  triggered_at        : datetime      // UTC — from SessionState.last_updated_at
-  lead_level          : "hot" | "warm" | "cold"
-  handoff_reason      : "hot_lead" | "explicit_request" | "stall" | "llm_failure"
-
-  # ── Qualification state ──────────────────────────────────────────
-  qualification : {
-    problem_fit         : "not_detected" | "partially_confirmed" | "confirmed"
-    authority_fit       : "not_detected" | "partially_confirmed" | "confirmed"
-    company_fit         : "not_detected" | "partially_confirmed" | "confirmed"
-    timing_fit          : "not_detected" | "partially_confirmed" | "confirmed"
-    is_consultant       : bool      // FR-13: consultant/evaluator flag
-    referral_mentioned  : bool
-  }
-
-  # ── Visitor data ─────────────────────────────────────────────────
-  visitor : {
-    email    : str | None           // None if not captured
-    name     : str | None           // None if not volunteered
-    company  : str | None           // None if not mentioned
-    role     : str | None           // None if not stated or inferable
-  }
-
-  # ── Conversation metadata ────────────────────────────────────────
-  conversation : {
-    turn_count              : int   // absolute turn index of the last message
-    stage3_proposals_issued : int
-    signals_observed        : list[SignalEntry]
-    // Full append-only signal log — used by sales rep for context,
-    // not for routing. See SignalEntry schema in Section 3.2.
-  }
-
-  # ── Summary ──────────────────────────────────────────────────────
-  conversation_summary : str
-  // 2-4 sentence template-generated summary.
-  // See build_summary() specification below.
-}
-```
+> *Schema: see [Data Models — ContextPacket](trd-data-model.md#data-models-contextpacket).*
 
 ---
 

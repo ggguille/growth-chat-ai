@@ -79,15 +79,13 @@ Specifications for the Conversation Orchestrator (graph structure, node definiti
 
 ## 4. Data Models
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Esta sección definirá:
->
-> - **4.1 Session State Object** — schema completo con tipos, valores permitidos y backend de persistencia (resuelve EC-02)
-> - **4.2 Qualification State** — cuatro dimensiones + tres maturity signals + score + confidence como campos tipados
-> - **4.3 Context Packet** — schema fijo derivado de human-handoff.md
-> - **4.4 Conversation Message** — estructura de cada turno almacenado en el sliding window
-> - **4.5 Lead Record** — datos capturados en handoff, campos PII identificados
+Canonical schemas for all data structures used by the system — `SessionState`,
+`QualificationState`, `ContextPacket`, `HandoffRecord`, `Message`, and `KnowledgeChunk` —
+together with PII classification, retention rules, and database DDL. This is the single
+authoritative schema reference; component specifications in Section 3 reference this section
+rather than repeating inline definitions.
+
+→ [Data Models](./trd-data-model)
 
 ---
 

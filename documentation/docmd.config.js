@@ -131,6 +131,7 @@ export default defineConfig({
       children: [
         { title: 'System Architecture', path: '/technical-requirements/trd-system-architecture' },
         { title: 'Component Specifications', path: '/technical-requirements/trd-component-specifications' },
+        { title: 'Data Models', path: '/technical-requirements/trd-data-model' },
       ]
     },
   ],
