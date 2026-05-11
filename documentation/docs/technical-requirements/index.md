@@ -91,14 +91,12 @@ rather than repeating inline definitions.
 
 ## 5. API Specifications
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Esta sección especificará:
->
-> - **5.1 Chat endpoint** — POST /chat, request/response schema, autenticación, errores
-> - **5.2 Handoff webhook** — contrato de entrega a Slack y CRM, campos, reintentos
-> - **5.3 Fallback form endpoint** — ruta independiente del AI backend para captura en degradación (resuelve EC-07)
-> - **5.4 Interfaces internas** — contratos entre orquestador, RAG module y handoff subsystem
+Chat endpoint contract (POST /chat, SSE streaming, authentication, error codes),
+Handoff delivery interfaces (Slack Block Kit payload, CRM abstract interface, email fallback),
+Fallback form resolution (EC-07), and internal component contracts
+(`retrieve_knowledge`, `dispatch_handoff`, `is_business_hours`, `emit_event`).
+
+→ [API Specifications](./trd-api-specification)
 
 ---
 
