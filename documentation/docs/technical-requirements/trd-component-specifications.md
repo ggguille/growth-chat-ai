@@ -169,7 +169,7 @@ is_hot_lead(state) → bool:
 
 | Layer | Content | Stable? |
 | --- | --- | --- |
-| Role definition | Zartis representative persona, voice and tone guidelines | Yes |
+| Role definition | Company representative persona, voice and tone guidelines | Yes |
 | Conversation model | Stage 1/2/3 rules, one-question-per-exchange constraint | Yes |
 | Persona adaptation | Register guidance per detected visitor profile | Yes |
 | Prohibited behaviours | Never fabricate, never give pricing, never reveal internal info | Yes |
@@ -184,7 +184,7 @@ is_hot_lead(state) → bool:
 ```json
 {
   "name": "retrieve_knowledge",
-  "description": "Retrieve relevant information from the Zartis knowledge base. Call this tool when the visitor asks about Zartis services, case studies, team expertise, engagement models, or any question that requires specific company information beyond what is in your instructions.",
+  "description": "Retrieve relevant information from the company knowledge base. Call this tool when the visitor asks about company services, case studies, team expertise, engagement models, or any question that requires specific company information beyond what is in your instructions.",
   "input_schema": {
     "type": "object",
     "properties": {
@@ -1662,7 +1662,7 @@ Host page (any stack)
 │  <script src="chat.js" defer></script>
 │  <growth-chat api-url="..." fallback-url="..."></growth-chat>
 │
-└── ZartisChatElement extends HTMLElement
+└── GrowthChatElement extends HTMLElement
     │  (Custom Element — registered by chat.js on load)
     │
     └── Shadow DOM (mode: "open")
@@ -1686,7 +1686,7 @@ The wrapper is ~100 lines of TypeScript. Its sole responsibility is bridging the
 Custom Element lifecycle to the React component tree.
 
 ```typescript
-class ZartisChatElement extends HTMLElement {
+class GrowthChatElement extends HTMLElement {
   private root: ReturnType<typeof createRoot> | null = null;
 
   connectedCallback() {
@@ -1715,7 +1715,7 @@ class ZartisChatElement extends HTMLElement {
   }
 }
 
-customElements.define("growth-chat", ZartisChatElement);
+customElements.define("growth-chat", GrowthChatElement);
 ```
 
 **React event delegation note (ADR-005):** React attaches event listeners to
@@ -1789,7 +1789,7 @@ or via a future `gdpr-notice` attribute on the element):**
 
 **Implementation:**
 
-- Stored in `sessionStorage` (key: `zartis_chat_gdpr_acknowledged`) — not
+- Stored in `sessionStorage` (key: `growth_chat_gdpr_acknowledged`) — not
   `localStorage`, so it resets on each browser session.
 - The message input is disabled until the visitor clicks "Got it" or equivalent.
 - No personal data is transmitted to the Chat API before the notice is
@@ -1985,4 +1985,4 @@ injected by Vite at build time via `define`.
 
 ---
 
-*Engineering concern resolved by this section: EC-07 (graceful degradation fallback destination — the fallback is a UI state displaying a link to `fallback-url`,which points to the existing Zartis contact form or any external form URL. No SMTP, no embedded form, no infrastructure dependency. The path is completely independent of the AI backend).*
+*Engineering concern resolved by this section: EC-07 (graceful degradation fallback destination — the fallback is a UI state displaying a link to `fallback-url`,which points to the existing company contact form or any external form URL. No SMTP, no embedded form, no infrastructure dependency. The path is completely independent of the AI backend).*

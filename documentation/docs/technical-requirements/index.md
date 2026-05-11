@@ -2,7 +2,7 @@
 
 ## AI-Powered Lead Qualification Chat
 
-**Project:** Zartis — Website Growth Chat
+**Project:** AI-powered lead qualification chat
 **Version:** 0.1
 **Status:** `Draft`
 **Last updated:** 2026-05-06
@@ -22,7 +22,7 @@
 
 ### 1.1 Purpose
 
-This document specifies the technical requirements for the Zartis AI-powered lead qualification chat. It translates the product requirements defined in the PRD into precise technical specifications that the engineering team can implement directly. It resolves the open engineering concerns (EC-01 through EC-13) identified in the Engineering Review, and defines the contracts — schemas, interfaces, logic, and configuration — that govern the system's behaviour.
+This document specifies the technical requirements for the company AI-powered lead qualification chat. It translates the product requirements defined in the PRD into precise technical specifications that the engineering team can implement directly. It resolves the open engineering concerns (EC-01 through EC-13) identified in the Engineering Review, and defines the contracts — schemas, interfaces, logic, and configuration — that govern the system's behaviour.
 
 This document is the authoritative technical specification. Any change to the architecture described here requires a corresponding ADR and a version increment to this document.
 
@@ -194,4 +194,4 @@ rather than repeating inline definitions.
 
 ---
 
-*Este TRD es la especificación técnica autoritativa del sistema de chat de cualificación de leads de Zartis. Debe mantenerse actualizado a medida que se toman e implementan decisiones. Cualquier cambio que afecte a la arquitectura aquí descrita requiere un ADR correspondiente y un incremento de versión en este documento.*
+*Este TRD es la especificación técnica autoritativa del sistema de chat de cualificación de leads. Debe mantenerse actualizado a medida que se toman e implementan decisiones. Cualquier cambio que afecte a la arquitectura aquí descrita requiere un ADR correspondiente y un incremento de versión en este documento.*

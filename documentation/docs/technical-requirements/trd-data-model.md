@@ -1,5 +1,5 @@
 ---
-description: "Data models for the Zartis AI-powered lead qualification chat — canonical schemas for SessionState, QualificationState, ContextPacket, HandoffRecord, Message, and KnowledgeChunk, with PII classification, retention rules, and database DDL."
+description: "Data models for the company AI-powered lead qualification chat — canonical schemas for SessionState, QualificationState, ContextPacket, HandoffRecord, Message, and KnowledgeChunk, with PII classification, retention rules, and database DDL."
 ---
 
 # Data Models
@@ -586,4 +586,4 @@ No visitor data reaches the backend before acknowledgement.
 
 ---
 
-*This section is the authoritative schema reference for the Zartis lead qualification chat. Any change to a schema defined here requires a version increment to this document and, if the change affects a database table, a corresponding migration script.*
+*This section is the authoritative schema reference for the company lead qualification chat. Any change to a schema defined here requires a version increment to this document and, if the change affects a database table, a corresponding migration script.*

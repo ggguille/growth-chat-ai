@@ -13,13 +13,13 @@ description: "ADR-005: Decision to use @assistant-ui/react wrapped as a Custom E
 
 ## Context
 
-The chat system requires a frontend widget that is embedded on the Zartis landing page and must integrate with any web stack the host site uses. Building a chat widget from scratch is solved work — streaming token rendering, auto-scroll, accessibility, typing indicators, and responsive layout are well-understood problems that several mature open source libraries already handle. The engineering value of this project is in the backend: the LangGraph qualification graph, the RAG layer, and the handoff logic. The widget is a delivery vehicle for that backend, not a differentiator in itself.
+The chat system requires a frontend widget that is embedded on the company landing page and must integrate with any web stack the host site uses. Building a chat widget from scratch is solved work — streaming token rendering, auto-scroll, accessibility, typing indicators, and responsive layout are well-understood problems that several mature open source libraries already handle. The engineering value of this project is in the backend: the LangGraph qualification graph, the RAG layer, and the handoff logic. The widget is a delivery vehicle for that backend, not a differentiator in itself.
 
 Three requirements shape the widget decision:
 
 1. **Open source with a permissive licence** — the widget must be freely modifiable and deployable without commercial restriction.
 2. **React-based** — the team wants to build on a mainstream component model that is easy to extend, restyle, and reason about.
-3. **Integrates into any host site without framework coupling** — the Zartis site stack is not specified; the widget must work on WordPress, Webflow, Next.js, or static HTML with equal ease and without requiring the host page to have React installed.
+3. **Integrates into any host site without framework coupling** — the company site stack is not specified; the widget must work on WordPress, Webflow, Next.js, or static HTML with equal ease and without requiring the host page to have React installed.
 
 A fourth requirement flows from the PRD: the widget must render streaming tokens
 in real time (TTFT < 3s, PRD NFR 6.1), which rules out any approach that buffers
@@ -104,7 +104,7 @@ The complete integration is two lines of HTML:
 <growth-chat api-url="https://api.domain.com/chat"></growth-chat>
 ```
 
-The `chat.js` bundle is served from the Zartis CDN. It registers the custom
+The `chat.js` bundle is served from the company CDN. It registers the custom
 element and self-initialises. No npm install, no build step, no framework
 requirement on the host side.
 
@@ -167,7 +167,7 @@ requirement on the host side.
   engineers before Phase 2 integration begins.
 - If the host site uses a strict Content Security Policy, the CSP must explicitly
   allow loading scripts from the widget CDN origin. This is a deployment concern
-  for the Zartis marketing team, not an engineering constraint on the widget itself.
+  for the company marketing team, not an engineering constraint on the widget itself.
 
 ---
 

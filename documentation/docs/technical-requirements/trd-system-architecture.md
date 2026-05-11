@@ -1,5 +1,5 @@
 ---
-description: "Eight-component architecture, component responsibilities, and happy-path data flow for the Zartis AI-powered lead qualification chat."
+description: "Eight-component architecture, component responsibilities, and happy-path data flow for the company AI-powered lead qualification chat."
 ---
 
 # System Architecture
@@ -69,7 +69,7 @@ flowchart TD
 
 | Component | Responsibility | Technology | References |
 | --- | --- | --- | --- |
-| Chat Widget | Embeds on the Zartis website; renders the conversation UI with streaming token display; shows GDPR data notice on first interaction; falls back to the contact form if the AI backend is unavailable | Custom JS / framework TBD | ADR (pending) |
+| Chat Widget | Embeds on the company website; renders the conversation UI with streaming token display; shows GDPR data notice on first interaction; falls back to the contact form if the AI backend is unavailable | Custom JS / framework TBD | ADR (pending) |
 | Fallback Contact Form | Captures visitor name and email when the AI service is unavailable; submits via a path independent of the AI backend | Static endpoint / third-party form service | EC-07 |
 | Chat API | Authenticates the request, initiates or resumes a LangGraph session, pipes the token stream to the HTTP response | Backend API layer | ADR (pending) |
 | Conversation Orchestrator | Controls the full session lifecycle: qualification state updates, RAG triage routing, response generation, stall detection, escalation trigger | LangGraph (`StateGraph`) | ADR-002 |
