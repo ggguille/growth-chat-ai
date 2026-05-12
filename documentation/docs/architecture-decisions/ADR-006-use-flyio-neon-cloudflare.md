@@ -211,6 +211,19 @@ enterprise-grade infrastructure becomes justified.
   forwarding is configured. The FastAPI application must read
   `CF-Connecting-IP` (not `X-Forwarded-For`) for per-IP rate limiting in
   `slowapi` to work correctly at the session layer.
+- **Neon free tier PITR covers 24 hours only.** Point-in-time recovery on
+  Neon's free tier is limited to a 24-hour window. The PRD requires 90-day
+  conversation retention (§6.3). To bridge this gap, a daily `pg_dump` of
+  the `checkpoints`, `checkpoint_writes`, `handoff_records`, and `messages`
+  tables is written to Tigris object storage as a compressed archive and
+  retained for 90 days. This is implemented as a scheduled Fly Machine
+  (cron job) running `pg_dump | gzip | tigris put`. In the event of
+  catastrophic data loss beyond the 24-hour PITR window, recovery requires
+  restoring from the most recent daily dump — with up to 24 hours of
+  conversation data lost. This is an accepted risk for the MVP. If the
+  system enters production with SLA requirements, upgrading to Neon Launch
+  plan (~$19/month, 7-day PITR) or Neon Scale plan (longer PITR) is the
+  remediation path.
 
 ### Constraints on future decisions
 
@@ -238,6 +251,13 @@ enterprise-grade infrastructure becomes justified.
   VPC setup, ALB configuration, ECS task definition, and AWS WAF rule
   replication of the Cloudflare rules — estimated 1–2 days. No application code
   changes are required.
+- **Daily backup cron job:** a separate Fly Machine running on a daily schedule
+  executes `pg_dump | gzip` against the Neon database and writes the archive to
+  Tigris. Required environment variables: `DATABASE_URL` (shared with the API
+  Machine), `TIGRIS_BUCKET_NAME`, `TIGRIS_ACCESS_KEY_ID`,
+  `TIGRIS_SECRET_ACCESS_KEY`. Backup archives must be retained in Tigris for
+  90 days (Tigris object lifecycle policy). The cron Machine must be deployed
+  as part of the initial deployment runbook.
 
 ---
 
@@ -267,6 +287,9 @@ enterprise-grade infrastructure becomes justified.
 
 This decision should be revisited if:
 
+- The daily `pg_dump` backup to Tigris fails more than twice in any 7-day
+  period — at that point, upgrading to Neon Launch plan (7-day PITR) should
+  be evaluated as a more reliable backup strategy.
 - Monthly infrastructure cost on Fly.io + Neon exceeds $100 USD — at that point
   the cost differential with AWS Fargate narrows and the broader AWS ecosystem
   becomes more competitive.
