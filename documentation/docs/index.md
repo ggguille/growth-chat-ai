@@ -34,4 +34,7 @@ React widget embedded on the company landing page. Connects to the Agent API.
 - **[Discovery Artifact](./discovery-artifact.md)** — Problem space, open questions, and design considerations
 - **[Problem Statement](./problem-statement.md)** — Formal problem definition and MVP scope, the authoritative input to the PRD
 - **[Product Requirements Document](./product-requirements/)** — Feature scope, requirements, technical stack candidates, and open questions for the MVP
+- **[Considerations](./considerations/)** — Design considerations for chat behaviour, qualification signals, and human handoff
 - **[User Personas](./user-personas/)** — Target and negative visitor personas for the company website chat
+- **[Architecture Decisions](./architecture-decisions/)** — Immutable records of key technical decisions (ADRs)
+- **[Technical Requirements](./technical-requirements/)** — Technical specifications covering system architecture, components, data models, and API
