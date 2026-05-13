@@ -102,14 +102,13 @@ Fallback form resolution (EC-07), and internal component contracts
 
 ## 6. Infrastructure Requirements
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Esta sección cubrirá:
->
-> - Compute: requisitos de instancia para backend y vector store
-> - Storage: pgvector sizing, retención de conversaciones (90 días según PRD), backup
-> - Networking: TLS 1.3, CORS para el widget embebido
-> - **Environment variables completas** — todas las variables de configuración requeridas, incluyendo RAG relevance threshold (resuelve EC-05), sliding window size (resuelve EC-13), y cost limits (resuelve EC-12)
+Compute sizing for the Chat API and Backup Cron machines (Fly.io), storage
+configuration and backup strategy for Neon Postgres and pgvector, TLS and CORS
+networking requirements, and the consolidated environment variable reference —
+all variables consumed by the system grouped by component, with required/optional
+status, defaults, and the engineering concerns they resolve (EC-05, EC-12, EC-13).
+
+→ [Infrastructure Requirements](./trd-infrastructure-requirements)
 
 ---
 
