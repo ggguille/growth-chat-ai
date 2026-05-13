@@ -128,7 +128,7 @@ export default defineConfig({
     {
       title: 'Technical Requirements',
       path: '/technical-requirements',
-      icon: 'file-text',
+      icon: 'cpu',
       children: [
         { title: 'System Architecture', path: '/technical-requirements/trd-system-architecture' },
         { title: 'Component Specifications', path: '/technical-requirements/trd-component-specifications' },
@@ -136,6 +136,7 @@ export default defineConfig({
         { title: 'API Specifications', path: '/technical-requirements/trd-api-specification' },
         { title: 'Infrastructure Requirements', path: '/technical-requirements/trd-infrastructure-requirements' },
         { title: 'Performance Requirements', path: '/technical-requirements/trd-performance-requirements' },
+        { title: 'Security Requirements', path: '/technical-requirements/trd-security-requirements' },
       ]
     },
     { title: 'Conversation Design', path: '/conversation-design-document', icon: 'message-square' },

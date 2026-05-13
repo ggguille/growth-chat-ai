@@ -124,15 +124,12 @@ traffic — including the 10-concurrent-session target and success criteria (res
 
 ## 8. Security Requirements
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Esta sección cubrirá:
->
-> - TLS 1.3 en tránsito
-> - Scrubbing de PII antes de enviar historial al LLM API
-> - Rate limiting por IP y por sesión (resuelve EC-12 — valores concretos)
-> - GDPR: data notice en primer turno, política de retención 90 días, estado del DPA con Anthropic (EC-08 — hard blocker para producción)
-> - No almacenamiento de PII en logs crudos
+Transport security (TLS 1.3, HSTS, AES-256 at rest), widget-to-API authentication via static key,
+PII scrubbing rules before Anthropic API calls, rate limiting per IP and per session (resolves EC-12),
+GDPR compliance (data notice, 90-day retention, Anthropic DPA — resolves EC-08), and secret management
+via Fly.io secrets.
+
+→ [Security Requirements](./trd-security-requirements)
 
 ---
 

@@ -150,7 +150,7 @@ application level.
 ```python
 # FastAPI CORS configuration
 origins = [
-    os.environ["ALLOWED_ORIGIN"],   # e.g. "https://www.zartis.com"
+    os.environ["ALLOWED_ORIGIN"],   # e.g. "https://www.company.com"
 ]
 
 app.add_middleware(
@@ -287,7 +287,7 @@ start if unset.
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `ALLOWED_ORIGIN` | **Yes** | — | CORS allowed origin for the host website. Example: `https://www.zartis.com`. Must not be `*` in staging or production. |
+| `ALLOWED_ORIGIN` | **Yes** | — | CORS allowed origin for the host website. Example: `https://www.company.com`. Must not be `*` in staging or production. |
 
 ---
 
