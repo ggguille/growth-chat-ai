@@ -138,6 +138,7 @@ export default defineConfig({
         { title: 'Performance Requirements', path: '/technical-requirements/trd-performance-requirements' },
       ]
     },
+    { title: 'Conversation Design', path: '/conversation-design-document', icon: 'message-square' },
   ],
 
   // --- Plugins ---

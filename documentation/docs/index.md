@@ -38,3 +38,4 @@ React widget embedded on the company landing page. Connects to the Agent API.
 - **[User Personas](./user-personas/)** — Target and negative visitor personas for the company website chat
 - **[Architecture Decisions](./architecture-decisions/)** — Immutable records of key technical decisions (ADRs)
 - **[Technical Requirements](./technical-requirements/)** — Technical specifications covering system architecture, components, data models, and API
+- **[Conversation Design](./conversation-design-document.md)** — Conversation principles, stage model, persona rules, dialogue flows, and QA test suite for the chat agent
