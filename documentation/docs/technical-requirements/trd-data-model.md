@@ -1,5 +1,5 @@
 ---
-description: "Data models for the company AI-powered lead qualification chat — canonical schemas for SessionState, QualificationState, ContextPacket, HandoffRecord, Message, and KnowledgeChunk, with PII classification, retention rules, and database DDL."
+description: "TRD Section 4 — Data models for the company AI-powered lead qualification chat — canonical schemas for SessionState, QualificationState, ContextPacket, HandoffRecord, Message, and KnowledgeChunk, with PII classification, retention rules, and database DDL."
 ---
 
 # Data Models

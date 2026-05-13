@@ -114,14 +114,11 @@ status, defaults, and the engineering concerns they resolve (EC-05, EC-12, EC-13
 
 ## 7. Performance Requirements
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Esta sección definirá:
->
-> - Target TTFT p95 < 3s con streaming habilitado (resuelve EC-09 — confirmado en PRD como TTFT, no full response)
-> - **Nivel de carga para el load test** — número de sesiones concurrentes sobre las que se mide el p95 (pendiente de definir, requerido por el DoD)
-> - Presupuesto de latencia por etapa del pipeline RAG: embedding + vector search + LLM TTFT + network
-> - Widget load time < 1s no-blocking
+TTFT and retrieval latency targets (p95), per-stage latency budget validating the 3s end-to-end target,
+widget load time and bundle size constraints, and a stress test plan dimensioned against observed site
+traffic — including the 10-concurrent-session target and success criteria (resolves EC-09).
+
+→ [Performance Requirements](./trd-performance-requirements)
 
 ---
 

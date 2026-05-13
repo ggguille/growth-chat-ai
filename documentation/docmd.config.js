@@ -135,6 +135,7 @@ export default defineConfig({
         { title: 'Data Models', path: '/technical-requirements/trd-data-model' },
         { title: 'API Specifications', path: '/technical-requirements/trd-api-specification' },
         { title: 'Infrastructure Requirements', path: '/technical-requirements/trd-infrastructure-requirements' },
+        { title: 'Performance Requirements', path: '/technical-requirements/trd-performance-requirements' },
       ]
     },
   ],

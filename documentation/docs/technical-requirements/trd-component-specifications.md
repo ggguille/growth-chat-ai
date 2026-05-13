@@ -1,5 +1,5 @@
 ---
-description: "Conversation Orchestrator and Qualification State Machine specifications — graph structure, node definitions, SessionState schema, transition rules, and session lifecycle."
+description: "TRD Section 3 — Conversation Orchestrator and Qualification State Machine specifications — graph structure, node definitions, SessionState schema, transition rules, and session lifecycle."
 ---
 
 # Component Specifications

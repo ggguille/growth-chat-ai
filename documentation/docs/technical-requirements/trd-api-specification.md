@@ -1,5 +1,5 @@
 ---
-description: "API Specifications for the company AI-powered lead qualification chat: Chat endpoint (SSE streaming), Handoff delivery interfaces (Slack, CRM), Fallback form resolution, and Internal component contracts."
+description: "TRD Section 5 — API Specifications for the company AI-powered lead qualification chat: Chat endpoint (SSE streaming), Handoff delivery interfaces (Slack, CRM), Fallback form resolution, and Internal component contracts."
 ---
 
 # API Specifications

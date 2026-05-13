@@ -1,5 +1,5 @@
 ---
-description: "Eight-component architecture, component responsibilities, and happy-path data flow for the company AI-powered lead qualification chat."
+description: "TRD Section 2 — Eight-component architecture, component responsibilities, and happy-path data flow for the company AI-powered lead qualification chat."
 ---
 
 # System Architecture
