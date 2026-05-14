@@ -25,6 +25,8 @@ Architecture Decision Records (ADRs) capture significant technical decisions mad
 | [ADR-004](./ADR-004-use-memorysaver-and-postgres-for-state-persistence.md) | Use MemorySaver for development and PostgreSQL checkpointer for production state persistence | Accepted | May 2026 | AI Engineering Lead |
 | [ADR-005](./ADR-005-use-chat-widget.md) | Use assistant-ui wrapped as a Web Component for the chat widget | Accepted | May 2026 | AI Engineering Lead |
 | [ADR-006](./ADR-006-use-flyio-neon-cloudflare.md) | Use Fly.io, Neon, and Cloudflare for the MVP Infrastructure | Accepted | May 2026 | Engineering Lead |
+| [ADR-007](./ADR-007-use-langfuse-for-llm-observability.md) | Use Langfuse Cloud as the LLM Observability Platform | Accepted | May 2026 | AI Engineering Lead |
+| [ADR-008](./ADR-008-use-betterstack-for-application-logging.md) | Use Better Stack for Application Logging and Uptime Monitoring | Accepted | May 2026 | Engineering Lead |
 
 ---
 

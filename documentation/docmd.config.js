@@ -123,6 +123,8 @@ export default defineConfig({
         { title: 'ADR-004 — State Persistence', path: '/architecture-decisions/ADR-004-use-memorysaver-and-postgres-for-state-persistence' },
         { title: 'ADR-005 — Chat Widget', path: '/architecture-decisions/ADR-005-use-chat-widget' },
         { title: 'ADR-006 — MVP Infrastructure', path: '/architecture-decisions/ADR-006-use-flyio-neon-cloudflare' },
+        { title: 'ADR-007 — LLM Observability', path: '/architecture-decisions/ADR-007-use-langfuse-for-llm-observability' },
+        { title: 'ADR-008 — Application Logging', path: '/architecture-decisions/ADR-008-use-betterstack-for-application-logging' },
       ]
     },
     {
