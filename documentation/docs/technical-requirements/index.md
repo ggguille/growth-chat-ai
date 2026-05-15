@@ -151,21 +151,35 @@ A consolidated failure mode table spanning all system components — Chat API, C
 
 ## 11. Engineering Concerns Resolution
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Esta sección listará cada EC del Engineering Review con referencia explícita a la sección del TRD que lo resuelve. Cubrirá EC-01 a EC-13.
+This section maps each of the 13 engineering concerns from the Engineering Review (April 2026) to the TRD section that resolves it. Concerns resolved in the PRD are confirmed here with a reference to the resulting implementation. Concerns that required no TRD implementation section are marked accordingly.
+
+| EC | Title | Resolved in | Resolution |
+| --- | --- | --- | --- |
+| EC-01 | RAG triage mechanism not specified | §3 — Component Specifications (RAG Triage Module) | Resolved via tool-use on the main LLM call (Option C from the Engineering Review analysis). The `generate_response` node exposes `retrieve_knowledge` as a tool to Claude Haiku 4.5 on every turn. The LLM decides when to invoke it; the RAG Triage Module executes only when called. No separate classifier. No keyword matching. |
+| EC-02 | Qualification state object persistence backend not specified | §3 — Component Specifications (Qualification State Machine); §4 — Data Models; ADR-004 | Resolved in ADR-004: `MemorySaver` for local development; `langgraph-checkpoint-postgres` on Neon Postgres for production. `SessionState` is persisted on every turn via the `BaseCheckpointSaver` interface. Survives process restarts. EU data residency satisfied by Neon EU region. |
+| EC-03 | Programmatic escalation trigger mechanism not specified | §3 — Component Specifications (Conversation Orchestrator — `score_router` node) | The `score_router` node evaluates `QualificationState` after every `update_state`. When the hot-lead threshold is met (Problem + Authority + one additional dimension confirmed), the graph routes to `propose_handoff` without LLM participation. The LLM receives the escalation as an instruction to generate the proposal — it does not decide to escalate. |
+| EC-04 | Business hours detection edge cases (DST, public holidays) | §3 — Component Specifications (Business Hours Detection Module) | Python `zoneinfo` (stdlib 3.9+) with IANA identifier `Europe/Madrid` handles DST automatically — no hardcoded UTC offset. No public holiday awareness in v1; documented as a known limitation. Configurable holiday calendar is a v2 item. |
+| EC-05 | Relevance threshold undefined — must be configurable | §3 — Component Specifications (RAG Triage Module); §6 — Infrastructure Requirements (env vars) | Resolved in the PRD (FR-17 updated) and specified here: `RAG_RELEVANCE_THRESHOLD` is a required environment variable with no hardcoded default. Provisional value 0.70 for Phase 1–2 development only. Final value determined during Phase 4 RAG tuning once the production knowledge base is available. |
+| EC-06 | "Qualification progress" not precisely defined for stall detection | §3 — Component Specifications (Conversation Orchestrator — stall detection) | Resolved in the PRD (FR-07 updated) and implemented here: stall is defined as 6+ turns without `score_router` triggering a `propose_handoff`. The `stall_turn_counter` resets when a Stage 3 proposal is issued. Configurable via `STALL_TURN_THRESHOLD` (default: `6`). |
+| EC-07 | Graceful degradation form submission destination not specified | §5 — API Specifications (Fallback Form); §10 — Resilience and Degradation (AI Backend Unavailable) | Resolved by design: there is no fallback form endpoint in this system. When the AI backend is unavailable, the widget activates a permanent fallback state displaying a link to the `fallback-url` HTML attribute, which points to the existing company contact form or any external URL. The submission path has zero dependency on the AI backend. |
+| EC-08 | GDPR DPA with LLM provider required | §8 — Security Requirements (GDPR Compliance) | DPA required with all five data processors: Anthropic (LLM), OpenAI (embeddings), Fly.io (compute), Neon (storage), Cloudflare (edge/CDN). Sign-off on all five DPAs is a go/no-go condition for production traffic with real visitor data. Engineering may proceed against synthetic test data before DPAs are in place. |
+| EC-09 | Performance target ambiguity: TTFT vs. full response | §7 — Performance Requirements | Resolved in the PRD (DoD updated) and specified in §7: the target is p95 TTFT < 3s, measured from API request sent to first token received at the client. Streaming is enabled from day one. Full-response latency is not the target metric. |
+| EC-10 | Content audit (OQ-01) must run as parallel workstream, not prerequisite | Resolved in PRD — no TRD implementation section | Resolved entirely in the PRD: OQ-01 is a parallel workstream with a two-week hard deadline from kickoff. Engineering builds the ingestion pipeline and RAG architecture against a synthetic placeholder knowledge base. Real content replaces the placeholder when delivered. Does not block engineering start. |
+| EC-11 | DoD hallucination test count (20) insufficient | Resolved in PRD — no TRD implementation section | Resolved in the PRD: the DoD now requires 70–80 structured test conversations covering all target personas plus adversarial cases. Belongs to QA planning; no TRD implementation section required. |
+| EC-12 | Missing: API rate limiting, cost controls, abuse prevention | §8 — Security Requirements (Rate Limiting and Cost Controls) | Per-IP rate limiting via Cloudflare Rules (30 req / 10 min — challenge; 60 req / 10 min — block). Per-session rate limiting via `slowapi` (20 messages / 5 min). Per-session token budget via `MAX_TOKENS_PER_SESSION`. Monthly cost alerting via `MONTHLY_COST_CAP_USD`. |
+| EC-13 | Missing: conversation turn limit and context window strategy | §3 — Component Specifications (Orchestrator config — `CONTEXT_WINDOW_TURNS`); §10 — Resilience and Degradation (Context Window Management) | Sliding window, configurable via `CONTEXT_WINDOW_TURNS` (default: `10` exchanges). `QualificationState` is always injected in full regardless of window position, preserving qualification context across eviction. Only raw conversation history is subject to eviction. |
 
 ---
 
 ## 12. Open Questions
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Preguntas abiertas que bloquean secciones específicas del TRD:
->
-> - OQ-04: CRM platform por confirmar — bloquea sección 5.2
-> - OQ-05: Topic restrictions list por recibir — bloquea especificación del system prompt
-> - Nivel de carga para load test (EC-09) — bloquea sección 7
+The following questions remain unresolved. Each blocks a specific TRD section or build phase and requires an owner decision before the dependent work can begin.
+
+| # | Question | Owner | Blocks | Needed by |
+| --- | --- | --- | --- | --- |
+| OQ-04 | Is there an existing CRM in use, and if so which platform? CRM integration is a Must requirement for v1 (M10). Without a confirmed platform it is not possible to define the CRM adapter, the lead record schema, or the abstract interface extension in §5.2. | ops / commercial | §5.2 — CRM Interface; Phase 3 build (Weeks 5–6) | Before build start (Week 0) |
+| OQ-05 | Are there specific topics that the system must never discuss, beyond pricing and internal operations? This list determines the topic restriction rules in the system prompt. Without it the prompt cannot be finalised and the Phase 5 QA test suite cannot be completed. | leadership | System prompt (Phase 2); QA test suite (Phase 5) | Before Phase 2 start |
+| OQ-06 | What is the production `fallback-url` value? The chat widget requires this attribute in the embed tag. If absent, the widget enters a degraded fallback state without a link to the contact form — functional but suboptimal. | PM / web ops | Chat Widget embed (Phase 1 frontend) | Before widget deploy to staging |
 
 ---
 
@@ -174,7 +188,8 @@ A consolidated failure mode table spanning all system components — Chat API, C
 | Version | Date | Author | Changes |
 | --- | --- | --- | --- |
 | 0.1 | 2026-05-06 | AI Engineering Lead | Initial draft — header and scope |
+| 0.2 | 2026-05-15 | AI Engineering Lead | Completed all sections |
 
 ---
 
-*Este TRD es la especificación técnica autoritativa del sistema de chat de cualificación de leads. Debe mantenerse actualizado a medida que se toman e implementan decisiones. Cualquier cambio que afecte a la arquitectura aquí descrita requiere un ADR correspondiente y un incremento de versión en este documento.*
+*This TRD is the authoritative technical specification for the company lead qualification chat system. It must be kept up to date as decisions are made and implemented. Any change that affects the architecture described here requires a corresponding ADR and a version increment to this document.*
