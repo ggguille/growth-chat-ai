@@ -27,6 +27,7 @@ Architecture Decision Records (ADRs) capture significant technical decisions mad
 | [ADR-006](./ADR-006-use-flyio-neon-cloudflare.md) | Use Fly.io, Neon, and Cloudflare for the MVP Infrastructure | Accepted | May 2026 | Engineering Lead |
 | [ADR-007](./ADR-007-use-langfuse-for-llm-observability.md) | Use Langfuse Cloud as the LLM Observability Platform | Accepted | May 2026 | AI Engineering Lead |
 | [ADR-008](./ADR-008-use-betterstack-for-application-logging.md) | Use Better Stack for Application Logging and Uptime Monitoring | Accepted | May 2026 | Engineering Lead |
+| [ADR-009](./ADR-009-use-postgres-leads-table-as-crm-substitute.md) | Use PostgreSQL leads table as CRM substitute | Accepted | May 2026 | AI Engineering Lead |
 
 ---
 

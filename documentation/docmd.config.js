@@ -125,6 +125,7 @@ export default defineConfig({
         { title: 'ADR-006 — MVP Infrastructure', path: '/architecture-decisions/ADR-006-use-flyio-neon-cloudflare' },
         { title: 'ADR-007 — LLM Observability', path: '/architecture-decisions/ADR-007-use-langfuse-for-llm-observability' },
         { title: 'ADR-008 — Application Logging', path: '/architecture-decisions/ADR-008-use-betterstack-for-application-logging' },
+        { title: 'ADR-009 — CRM Substitute', path: '/architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute' },
       ]
     },
     {
