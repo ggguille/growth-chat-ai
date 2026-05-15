@@ -530,6 +530,8 @@ All open questions are resolved. Entries are retained for traceability.
 | [chat-behaviour.md](../considerations/chat-behaviour.md) | Conversation model and lead capture principles |
 | [qualification-signals.md](../considerations/qualification-signals.md) | Qualification dimensions, scoring model, escalation logic |
 | [human-handoff.md](../considerations/human-handoff.md) | Handoff triggers, execution sequences, escalation matrix |
+| [Technical Requirements Document (TRD)](../technical-requirements/index.md) | Authoritative reference for all technology decisions and implementation specifications |
+| [Conversation Design Document (CDD)](../conversation-design-document.md) | Conversation design, prohibited behaviours, evaluation framework |
 
 ---
 
