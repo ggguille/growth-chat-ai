@@ -8,7 +8,7 @@ description: "Product Requirements Document for the AI-powered lead qualificatio
 
 **Project:** AI-powered lead qualification chat
 **Version:** 1.0
-**Status:** Final — stakeholder sign-off complete, engineering review complete; TRD and CDD complete (May 2026); two external dependencies outstanding (OQ-04, OQ-05)
+**Status:** Final — stakeholder sign-off complete, engineering review complete; TRD and CDD complete (May 2026); all open questions resolved; development start gates fully satisfied
 **Last updated:** May 2026
 **Owner:** Product / AI Engineering Team
 
@@ -176,8 +176,9 @@ when maturity signals are detected.
 When a hot lead is detected during business hours, the chat proposes a
 connection to the company team and collects the visitor's email. It delivers
 the context packet to two channels simultaneously: a Slack message to
-`#new-leads` (for immediate visibility) and a new lead record in the CRM (for
-record and follow-up tracking). Email to `sales@` is a fallback only if both
+`#new-leads` (for immediate visibility) and a new row in the `leads` table in the
+existing PostgreSQL instance via `PostgresCRMClient` (for record and follow-up
+tracking — see [ADR-009](../architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute.md)). Email to `sales@` is a fallback only if both
 primary channels are unavailable. The sales team follows up by email or phone
 within 2 business hours of receiving the Slack notification. No self-serve
 booking tool is used — all scheduling is handled by the sales rep directly.
@@ -347,7 +348,7 @@ rep directly — no Calendly or equivalent integration in v1.
 | --- | --- |
 | Chat response latency (p95) | < 3 seconds from visitor message to first token displayed |
 | Time to first meaningful response | < 5 seconds end-to-end |
-| Sales notification delivery | Slack + CRM delivery on hot lead detection (best-effort, no hard SLA for MVP) |
+| Sales notification delivery | Slack notification + `leads` table insert on hot lead detection (best-effort, no hard SLA for MVP) |
 | Widget load time | < 1 second on page load, non-blocking |
 
 ### 6.2 Availability
@@ -424,18 +425,16 @@ and recorded in the corresponding ADR.
 
 #### Notification and Lead Capture
 
-*Decision: Both Slack webhook (`#new-leads`) and CRM integration are required in V1 — Slack for speed, CRM for record (see M5, M10, FR-19). Email to `sales@` is fallback only on dual-channel failure. No self-serve booking tool — all scheduling handled by the sales rep directly. CRM platform unconfirmed pending **OQ-04** (external dependency — blocks Phase 3 build). CRM adapter ADR to be written once OQ-04 is resolved.*
+*Decision: Both Slack webhook (`#new-leads`) and `PostgresCRMClient` are required in V1 — Slack for speed, `leads` table for record (see M5, M10, FR-19). Email to `sales@` is fallback only on dual-channel failure. No self-serve booking tool — all scheduling handled by the sales rep directly. OQ-04 resolved by **[ADR-009](../architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute.md)** (Accepted 2026-05-15): no external CRM in v1; `PostgresCRMClient` persists the full `ContextPacket` to the `leads` table in the existing Neon instance. The `CRMClient` interface is preserved — a `HubSpotCRMClient` or equivalent is a drop-in swap in v2.*
 
 | Candidate | Strengths | Weaknesses |
 | --- | --- | --- |
 | Slack webhook | Instant, zero cost, sales team already in Slack | No structured data, hard to query later, not a CRM |
 | Email (SMTP / SendGrid) | Universal, structured template possible, easy to route | Slower than Slack, higher chance of being missed |
 | Zapier / Make webhook | No-code routing to any destination, easy to change target | External dependency, adds latency, not suitable for real-time handoff |
-| Native CRM integration | Structured lead record from day one | Requires CRM selection (OQ-04 unresolved), significant added complexity for MVP |
+| **PostgreSQL `leads` table (chosen)** | Reuses existing Neon instance; zero new services; structured, queryable lead records; `CRMClient` interface preserved for v2 swap | No CRM UI — records visible via SQL only; no pipeline automation |
 
-**Key evaluation criteria:** reliable delivery of the context packet (FR-13),
-operational simplicity for MVP. Slack and CRM are both required; the evaluation
-focuses on which CRM and which Slack integration approach.
+**Decision:** Slack webhook for real-time notification + `PostgresCRMClient` / `leads` table for structured lead persistence. Evaluation criteria met: reliable context packet delivery (FR-13), zero new infrastructure, operational simplicity for MVP.
 
 ---
 
@@ -504,14 +503,14 @@ A feature is complete when it meets all of the following:
 - [ ] p95 TTFT (time-to-first-token) < 3 seconds verified under a stress test of 10 concurrent sessions sustained for 10 minutes (TRD Section 7 — ~40× expected peak production concurrency). Streaming must be enabled; full-response latency is not the target metric.
 - [ ] GDPR data notice displayed on first interaction
 - [ ] Graceful degradation tested (AI service down → fallback form)
-- [ ] Sales notification (Slack + CRM) received and verified end-to-end on hot lead detection
+- [ ] Sales notification verified end-to-end on hot lead detection: Slack message delivered to `#new-leads` and row inserted in `leads` table
 - [ ] Conversation end is consistently defined in code and analytics as: explicit close action, 15-minute inactivity timeout, or session expiry — all three cases fire the conversation-ended event with the correct termination type field.
 
 ---
 
 ## 9. Open Questions
 
-These questions remain unresolved and require input before or during development.
+All open questions are resolved. Entries are retained for traceability.
 
 | # | Question | Owner | Needed by |
 | --- | --- | --- | --- |

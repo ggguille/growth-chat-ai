@@ -7,7 +7,7 @@ description: "Engineering team review of the PRD for the AI-powered lead qualifi
 **Document type:** Engineering review
 **PRD reviewed:** [Product Requirements Document v1.0](./index.md)
 **Review date:** April 2026
-**Status:** TRD and CDD complete — development start gates satisfied; two external dependencies outstanding (OQ-04, OQ-05)
+**Status:** TRD and CDD complete — all development start gates satisfied; no external dependencies outstanding
 
 ---
 
@@ -43,7 +43,7 @@ description: "Engineering team review of the PRD for the AI-powered lead qualifi
 
 **Availability — Graceful degradation:** The fallback contact form must submit through a path independent of the AI backend. If the form submits to the same process that serves the AI, it is not a fallback — see EC-07.
 
-**Security — GDPR / LLM provider:** A Data Processing Agreement with the chosen LLM provider is a hard legal requirement before any real visitor data is sent to the API — see EC-08.
+**Security — GDPR / LLM provider:** This project processes synthetic test data only — no real visitor data is handled at any deployment phase. DPA execution is deferred to any future commercial deployment. See EC-08 for the full analysis and updated resolution.
 
 **Observability — Analytics event schema:** Defined at category level only (e.g. "contact captured"). The full event schema with field names and types must be specified in the TRD before implementation. Without it, the backend and frontend will log inconsistent shapes that break any downstream analytics. **PRD updated:** The observability section now explicitly requires the full field-level schema to be specified in the TRD before implementation.
 
@@ -86,7 +86,7 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 | EC-05 | Relevance threshold undefined — must be configurable | Resolved in TRD — Section 3.3; value via Phase 4 tuning |
 | EC-06 | "Qualification progress" not precisely defined for stall detection | Resolved in TRD — Section 3.1 |
 | EC-07 | Graceful degradation form submission destination not specified | Resolved in TRD — Section 10 |
-| EC-08 | GDPR DPA with LLM provider required | Requirements resolved in TRD Section 8.7; DPA execution pending — hard blocker for production |
+| EC-08 | GDPR DPA with LLM provider required | Resolved — project uses synthetic test data only; DPA execution deferred to future commercial deployment (TRD §8.7) |
 | EC-09 | Performance target ambiguity: TTFT vs. full response | Resolved in TRD — Section 7; load level defined (10 concurrent sessions) |
 | EC-10 | Content audit (OQ-01) must run as parallel workstream, not prerequisite | Resolved in PRD — OQ-01 updated |
 | EC-11 | DoD hallucination test count (20) insufficient | Resolved in CDD — Section 9 defines 80 structured test cases |
@@ -214,7 +214,7 @@ The DPA must cover: lawful processing purposes, EU data residency guarantee, sub
 
 **Blocker level:** Hard blocker for production launch.
 
-**Status:** Resolved in TRD — DPA requirements defined for all five processors (Anthropic, OpenAI, Cloudflare, Neon, Fly.io) in Section 8.7. EU data residency confirmed at every processing step (Fly.io `fra`, Neon `eu-central-1`, Anthropic EU endpoint, OpenAI EU endpoint). DPA execution is a go/no-go gate for production traffic — DPA sign-off must be recorded in the deployment checklist. **Execution is not yet confirmed and remains a production launch blocker.**
+**Status:** Resolved in TRD — DPA requirements and EU data residency defined for all five processors in Section 8.7. **Updated resolution (2026-05-15):** This project is an AI engineering study processing synthetic test data only. No real visitor data is handled at any build or staging phase. DPA execution is therefore not required for this project and is deferred to any future commercial deployment. Engineering may proceed through all phases — including staging deployment — without DPAs in place. If the system is extended to real visitor traffic, DPA sign-off with all five processors becomes a go/no-go condition and must be tracked separately at that time.
 
 ---
 
@@ -320,8 +320,8 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 - [x] ADR-002 completed: LangGraph selected as orchestration framework (Accepted April 2026)
 - [x] TRD drafted: covers EC-01, EC-02, EC-03, EC-04, EC-06, EC-07, EC-09, EC-12, EC-13 (completed May 2026)
 - [x] DoD updated: hallucination test count raised to 70–80; TTFT definition added (April 2026); CDD Section 9 defines 80 structured test cases
-- [ ] CRM platform confirmed (OQ-04) — engineering cannot build the handoff subsystem without this
-- [ ] Topic restrictions initial list received (OQ-05) — engineering cannot write the system prompt without this
+- [x] CRM platform confirmed (OQ-04) — resolved by ADR-009: no external CRM in v1; lead records persisted to `leads` table in existing PostgreSQL instance via `PostgresCRMClient`. Resolved 2026-05-15.
+- [x] Topic restriction policy resolved (OQ-05) — system is scope-bounded by KB and instruction layer; out-of-scope topics redirected without acknowledgement; no enumerated blocklist required. See [CDD §7](../conversation-design-document.md#conversation-design-document-7-prohibited-behaviours) (PB-28). Resolved 2026-05-15.
 
 ---
 
@@ -352,7 +352,7 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 Requires Phase 1 complete and ADR-001 resolved:
 
 - LLM integration with chosen provider
-- System prompt: three-stage model, persona tone, disqualification paths, pricing deflection, topic restrictions (OQ-05)
+- System prompt: three-stage model, persona tone, disqualification paths, pricing deflection, out-of-scope redirect behaviour (OQ-05 resolved — PB-28)
 - RAG triage mechanism via tool-use (EC-01, ADR-003)
 - RAG layer: embedding pipeline, vector store setup, ingestion tooling against placeholder knowledge base
 - Relevance threshold as configurable env variable (EC-05)
@@ -361,13 +361,13 @@ Requires Phase 1 complete and ADR-001 resolved:
 
 ### Phase 3 — Handoff and Integration (Weeks 5–6)
 
-Requires Phase 2 complete and CRM platform confirmed (OQ-04):
+Requires Phase 2 complete (OQ-04 resolved — [ADR-009](../architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute.md)):
 
 - Slack webhook integration (#new-leads)
-- CRM integration
+- `PostgresCRMClient` implementation — writes `ContextPacket` to `leads` table in existing Neon instance (ADR-009)
 - Outside-hours capture flow
 - Email fallback (sales@ for dual-channel failure)
-- End-to-end handoff test: hot lead detected → Slack + CRM delivered successfully
+- End-to-end handoff test: hot lead detected → Slack notification delivered + `leads` row inserted successfully
 
 ---
 
@@ -386,7 +386,7 @@ Requires real content deliverable from OQ-01:
 
 - Hallucination test suite: 70–80 structured conversations across all personas + adversarial cases (EC-11)
 - Performance load test: TTFT p95 < 3s (EC-09)
-- End-to-end handoff test: Slack + CRM delivery verified
+- End-to-end handoff test: Slack notification + `leads` table insert verified
 - Graceful degradation test: AI service down → fallback form captures lead independently
 - Analytics event audit: all defined events firing with correct schema
 - GDPR data notice verified on first interaction
@@ -395,7 +395,7 @@ Requires real content deliverable from OQ-01:
 
 ### Phase 6 — Launch Readiness
 
-- DPA with LLM provider signed (EC-08)
+- ~~DPA with LLM provider signed (EC-08)~~ — not required for this project (synthetic data only); deferred to future commercial deployment
 - Rate limiting and cost controls in place (EC-12)
 - Context window strategy and turn limit enforced (EC-13)
 - Monitoring and alerting configured
@@ -410,12 +410,12 @@ Requires real content deliverable from OQ-01:
 - [x] ADR-002 completed — LangGraph (Accepted April 2026)
 - [x] TRD drafted covering EC-01, EC-02, EC-03, EC-04, EC-06, EC-07, EC-09, EC-12, EC-13 (completed May 2026)
 - [x] DoD updated: hallucination test count raised to 70–80 and TTFT definition added (April 2026); CDD Section 9 defines 80 structured test cases
-- [ ] CRM platform confirmed — external dependency, blocks handoff subsystem build
-- [ ] Topic restrictions list received — external dependency, blocks system prompt
+- [x] CRM platform confirmed — ADR-009: `PostgresCRMClient` / `leads` table; no external CRM in v1 (resolved 2026-05-15)
+- [x] Topic restriction policy resolved — OQ-05: scope-bounded by KB and instruction layer; PB-28 in CDD §7 (resolved 2026-05-15)
 
 **Gates production launch:**
 
-- [ ] DPA with LLM provider signed (EC-08)
+- [x] ~~DPA with LLM provider signed (EC-08)~~ — not required; project uses synthetic test data only (resolved 2026-05-15)
 - [ ] Rate limiting and cost controls implemented (EC-12)
 - [ ] Real knowledge base ingested and threshold tuned (EC-05)
 - [ ] Hallucination test suite passing at 70–80 conversations (EC-11)
