@@ -139,6 +139,8 @@ export default defineConfig({
         { title: 'Infrastructure Requirements', path: '/technical-requirements/trd-infrastructure-requirements' },
         { title: 'Performance Requirements', path: '/technical-requirements/trd-performance-requirements' },
         { title: 'Security Requirements', path: '/technical-requirements/trd-security-requirements' },
+        { title: 'Observability', path: '/technical-requirements/trd-observability' },
+        { title: 'Resilience & Degradation', path: '/technical-requirements/trd-resilience-degradataion' },
       ]
     },
     { title: 'Conversation Design', path: '/conversation-design-document', icon: 'message-square' },

@@ -135,25 +135,17 @@ via Fly.io secrets.
 
 ## 9. Observability
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Esta sección definirá:
->
-> - **9.1 Logging** — eventos, niveles, campos y retención
-> - **9.2 Metrics** — counters, gauges e histogramas con thresholds de alerta
-> - **9.3 Analytics Event Schema** — schema completo a nivel de campo para todos los eventos definidos en el PRD (chat_opened, first_message_sent, qualification_state_change, contact_captured, escalation_triggered, conversation_ended), incluyendo field names, tipos y quién los dispara (frontend vs backend). Requerido antes de implementación para garantizar shapes consistentes.
+Structured JSON logging emitted to `stdout` and shipped to Better Stack (Logtail) — mandatory field schema, 15-event table with levels and component assignments, and PII/log-safety rules. Metrics implemented as named Better Stack log queries with per-metric alert thresholds, uptime monitors for the Chat API health endpoint and the backup cron heartbeat, and a monthly LLM cost alert. Full analytics event schema: 8 frontend `CustomEvent`s dispatched on `<growth-chat>` (with `detail` fields) and 8 backend events emitted to Langfuse via `emit_event` (with field-level types) — including a frontend/backend mapping table for events that have representations at both layers.
+
+→ [Observability](./trd-observability)
 
 ---
 
 ## 10. Resilience and Degradation
 
-> **[PLACEHOLDER — Section to be completed]**
->
-> Esta sección cubrirá:
->
-> - **10.1 Failure Modes** — tabla de modos de fallo por componente con comportamiento del sistema y recuperación
-> - **10.2 Graceful Degradation** — fallback form con ruta de submission independiente del AI backend (resuelve EC-07); comportamiento cuando Slack falla pero CRM tiene éxito y viceversa (partial failure — resuelve FR-19)
-> - **10.3 Context Window Management** — estrategia sliding window, tamaño configurable, comportamiento en límite de turno (resuelve EC-13)
+A consolidated failure mode table spanning all system components — Chat API, Conversation Orchestrator, LLM, RAG, PostgreSQL Checkpointer, Human Handoff Subsystem, Chat Widget, and State Machine — with system behaviour, user-facing impact, and recovery path for each. Graceful degradation specifications: the fallback form path (zero dependency on the AI backend, resolves EC-07), handoff partial failure (one channel down — fallback email dispatched, resolves FR-19), handoff total failure and SMTP failure recovery, LLM failure mid-conversation routing to handoff capture, and RAG bypass behaviour. Sliding-window context window management: eviction strategy, what survives eviction (always-fresh `QualificationState`), `CONTEXT_WINDOW_TURNS` configuration, per-turn token budget table, and v1 limitations — resolves EC-13.
+
+→ [Resilience & Degradation](./trd-resilience-degradataion)
 
 ---
 
