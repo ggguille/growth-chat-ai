@@ -8,8 +8,8 @@ description: "Product Requirements Document for the AI-powered lead qualificatio
 
 **Project:** AI-powered lead qualification chat
 **Version:** 1.0
-**Status:** Draft — stakeholder sign-off complete, pending engineering review
-**Last updated:** April 2026
+**Status:** Final — stakeholder sign-off complete, engineering review complete; TRD and CDD complete (May 2026); two external dependencies outstanding (OQ-04, OQ-05)
+**Last updated:** May 2026
 **Owner:** Product / AI Engineering Team
 
 ---
@@ -376,7 +376,7 @@ rep directly — no Calendly or equivalent integration in v1.
 | Conversation logging | All conversations logged with session ID, timestamp, persona classification, qualification state at close, and outcome |
 | Escalation logging | All handoff events logged with trigger type, lead level, and response time |
 | Error logging | LLM errors, timeout events, and fallback activations logged with sufficient context to diagnose |
-| Analytics events | Defined event schema for: chat opened, first message sent, qualification state change, contact captured, escalation triggered, conversation ended. The full schema with field names and types must be specified in the TRD before implementation — category-level definitions only (as listed here) are insufficient to ensure consistent event shapes across frontend and backend. |
+| Analytics events | Defined event schema for: chat opened, first message sent, qualification state change, contact captured, escalation triggered, conversation ended. Full event schema with field names, types, and PII rules defined in TRD Section 9 (Observability) — 8 frontend CustomEvents on the `<growth-chat>` element and 8 backend Langfuse traces/spans. Both layers must conform to the schema before implementation. |
 
 ---
 
@@ -393,74 +393,39 @@ and recorded in the corresponding ADR.
 
 #### LLM Provider
 
-> *Decision owner: AI Engineering Lead — ADR-001 (pending)*
-
-| Candidate | Strengths | Weaknesses |
-| --- | --- | --- |
-| OpenAI GPT-4o | Best instruction-following, wide ecosystem, streaming support, function calling | Cost at scale, data leaves EU by default (GDPR consideration) |
-| Anthropic Claude Sonnet 4.6 | Strong reasoning, large context window, good at staying in character, EU data processing available | Smaller ecosystem, fewer native integrations |
-| Mistral Large (self-hosted) | Full data control, EU infrastructure, no per-token cost at scale | Higher infrastructure overhead, weaker instruction-following than GPT-4o |
-
-**Key evaluation criteria:** instruction-following quality, GDPR compliance posture,
-cost at projected conversation volume, streaming latency, function calling support
-for qualification state management.
+> *Decision: **Anthropic Claude Haiku 4.5** via the Anthropic API — ADR-001 (Accepted, April 2026). Selected for instruction-following reliability under a complex system prompt, EU data processing endpoint availability (Frankfurt), function calling support for RAG triage (EC-01), and cost profile at MVP volume.*
 
 ---
 
 #### Conversation Orchestration
 
-> *Decision owner: AI Engineering Lead — ADR-002 (pending)*
-
-| Candidate | Strengths | Weaknesses |
-| --- | --- | --- |
-| LangGraph | Native stateful graph execution, explicit node/edge control, ideal for multi-step qualification logic, strong observability | Steeper learning curve, more boilerplate than LangChain |
-| LangChain LCEL | Simpler to get started, large community, broad integrations | Less suited to complex branching state machines, harder to maintain qualification state explicitly |
-| Custom state machine (no framework) | Full control, no framework dependencies, minimal overhead | More code to maintain, reinvents solved problems |
-
-**Key evaluation criteria:** ability to maintain an explicit qualification state
-object across turns, support for conditional branching (hot/warm/cold logic),
-observability and debuggability of conversation state.
+> *Decision: **LangGraph** (`StateGraph`) — ADR-002 (Accepted, April 2026). Selected for native stateful graph execution, explicit node/edge control suited to the qualification state machine, support for deterministic programmatic nodes alongside LLM nodes, and built-in observability of graph execution.*
 
 ---
 
 #### Knowledge Architecture
 
 *Decision: Selective RAG — Option B (agreed in PRD). See M2 for rationale.*
-*Component-level decisions below remain open — ADR-003 (pending)*
+*Component decisions resolved — ADR-003 (Accepted, April 2026) and ADR-004 (Accepted, April 2026).*
 
-| Component | Candidate | Strengths | Weaknesses |
-| --- | --- | --- | --- |
-| Vector store | Chroma (local) | Zero infrastructure, fast to set up, good for MVP | Not managed, manual scaling, not suitable for production at volume |
-| Vector store | Pinecone (managed) | Fully managed, production-ready, low latency at scale | Cost, external dependency, data leaves infrastructure |
-| Vector store | pgvector (Postgres extension) | Stays within existing DB infrastructure if Postgres is used, no new service | Less mature than dedicated vector stores, limited ANN algorithm options |
-| Embedding model | OpenAI text-embedding-3-small | Low cost ($0.02/1M tokens), strong quality for English technical content | Data sent to OpenAI API |
-| Embedding model | Cohere embed-v3 | Competitive quality, multilingual, EU data processing | Slightly higher cost than OpenAI small |
-| Embedding model | sentence-transformers (self-hosted) | Free, full data control, runs locally | Infrastructure overhead, slower than managed APIs |
-
-**Key evaluation criteria:** retrieval quality on technical B2B content, data
-residency requirements, cost per query at projected volume, operational complexity.
+| Component | Decision | ADR |
+| --- | --- | --- |
+| Vector store | **pgvector** (PostgreSQL extension, HNSW index) | ADR-003 |
+| Embedding model | **OpenAI text-embedding-3-small** (1536 dimensions, EU endpoint) | ADR-003 |
+| RAG triage mechanism | **Tool use** — `retrieve_knowledge` function call in the main LLM turn; no separate classifier call (EC-01) | ADR-003 |
+| Session state persistence | **langgraph-checkpoint-postgres** (production); `MemorySaver` (local dev) | ADR-004 |
 
 ---
 
 #### Frontend Widget
 
-> *Decision owner: Frontend / Full-stack Lead — ADR-004 (pending)*
-
-| Candidate | Strengths | Weaknesses |
-| --- | --- | --- |
-| Custom JS widget (vanilla) | Minimal footprint, no framework dependency, embeds via script tag, full control over UX | More code to maintain, no pre-built UI components |
-| React component (embeddable) | Component ecosystem, easier to build complex UI states, familiar to most frontend devs | Heavier bundle if React is not already on the company site |
-| Vercel AI SDK + Next.js | Rapid development, built-in streaming UI, good DX | Tighter coupling to Vercel infrastructure, overkill if site is not Next.js |
-
-**Key evaluation criteria:** bundle size impact on company website load time,
-ease of embedding without company site rebuild, streaming response support,
-mobile responsiveness.
+> *Decision: **Custom web component** (`<growth-chat>` element, embeds via a `<script>` tag on the company site) — ADR-005 (Accepted, April 2026). Selected for minimal bundle footprint (≤ 200KB gzipped), no framework dependency on the host site, full control over streaming UX, and straightforward embedding without a site rebuild.*
 
 ---
 
 #### Notification and Lead Capture
 
-*Decision: Both Slack webhook (`#new-leads`) and CRM integration are required in V1 — Slack for speed, CRM for record (see M5, M10, FR-19). Email is fallback only. No self-serve booking tool — all scheduling handled by the sales rep directly. Specific CRM platform to be confirmed pending OQ-04. ADR-005 to document final implementation choices.*
+*Decision: Both Slack webhook (`#new-leads`) and CRM integration are required in V1 — Slack for speed, CRM for record (see M5, M10, FR-19). Email to `sales@` is fallback only on dual-channel failure. No self-serve booking tool — all scheduling handled by the sales rep directly. CRM platform unconfirmed pending **OQ-04** (external dependency — blocks Phase 3 build). CRM adapter ADR to be written once OQ-04 is resolved.*
 
 | Candidate | Strengths | Weaknesses |
 | --- | --- | --- |
@@ -477,62 +442,40 @@ focuses on which CRM and which Slack integration approach.
 
 #### Data Storage
 
-> *Constraint: minimal in v1. No CRM. Session logs and captured leads only.*
+> *Decision: **PostgreSQL** — single storage backend for all persistence needs (ADR-003, ADR-004).*
 
-| Candidate | Strengths | Weaknesses |
+| Purpose | Solution | ADR |
 | --- | --- | --- |
-| PostgreSQL | Reliable, queryable, familiar, can add pgvector for vector store consolidation | Requires a managed instance if not already available |
-| SQLite (local / dev only) | Zero setup, good for MVP development | Not suitable for production multi-instance deployment |
-| Firebase Firestore | Managed, real-time, easy to set up | NoSQL limitations for analytics queries, Google Cloud dependency |
+| Knowledge index (vector store) | PostgreSQL + **pgvector** extension (HNSW index) | ADR-003 |
+| Session state (conversation history, qualification state) | PostgreSQL + **langgraph-checkpoint-postgres** | ADR-004 |
+| Handoff audit records | PostgreSQL — `handoff_records` table | ADR-004 |
+| Managed instance | **Neon** — `eu-central-1` (Frankfurt) | ADR-006 |
 
-**Key evaluation criteria:** ability to store structured conversation logs and
-qualification state, query capability for post-launch analytics, operational
-simplicity, cost at MVP scale.
+No separate vector store service is needed. PostgreSQL handles both the knowledge index and session state, keeping the infrastructure footprint minimal.
 
 ---
 
 #### Rate Limiting, Cost Controls, and Context Window Management
 
-> *Required before production launch — EC-12, EC-13. Decisions to be recorded in the TRD.*
+> *Resolved in TRD Section 8 and Section 10 (May 2026) — EC-12, EC-13.*
 
-**Rate limiting and cost controls (EC-12):** No LLM API token budgets, per-session rate limits, cost alerting, or bot prevention are specified. For a publicly-accessible widget all four are required before production. The TRD must define: max tokens per session and truncation strategy, per-IP rate limit, monthly cost cap with alerting threshold, and basic bot fingerprinting approach.
+**Rate limiting and cost controls (EC-12 — resolved):** Per-IP rate limiting via Cloudflare Rules (30 req / 10 min); per-session rate limiting via `slowapi` middleware (20 messages / 5 min); per-session token budget of 16,000 tokens (`MAX_TOKENS_PER_SESSION`); monthly cost cap of $50 with alerting at 80% (`MONTHLY_COST_CAP_USD`); bot prevention via Cloudflare Bot Score, API key validation, and 2,000-character message size limit. See TRD Section 8.
 
-**Context window management (EC-13):** No maximum conversation length is defined. As conversation history grows, each turn becomes more expensive and the context window eventually overflows. The TRD must define the strategy (sliding window recommended for v1) and configurable window size before conversation orchestration is implemented.
+**Context window management (EC-13 — resolved):** Sliding window strategy — `CONTEXT_WINDOW_TURNS = 10` exchange pairs (configurable environment variable). Qualification state is stored independently on `SessionState` and is never evicted from the window, so the LLM never loses qualification context regardless of conversation length. See TRD Section 10.
 
 ---
 
 #### Cloud Provider
 
-> *Decision owner: Engineering Lead + Operations — ADR-006 (pending)*
+> *Decision: **Fly.io (fra) + Neon (eu-central-1) + Cloudflare** — ADR-006 (Accepted, April 2026). Full EU data residency at every processing step; low operational overhead for a small team.*
 
-The cloud provider choice affects data residency (GDPR), latency for European
-and US visitors, operational complexity for the team, and long-term cost. Three
-candidates are under evaluation.
+| Component | Decision | Notes |
+| --- | --- | --- |
+| Application hosting | **Fly.io** — `fra` region (Frankfurt) | Deploy via CLI; EU data residency; auto-restart on failure |
+| PostgreSQL (managed) | **Neon** — `eu-central-1` (Frankfurt) | Serverless Postgres; pgvector supported; AES-256 at rest |
+| Edge / CDN / WAF | **Cloudflare** | TLS 1.3 termination; rate limiting rules; Bot Score; HSTS |
 
-| Candidate | Data residency | AI services | Operational complexity | Best fit scenario |
-| --- | --- | --- | --- | --- |
-| AWS (eu-west-1 / eu-central-1) | EU regions available | Amazon Bedrock (LLM hosting), SageMaker | High — broadest ecosystem but most configuration overhead | If the company already has AWS infrastructure or anticipates significant scaling |
-| Microsoft Azure (westeurope / northeurope) | EU regions, GDPR compliance built-in | Azure OpenAI Service — same GPT-4o / Claude models with EU data residency guaranteed | Medium — more enterprise tooling than Fly.io, less raw complexity than AWS | If GPT-4o is the chosen LLM and GDPR compliance is a hard requirement; native integration between Azure OpenAI and Azure infrastructure eliminates data residency concern |
-| Fly.io (EU regions) | EU regions available, data stays in selected region | None native — connects to external LLM APIs | Low — deploy via CLI, minimal DevOps, no infrastructure management | If the team is small, speed of setup is a priority, and the system does not need to integrate with existing enterprise infrastructure |
-
-**Key evaluation criteria:**
-
-- **GDPR / data residency:** Can all components — LLM API, vector store, conversation
-  logs, lead data — run within EU boundaries? Azure has the clearest answer if
-  Azure OpenAI Service is used. AWS and Fly.io require careful configuration
-  to achieve the same guarantee.
-- **Operational overhead for MVP:** Fly.io has the lowest setup cost for a small
-  team. AWS has the highest. Azure sits in between, particularly if the team
-  has existing Microsoft familiarity.
-- **LLM integration:** If Azure OpenAI Service is selected as the LLM candidate,
-  Azure as the cloud provider creates a natural, low-friction integration.
-  If Anthropic or Groq is selected, provider choice is more neutral.
-- **Path to v2:** AWS and Azure have broader managed services for CRM integration,
-  advanced monitoring, and scaling. Fly.io is a good MVP platform but may require
-  migration as the system grows.
-
-**Interaction with LLM candidate decision:** The cloud provider and LLM provider
-decisions are partially coupled. See dependency note in ADR-001 and ADR-006.
+All components — LLM API (Anthropic EU endpoint), embeddings (OpenAI EU endpoint), session state, and knowledge index — process and store data within EU territory, satisfying GDPR Article 44 without relying on Standard Contractual Clauses.
 
 ---
 
@@ -559,7 +502,7 @@ A feature is complete when it meets all of the following:
 - [ ] No hallucination on company knowledge base content (verified by manual review of 70–80 structured test conversations: 10 per persona × 5 personas + 20–30 adversarial cases covering out-of-scope questions, competitor probes, and absent-content queries). Test cases must have defined expected outputs and be run through a repeatable eval framework.
 - [ ] RAG retrieval verified: relevant questions return above-threshold results; irrelevant questions do not trigger retrieval
 - [ ] Prompt layer and RAG layer correctly separated — no domain content in system prompt
-- [ ] p95 TTFT (time-to-first-token) < 3 seconds verified under simulated load at the request rate defined in the TRD performance test plan. Streaming must be enabled; full-response latency is not the target metric.
+- [ ] p95 TTFT (time-to-first-token) < 3 seconds verified under a stress test of 10 concurrent sessions sustained for 10 minutes (TRD Section 7 — ~40× expected peak production concurrency). Streaming must be enabled; full-response latency is not the target metric.
 - [ ] GDPR data notice displayed on first interaction
 - [ ] Graceful degradation tested (AI service down → fallback form)
 - [ ] Sales notification (Slack + CRM) received and verified end-to-end on hot lead detection
@@ -594,5 +537,6 @@ These questions remain unresolved and require input before or during development
 
 *This PRD defines the scope of the company website chat MVP. It is a living document
 and will be updated as open questions are resolved and decisions are made during
-development. The next documents in the series are the Conversation Design Document
-and the Technical Requirements Document.*
+development. The Conversation Design Document and the Technical Requirements Document
+are complete — the TRD is the authoritative reference for all technology decisions
+and implementation specifications.*

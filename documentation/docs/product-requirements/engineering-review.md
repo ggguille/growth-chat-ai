@@ -7,7 +7,7 @@ description: "Engineering team review of the PRD for the AI-powered lead qualifi
 **Document type:** Engineering review
 **PRD reviewed:** [Product Requirements Document v1.0](./index.md)
 **Review date:** April 2026
-**Status:** Pending sign-off — PRD updated April 2026 to propagate resolved engineering concerns
+**Status:** TRD and CDD complete — development start gates satisfied; two external dependencies outstanding (OQ-04, OQ-05)
 
 ---
 
@@ -79,19 +79,19 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 
 | # | Title | Blocker level |
 | --- | --- | --- |
-| EC-01 | RAG triage mechanism not specified | Blocks backend build start |
-| EC-02 | Qualification state object persistence backend not specified | Blocks architecture finalisation |
-| EC-03 | Programmatic escalation trigger mechanism not specified | Blocks orchestration design |
-| EC-04 | Business hours detection edge cases (DST, public holidays) | Must define before building that module |
-| EC-05 | Relevance threshold undefined — must be configurable | Resolved in PRD — FR-17 updated; value via Phase 4 tuning |
-| EC-06 | "Qualification progress" not precisely defined for stall detection | Resolved in PRD — FR-07 updated |
-| EC-07 | Graceful degradation form submission destination not specified | Blocks frontend widget build |
-| EC-08 | GDPR DPA with LLM provider required | Hard blocker for production launch |
-| EC-09 | Performance target ambiguity: TTFT vs. full response | Resolved in PRD — DoD updated to TTFT; load level in TRD |
+| EC-01 | RAG triage mechanism not specified | Resolved in TRD — Section 3.1 |
+| EC-02 | Qualification state object persistence backend not specified | Resolved in TRD — Sections 3.2, 4.1 |
+| EC-03 | Programmatic escalation trigger mechanism not specified | Resolved in TRD — Section 3.1 |
+| EC-04 | Business hours detection edge cases (DST, public holidays) | Resolved in TRD — Section 2 |
+| EC-05 | Relevance threshold undefined — must be configurable | Resolved in TRD — Section 3.3; value via Phase 4 tuning |
+| EC-06 | "Qualification progress" not precisely defined for stall detection | Resolved in TRD — Section 3.1 |
+| EC-07 | Graceful degradation form submission destination not specified | Resolved in TRD — Section 10 |
+| EC-08 | GDPR DPA with LLM provider required | Requirements resolved in TRD Section 8.7; DPA execution pending — hard blocker for production |
+| EC-09 | Performance target ambiguity: TTFT vs. full response | Resolved in TRD — Section 7; load level defined (10 concurrent sessions) |
 | EC-10 | Content audit (OQ-01) must run as parallel workstream, not prerequisite | Resolved in PRD — OQ-01 updated |
-| EC-11 | DoD hallucination test count (20) insufficient | Resolved in PRD — DoD updated to 70–80 conversations |
-| EC-12 | Missing: API rate limiting, cost controls, abuse prevention | Acknowledged in PRD Section 7.1 — values in TRD |
-| EC-13 | Missing: conversation turn limit and context window strategy | Acknowledged in PRD Section 7.1 — strategy in TRD |
+| EC-11 | DoD hallucination test count (20) insufficient | Resolved in CDD — Section 9 defines 80 structured test cases |
+| EC-12 | Missing: API rate limiting, cost controls, abuse prevention | Resolved in TRD — Section 8 |
+| EC-13 | Missing: conversation turn limit and context window strategy | Resolved in TRD — Section 10 |
 
 ---
 
@@ -109,6 +109,8 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 
 **Blocker level:** Must resolve before backend agent build begins.
 
+**Status:** Resolved in TRD — `retrieve_knowledge` tool use implemented in `generate_response` node (Section 3.1); single tool call per turn; ADR-003 completed.
+
 ---
 
 ### EC-02 — Qualification State Object — Persistence Backend Not Specified (FR-01 Gap)
@@ -125,6 +127,8 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 
 **Blocker level:** Must resolve before backend architecture is finalised.
 
+**Status:** Resolved in TRD — `langgraph-checkpoint-postgres` for staging and production; `MemorySaver` for local development. Redis was not selected — PostgreSQL is already in the stack and Fly.io single-instance deployment eliminates the horizontal scaling risk (Sections 3.2, 4.1; ADR-004).
+
 ---
 
 ### EC-03 — Programmatic Escalation Trigger — Mechanism Not Specified (FR-09 Gap)
@@ -134,6 +138,8 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 **Recommendation:** Implement as an explicit condition node in the conversation graph, evaluated before the response generation step. When the hot threshold is met (Problem + Authority + one more dimension), the orchestrator routes to the escalation proposal path. The LLM does not decide to escalate — it is given the escalation proposal as the response to generate. Define as a graph node in ADR-002.
 
 **Blocker level:** Must resolve in orchestration design before agent build begins.
+
+**Status:** Resolved in TRD — `score_router` is a deterministic programmatic node with no LLM call. It evaluates the hot lead threshold and explicit human request flag against `SessionState` and routes to `propose_handoff` accordingly. Stage 3 proposals are generated only in `propose_handoff`, never in `generate_response` (Section 3.1; ADR-002).
 
 ---
 
@@ -148,6 +154,8 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 **Recommendation:** Use a timezone-aware library with an IANA identifier (`Europe/Madrid` or equivalent), not a fixed UTC offset. For public holidays: no awareness in v1 (document as a known limitation), configurable holiday calendar in v2.
 
 **Blocker level:** Must define before the business hours module is built.
+
+**Status:** Resolved in TRD — Business Hours Detection Module implemented with Python `zoneinfo` and IANA identifier `Europe/Madrid`. DST is handled correctly. No public holiday awareness in v1 (documented as a known limitation). `BUSINESS_HOURS_TIMEZONE` is a configurable environment variable that defaults to `Europe/Madrid` (Section 2; Section 10 failure mode table).
 
 ---
 
@@ -186,6 +194,8 @@ Thirteen architectural gaps and missing requirements not addressed in the PRD or
 
 **Blocker level:** Must resolve before frontend widget build. Low implementation complexity.
 
+**Status:** Resolved in TRD — the `fallback-url` widget attribute points to the host site's existing contact form or any external URL. This system builds no backend endpoint for fallback submissions. Form handling is entirely the host site's responsibility. Known gap: fallback form leads are not auto-created in CRM by this system (accepted MVP limitation, documented in Section 10 and Section 12).
+
 ---
 
 ### EC-08 — GDPR Data Processing Agreement with LLM Provider
@@ -203,6 +213,8 @@ The DPA must cover: lawful processing purposes, EU data residency guarantee, sub
 **Recommendation:** Treat DPA sign-off as a go/no-go condition for production traffic. Development with synthetic test data can proceed without it. Track as a legal task running in parallel with engineering.
 
 **Blocker level:** Hard blocker for production launch.
+
+**Status:** Resolved in TRD — DPA requirements defined for all five processors (Anthropic, OpenAI, Cloudflare, Neon, Fly.io) in Section 8.7. EU data residency confirmed at every processing step (Fly.io `fra`, Neon `eu-central-1`, Anthropic EU endpoint, OpenAI EU endpoint). DPA execution is a go/no-go gate for production traffic — DPA sign-off must be recorded in the deployment checklist. **Execution is not yet confirmed and remains a production launch blocker.**
 
 ---
 
@@ -278,7 +290,7 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 
 **Blocker level:** Required before production launch. Not needed in a non-public dev environment.
 
-**Status:** Acknowledged in PRD — Section 7.1 now includes a rate limiting and cost controls subsection; specific values and implementation to be defined in the TRD.
+**Status:** Resolved in TRD — per-IP rate limiting via Cloudflare Rules (30 req / 10 min); per-session rate limiting via `slowapi` (20 msg / 5 min); per-session token budget via `MAX_TOKENS_PER_SESSION` (default: 16,000 tokens); monthly cost alerting via `MONTHLY_COST_CAP_USD` (default: $50 at 80% threshold); bot prevention via Cloudflare Bot Score, API key validation, and 2,000-character message size limit (Section 8).
 
 ---
 
@@ -296,7 +308,7 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 
 **Blocker level:** Must define before conversation orchestration is implemented.
 
-**Status:** Acknowledged in PRD — Section 7.1 now includes a context window management subsection recommending a sliding window for v1; window size to be defined in the TRD.
+**Status:** Resolved in TRD — sliding window strategy adopted; `CONTEXT_WINDOW_TURNS=10` configurable environment variable (default: last 10 exchange pairs). Qualification state is stored independently of the message window and is never evicted — the LLM never loses qualification context due to window eviction. Hard limit and summarisation approaches were evaluated and deferred to v2 (Section 10).
 
 ---
 
@@ -304,10 +316,10 @@ Test cases should have defined expected outputs, not be unscripted runs. Impleme
 
 ### Week 0 — Pre-Build Decisions
 
-- [ ] ADR-001 completed: LLM provider selected (constrains ADR-002 and ADR-006)
-- [ ] ADR-002 completed: orchestration framework selected
-- [ ] TRD drafted: covers EC-01, EC-02, EC-03, EC-06, EC-07, EC-09, EC-12, EC-13
-- [ ] DoD updated: hallucination test count raised to 70–80; TTFT definition added
+- [x] ADR-001 completed: Anthropic Claude Haiku 4.5 selected (Accepted April 2026)
+- [x] ADR-002 completed: LangGraph selected as orchestration framework (Accepted April 2026)
+- [x] TRD drafted: covers EC-01, EC-02, EC-03, EC-04, EC-06, EC-07, EC-09, EC-12, EC-13 (completed May 2026)
+- [x] DoD updated: hallucination test count raised to 70–80; TTFT definition added (April 2026); CDD Section 9 defines 80 structured test cases
 - [ ] CRM platform confirmed (OQ-04) — engineering cannot build the handoff subsystem without this
 - [ ] Topic restrictions initial list received (OQ-05) — engineering cannot write the system prompt without this
 
@@ -394,10 +406,10 @@ Requires real content deliverable from OQ-01:
 
 **Gates development start:**
 
-- [ ] ADR-001 completed (LLM provider)
-- [ ] ADR-002 completed (orchestration framework)
-- [ ] TRD drafted covering EC-01, EC-02, EC-03, EC-06, EC-07, EC-09, EC-12, EC-13
-- [x] DoD updated: hallucination test count raised to 70–80 and TTFT definition added (April 2026)
+- [x] ADR-001 completed — Anthropic Claude Haiku 4.5 (Accepted April 2026)
+- [x] ADR-002 completed — LangGraph (Accepted April 2026)
+- [x] TRD drafted covering EC-01, EC-02, EC-03, EC-04, EC-06, EC-07, EC-09, EC-12, EC-13 (completed May 2026)
+- [x] DoD updated: hallucination test count raised to 70–80 and TTFT definition added (April 2026); CDD Section 9 defines 80 structured test cases
 - [ ] CRM platform confirmed — external dependency, blocks handoff subsystem build
 - [ ] Topic restrictions list received — external dependency, blocks system prompt
 
