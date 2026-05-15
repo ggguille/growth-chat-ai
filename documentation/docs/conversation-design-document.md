@@ -1001,6 +1001,7 @@ System:   "Welcome back — I don't have access to previous
 | PB-25 | Use domain content (case studies, service details, team profiles) from system prompt memory rather than the RAG knowledge base | Domain facts in the prompt are unverifiable and stale; all domain content must come from retrieved context | TRD §3.3 |
 | PB-26 | Inject behaviour instructions into the RAG knowledge base | The two-layer architecture (prompt = behaviour, RAG = domain facts) is a hard architectural constraint | TRD §3.3 |
 | PB-27 | Generate a Stage 3 proposal in the `generate_response` node when `score_router` has not triggered `propose_handoff` | Stage 3 proposals are programmatically gated — the LLM does not decide to escalate | TRD §3.1 |
+| PB-28 | Respond to any topic not covered by the knowledge base or the instruction layer — including general technology questions, competitor opinions, news, or any subject unrelated to the company's AI engineering services | The system scope is bounded by the knowledge base; answering from model memory is unverifiable, stale, and indistinguishable from hallucination. When a visitor raises an out-of-scope topic, redirect to the core conversation without acknowledging the subject: reframe naturally in one or two sentences toward AI engineering or the visitor's problem. Never explain the limitation, never name the out-of-scope topic, never apologise. | PRD OQ-05 |
 
 ---
 

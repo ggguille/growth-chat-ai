@@ -187,13 +187,15 @@ No personal data leaves EU territory at any step of the processing chain. This s
 
 | Processor | DPA status | Requirement |
 | --- | --- | --- |
-| Anthropic (LLM) | Enterprise DPA available; EU data processing addendum required | **Hard blocker for production launch (EC-08).** Development with synthetic data may proceed without it. |
-| OpenAI (Embeddings) | DPA available; EU data processing addendum required | Hard blocker for production launch. |
-| Cloudflare | DPA available (Cloudflare Customer DPA) | Must be executed before production traffic is proxied. |
-| Neon | DPA available | Must be executed before real visitor data is stored. |
-| Fly.io | DPA available | Must be executed before production deployment. |
+| Anthropic (LLM) | Enterprise DPA available; EU data processing addendum required | Required for production traffic with real visitor data only. |
+| OpenAI (Embeddings) | DPA available; EU data processing addendum required | Required for production traffic with real visitor data only. |
+| Cloudflare | DPA available (Cloudflare Customer DPA) | Required for production traffic with real visitor data only. |
+| Neon | DPA available | Required for production traffic with real visitor data only. |
+| Fly.io | DPA available | Required for production traffic with real visitor data only. |
 
-**EC-08 resolution:** DPA sign-off with all five processors is a go/no-go condition for production traffic. The DPA status for each processor must be confirmed in the deployment checklist before the system is opened to real visitors. Engineering may proceed against synthetic test data without DPAs in place.
+**EC-08 resolution (updated):** This project is an AI engineering study. The system will only process synthetic test data — no real visitor data will be handled in any deployment phase of this project. DPA execution is therefore not required for any build or staging phase. If the system is extended to handle real visitor traffic in a future commercial deployment, DPA sign-off with all five processors becomes a go/no-go condition before opening to production traffic. That decision must be tracked separately at that time.
+
+Engineering may proceed through all phases — including staging deployment — without DPAs in place.
 
 ### Subject Rights
 
