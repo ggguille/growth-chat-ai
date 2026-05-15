@@ -261,8 +261,6 @@ start if unset.
 | --- | --- | --- | --- |
 | `SLACK_WEBHOOK_URL` | **Yes** | — | Incoming webhook URL for `#new-leads`. Secret. |
 | `SLACK_BOT_TOKEN` | **Yes** | — | Slack bot token for `chat.update` — required to add the CRM record button to the Slack message once CRM delivery completes (§3.4, §5.2). Secret. |
-| `CRM_API_URL` | Yes *(Phase 3)* | — | CRM platform base URL. Pending OQ-04 resolution. Service does not start in Phase 3+ if unset. Secret. |
-| `CRM_API_KEY` | Yes *(Phase 3)* | — | CRM API authentication credential. Pending OQ-04 resolution. Secret. |
 | `FALLBACK_EMAIL_ADDRESS` | **Yes** | — | Recipient address for dual-channel failure fallback email (FR-19, §3.4) |
 | `SMTP_HOST` | **Yes** | — | SMTP server hostname for fallback email |
 | `SMTP_PORT` | No | `587` | SMTP server port |
@@ -341,13 +339,6 @@ SMTP_USERNAME
 SMTP_PASSWORD
 ALLOWED_ORIGIN
 BUSINESS_HOURS_TIMEZONE       # example: Europe/Madrid
-```
-
-**Human Handoff — Phase 3 only (add before Phase 3 deployment):**
-
-```text
-CRM_API_URL
-CRM_API_KEY
 ```
 
 **Backup cron Machine (Fly secrets):**

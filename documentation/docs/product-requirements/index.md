@@ -219,11 +219,10 @@ meaningful. It offers a call as the natural next step. It does not sound evasive
 
 **M10 — CRM lead record creation**
 At the point of any escalation or capture handoff, the system creates a new
-lead record in the company CRM pre-populated with the full context packet
-(conversation summary, qualification state, lead level, trigger, visitor data,
-timestamp). The CRM is the system of record for all leads — the Slack
-notification links to it so the sales rep does not need to reconstruct context.
-Specific CRM platform to be confirmed pending OQ-04.
+lead record pre-populated with the full context packet (conversation summary,
+qualification state, lead level, trigger, visitor data, timestamp). In v1, the
+`leads` table in the existing PostgreSQL instance is the system of record for
+leads (see [ADR-009](../architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute.md)).
 
 Example response pattern:
 > *"We don't publish standard rates — the right engagement structure really
@@ -518,7 +517,7 @@ These questions remain unresolved and require input before or during development
 | --- | --- | --- | --- |
 | OQ-01 | Which specific company case studies should be included in the v1 knowledge base? Requires a content audit. **Constraint resolved: v1 is restricted to publicly available content only — no NDA-protected case studies.** **Sequencing resolved: the content audit must begin immediately at kickoff as a parallel workstream with a hard two-week deadline — it is not a prerequisite that blocks engineering start. Engineering builds the ingestion pipeline against a synthetic placeholder knowledge base; real content replaces it when delivered. Content format: Markdown or plain text files.** | marketing / PM | Kickoff + 2 weeks |
 | OQ-03 | ~~What is the current form submission volume and qualification rate?~~ **Resolved:** 30-day analytics export (form submission count + form-to-sales-call rate) to be completed before deployment. Responsibility: Product Owner. | sales / analytics | Before deployment |
-| OQ-04 | Is there an existing CRM? If so, which one? (CRM integration is required in V1 — M10 — this determines the implementation path) | ops | Before build starts |
+| OQ-04 | ~~Is there an existing CRM? If so, which one?~~ **Resolved:** No external CRM in v1. Lead records persist to the `leads` table in the existing PostgreSQL instance via `PostgresCRMClient`. See [ADR-009](../architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute.md). | ops | Resolved 2026-05-15 |
 | OQ-05 | Are there specific topics that must never be discussed — beyond pricing and internal operations? | leadership | Before build starts |
 
 ---

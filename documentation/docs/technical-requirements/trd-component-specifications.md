@@ -1038,9 +1038,9 @@ return FAILURE
 
 ### CRM Delivery
 
-**Destination:** CRM platform API — platform pending OQ-04. This section specifies the integration contract. Concrete endpoints and authentication are defined in a supplementary ADR once OQ-04 is resolved.
+**Destination (v1):** `leads` table in the existing Neon PostgreSQL instance, via `PostgresCRMClient`. No external CRM API is called in v1. See [ADR-009](../architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute.md).
 
-**Confirmation criterion:** HTTP 2xx response with a non-null `record_id` in the response body. A 202 Accepted without a `record_id` does not count — it may indicate an async creation that could fail silently.
+**Confirmation criterion:** `PostgresCRMClient.create_lead()` returns a `LeadCreationResult` with a non-null `crm_record_id` (= `str(leads.id)` from the successful `INSERT`). A database error raises `CRMDeliveryError` and triggers the retry path.
 
 **Payload (platform-agnostic schema):**
 
@@ -1077,7 +1077,7 @@ return FAILURE
 
 **Retry logic:** identical to Slack — 3 attempts, backoff 1s → 3s → 9s.
 
-**OQ-04 dependency:** Engineering builds against an abstract `CRMClient` interface with a stub in Phase 1–2. Concrete implementation is a Phase 3 deliverable.
+**OQ-04:** Resolved by ADR-009 — `PostgresCRMClient` is the v1 concrete implementation.
 
 ---
 
@@ -1161,8 +1161,6 @@ N1/N2 blocking (FR-11) is enforced in `score_router` (Section 3.1). Every `Hando
 | Variable | Required | Description |
 | --- | --- | --- |
 | `SLACK_WEBHOOK_URL` | Yes | Incoming webhook URL for `#new-leads` |
-| `CRM_API_URL` | Yes (Phase 3) | CRM platform base URL — pending OQ-04 |
-| `CRM_API_KEY` | Yes (Phase 3) | CRM API authentication credential — pending OQ-04 |
 | `FALLBACK_EMAIL_ADDRESS` | Yes | Fallback recipient — `sales@` |
 | `SMTP_HOST` | Yes | SMTP server for fallback email |
 | `SMTP_PORT` | No | Default: `587` |
@@ -1181,12 +1179,12 @@ N1/N2 blocking (FR-11) is enforced in `score_router` (Section 3.1). Every `Hando
 | Context Packet Generator | Section 3.6 | `generate_context_packet(SessionState) → ContextPacket` |
 | PostgreSQL | ADR-004 | `HandoffRecord` audit log writes |
 | Slack Webhooks API | External | HTTPS POST; Block Kit payload |
-| CRM platform API | External — pending OQ-04 | HTTPS POST via `CRMClient` interface; Phase 3 |
+| PostgreSQL `leads` table | ADR-009 | `PostgresCRMClient.create_lead()` — INSERT into `leads`; returns `leads.id` |
 | SMTP | External | Fallback email — path independent of AI backend (EC-07) |
 
 ---
 
-*Engineering concern resolved by this section: EC-03 (programmatic escalation trigger — routing decision is made by `score_router` in Section 3.1; this subsystem executes delivery only after that deterministic decision). Delivery confirmation decisions: Slack HTTP 200; CRM HTTP 2xx + `record_id`; 3 retries with 1s → 3s → 9s backoff; partial failure silent to visitor, handled internally via fallback email to `sales@`.*
+*Engineering concern resolved by this section: EC-03 (programmatic escalation trigger — routing decision is made by `score_router` in Section 3.1; this subsystem executes delivery only after that deterministic decision). Delivery confirmation decisions: Slack HTTP 200; CRM `PostgresCRMClient` successful INSERT returning non-null `leads.id`; 3 retries with 1s → 3s → 9s backoff; partial failure silent to visitor, handled internally via fallback email to `sales@`.*
 
 ---
 

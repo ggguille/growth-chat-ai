@@ -300,12 +300,9 @@ This requires the `SLACK_BOT_TOKEN` environment variable in addition to `SLACK_W
 
 ### CRM Delivery
 
-**Platform:** TBD — pending OQ-04. The concrete implementation is a Phase 3 deliverable
-specified in a supplementary ADR once the platform is confirmed.
+**Platform (v1):** PostgreSQL `leads` table in the existing Neon instance, via `PostgresCRMClient` — a concrete implementation of the `CRMClient` interface (resolved by [ADR-009](../architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute.md)). No external CRM is integrated in v1.
 
-**Integration pattern:** The Human Handoff Subsystem calls an abstract `CRMClient` interface.
-Phase 1–2 engineering uses a stub implementation. The concrete adapter is a drop-in replacement
-conforming to the same interface.
+**Integration pattern:** The Human Handoff Subsystem calls the abstract `CRMClient` interface. The v1 concrete implementation (`PostgresCRMClient`) writes the `ContextPacket` to the `leads` table instead of calling an external HTTP API. In v2, swapping to an external CRM requires only a new implementation class — no changes to the subsystem or interface.
 
 **`CRMClient` interface:**
 
@@ -330,10 +327,25 @@ class CRMDeliveryError(Exception):
     message:     str
 ```
 
+**v1 concrete implementation:**
+
+```python
+class PostgresCRMClient(CRMClient):
+    """v1 concrete implementation — writes to the `leads` table in Neon PostgreSQL."""
+
+    async def create_lead(self, payload: CRMLeadPayload) -> LeadCreationResult:
+        leads_id = await _insert_lead(payload)   # raises CRMDeliveryError on DB error
+        return LeadCreationResult(
+            crm_record_id=str(leads_id),
+            crm_record_url="",                   # no CRM UI in v1
+        )
+```
+
 **Confirmation criterion:** `create_lead()` returns a `LeadCreationResult` with a
-non-null `crm_record_id`. A response without a record ID is treated as a failure —
-async creation patterns that return 202 without an ID do not satisfy the confirmation
-criterion.
+non-null `crm_record_id`. For `PostgresCRMClient`, a successful `INSERT` into the
+`leads` table returns the row's `id` (cast to `str`) as `crm_record_id`; a database
+error raises `CRMDeliveryError`. The `crm_record_url` field is an empty string in v1
+(no CRM UI to link to), so the Slack "View in CRM" button is permanently omitted.
 
 **Canonical CRM payload schema (platform-agnostic):**
 

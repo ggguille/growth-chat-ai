@@ -315,9 +315,10 @@ status per channel, retry outcomes, and the final outcome of the handoff operati
 persisted to PostgreSQL by the Human Handoff Subsystem (Section 3.4) after every dispatch
 attempt, regardless of outcome.
 
-The `HandoffRecord` is **not** a lead record. The external CRM is the system of record for
-leads. The `HandoffRecord` exists to make handoff delivery auditable and diagnosable without
-querying the CRM.
+The `HandoffRecord` is **not** a lead record. The `leads` table is the system of record for
+leads (see [ADR-009](../architecture-decisions/ADR-009-use-postgres-leads-table-as-crm-substitute.md)).
+The `HandoffRecord` exists to make handoff delivery auditable and diagnosable without
+querying the leads table.
 
 ### HandoffRecord Schema
 
@@ -335,7 +336,7 @@ HandoffRecord {
 
   crm_status        : "ok" | "failed"
   crm_attempts      : int
-  crm_record_id     : str | None      // populated when CRM confirms creation
+  crm_record_id     : str | None      // str(leads.id) — populated when PostgresCRMClient insert succeeds
   crm_last_http     : int | None      // last HTTP status received from CRM API
 
   fallback_sent     : bool
