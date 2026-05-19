@@ -18,7 +18,7 @@ Based on **[docmd framework](https://docs.docmd.io/)**
 
 ```bash
 # Move to documentation directory
-cd ./docuemntation
+cd ./documentation
 
 # Start project on local
 npx docmd dev
@@ -31,6 +31,26 @@ npx docmd build
 
 > TODO: python agent api in `./agent-api`
 
-## Chat UI
+## Frontend
 
-> TODO: react base front-end in `./chat-ui`
+React + TypeScript chat widget scaffolded in `./frontend`, built as a `<growth-chat>` Web Component with Shadow DOM.
+
+### Commands
+
+```bash
+# Move to frontend directory
+cd ./frontend
+
+# Start dev server with HMR
+npm run dev
+
+# Build self-contained IIFE bundle to dist/growth_chat.js
+npm run build
+```
+
+### Embed on any page
+
+```html
+<script src="dist/growth_chat.js" defer></script>
+<growth-chat api-url="https://api.example.com/chat"></growth-chat>
+```

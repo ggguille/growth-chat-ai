@@ -24,9 +24,9 @@ Python-based backend powering the chat agent. Handles conversation, qualificatio
 > Status: TODO
 :::
 
-::: card "Chat UI"
-React widget embedded on the company landing page. Connects to the Agent API.
-> Status: TODO
+::: card "Frontend"
+React + TypeScript + Vite chat widget delivered as a `<growth-chat>` Web Component. Embeds on any host page with a single script tag.
+> Status: Scaffolded
 :::
 
 ## Documentation
