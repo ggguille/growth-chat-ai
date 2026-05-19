@@ -19,9 +19,9 @@ This project is built as part of a course to explore real-world AI engineering â
 This site. Architecture decisions, design docs, and development notes.
 :::
 
-::: card "Agent API"
-Python-based backend powering the chat agent. Handles conversation, qualification logic, and lead routing.
-> Status: TODO
+::: card "Backend"
+FastAPI backend powering the chat agent. Streaming `POST /chat` endpoint via SSE, with domain-driven structure across conversation, qualification, knowledge, handoff, and analytics.
+> Status: Scaffolded
 :::
 
 ::: card "Frontend"

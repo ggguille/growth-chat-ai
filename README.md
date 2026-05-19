@@ -8,6 +8,10 @@ AI Chat project to learn about AI engineering
 
 This project uses **[NodeJS](https://nodejs.org/es)** for documentation, version managed by **[NVM](https://github.com/nvm-sh/nvm)**
 
+### Python + uv
+
+The backend uses **Python 3.14+**, managed via **[uv](https://docs.astral.sh/uv/)** as a workspace.
+
 ## Documentation
 
 All documentation about project is in `./documentation` folder.
@@ -27,9 +31,21 @@ npx docmd dev
 npx docmd build
 ```
 
-## Agent API
+## Backend
 
-> TODO: python agent api in `./agent-api`
+FastAPI backend in `./backend` — streaming `POST /chat` endpoint via SSE, with LangGraph orchestration, RAG retrieval, and lead handoff delivery.
+
+### Commands
+
+```bash
+# Install all workspace dependencies (from project root)
+uv sync
+
+# Start dev server with hot reload
+uv run --package backend uvicorn backend.main:app --reload --port 8000
+```
+
+See [`backend/README.md`](./backend/README.md) for environment variables and full API docs.
 
 ## Frontend
 
@@ -54,3 +70,5 @@ npm run build
 <script src="dist/growth_chat.js" defer></script>
 <growth-chat api-url="https://api.example.com/chat"></growth-chat>
 ```
+
+See [`frontend/README.md`](./frontend/README.md) for attributes and full UI docs.

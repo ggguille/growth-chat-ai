@@ -4,13 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Growth Chat is an AI engineering learning project structured as a monorepo with three planned modules:
+Growth Chat is an AI engineering learning project structured as a monorepo with four modules:
 
 - `documentation/` — DocMD static site (implemented)
-- `agent-api/` — Python agent API (TODO)
+- `backend/` — FastAPI backend with SSE streaming and domain-driven structure (scaffolded)
 - `frontend/` — React + TypeScript + Vite chat widget (scaffolded)
+- `evaluation/`, `knowledge_ingest/`, `shared/` — Python uv workspace members (stubs)
 
 Node version: v24.15.0 (see `.nvmrc`; use `nvm use` before working in `documentation/`).
+
+Python version: 3.14+ (see `.python-version`; managed via uv workspace).
 
 ## Documentation Module
 
@@ -22,6 +25,25 @@ npx docmd build  # build static site to site/
 ```
 
 DocMD config lives in `docmd.config.js`. Content is Markdown in `docs/`. The generated `site/` directory is git-ignored.
+
+## Backend Module
+
+Managed as a uv workspace member. All commands run from the project root:
+
+```bash
+uv sync                                                                   # install all workspace deps
+uv run --package backend uvicorn backend.main:app --reload --port 8000   # dev server
+```
+
+Source lives in `backend/src/backend/`. Domain structure:
+
+- `conversation/` — `POST /chat` SSE route, request/response models, `SessionState`
+- `qualification/` — `LeadLevel`, `FitLevel`, `QualificationState`
+- `knowledge/` — `retrieve_knowledge()` stub (RAG interface)
+- `handoff/` — `dispatch_handoff()` stub, `is_business_hours()`, `CRMClient` protocol
+- `analytics/` — `emit_event()` stub
+
+`backend/.env.example` lists all required environment variables. Copy to `backend/.env` before running.
 
 ## Frontend Module
 
@@ -36,7 +58,7 @@ The widget is a `<growth-chat>` Custom Element (Web Component) that mounts React
 
 ## Architecture Notes
 
-The repository is intentionally sparse at this stage. When `agent-api/` is added:
-
-- The Python agent API will go in `agent-api/` (expect `pyproject.toml` or `requirements.txt`)
-- Each module is independent; there is no root-level build system yet
+- The uv workspace root is `pyproject.toml`. Members: `backend`, `evaluation`, `knowledge-ingest`, `shared/knowledge_base`.
+- Code is organised by business domain, not technical layer (conversation, qualification, knowledge, handoff, analytics).
+- Each module is independent; there is no root-level build system.
+- The `backend/` package uses src layout (`src/backend/`). Import as `from backend.x import y`.

@@ -28,7 +28,7 @@ Two lines of HTML, no framework required on the host page:
 
 ## Structure
 
-```
+```text
 src/
 ├── main.ts                    # registers <growth-chat> custom element
 ├── GrowthChat.ts              # Web Component: Shadow DOM + React lifecycle
@@ -39,5 +39,5 @@ src/
 ## Attributes
 
 | Attribute | Required | Description |
-|-----------|----------|-------------|
+| --- | --- | --- |
 | `api-url` | yes | Backend streaming endpoint URL |
