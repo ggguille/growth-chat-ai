@@ -30,7 +30,7 @@ export class GrowthChat extends HTMLElement {
     if (!this.root) return;
     this.root.render(
       createElement(ChatWidget, {
-        apiUrl: this.getAttribute('api-url') ?? '',
+        apiUrl: this.getAttribute('api-url') ?? import.meta.env.VITE_API_URL ?? '',
       })
     );
   }

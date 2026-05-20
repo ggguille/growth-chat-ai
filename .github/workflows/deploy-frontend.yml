@@ -1,0 +1,55 @@
+name: Deploy Frontend Widget
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: false
+
+env:
+  VITE_API_URL: https://growth-chat-api.fly.dev/chat  # update to real API domain before first deploy
+  VITE_FALLBACK_URL: https://www.example.com/contact  # update to real contact form URL
+  VITE_GDPR_NOTICE_TEXT: ''                           # update with legal-approved notice text before first deploy
+  TIGRIS_BUCKET_NAME: growth-chat-assets
+
+jobs:
+  build-and-deploy:
+    name: Build and upload to Fly Tigris CDN
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build widget
+        working-directory: frontend
+        run: npm run build
+        # all VITE_* vars are inherited from the workflow-level env block
+
+      - name: Upload chat.js to Fly Tigris
+        # Tigris is S3-compatible — the AWS CLI connects to the Tigris endpoint, not AWS
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TIGRIS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_SECRET_ACCESS_KEY }}
+          AWS_REGION: auto
+        run: |
+          aws s3 cp frontend/dist/chat.js \
+            s3://$TIGRIS_BUCKET_NAME/chat.js \
+            --endpoint-url https://fly.storage.tigris.dev \
+            --cache-control "public, max-age=3600" \
+            --content-type "application/javascript"

@@ -9,7 +9,7 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/main.ts'),
       name: 'GrowthChat',
       formats: ['iife'],
-      fileName: () => 'growth_chat.js',
+      fileName: () => 'chat.js',
     },
     outDir: 'dist',
     emptyOutDir: true,
