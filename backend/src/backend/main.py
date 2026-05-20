@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="Growth Chat API",
     lifespan=lifespan,
-    docs_url=None if _production else "/docs",
+    docs_url="/docs", # None if _production else "/docs", REVERT when development done
     redoc_url=None if _production else "/redoc",
 )
 app.include_router(conversation_router)
