@@ -44,6 +44,28 @@ uv run uvicorn backend.main:app --reload --port 8000
 
 The API will be available at `http://localhost:8000`. Interactive docs at `http://localhost:8000/docs`.
 
+## Docker
+
+The image is built with a two-stage Dockerfile. Run all commands from the **project root** (the build context must include the uv workspace).
+
+### Build
+
+```bash
+docker build -f backend/Dockerfile -t growth-chat-backend .
+```
+
+### Run
+
+```bash
+docker run --env-file backend/.env -p 8000:8000 growth-chat-backend
+```
+
+The API is available at `http://localhost:8000`. Interactive docs (`/docs`, `/redoc`) are **disabled** in the container because `APP_ENV=production` is baked into the image — set `APP_ENV=development` in your env file to re-enable them.
+
+Health check: `GET /health` → `{"status": "ok"}`
+
+---
+
 ## API
 
 ### `POST /chat`

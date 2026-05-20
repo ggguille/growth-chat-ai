@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -8,14 +9,26 @@ from fastapi.responses import JSONResponse
 from backend.conversation.models import ErrorCode, ErrorDetail, HTTPErrorResponse
 from backend.conversation.router import router as conversation_router
 
+_production = os.getenv("APP_ENV", "development") == "production"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
 
-app = FastAPI(title="Growth Chat API", lifespan=lifespan)
+app = FastAPI(
+    title="Growth Chat API",
+    lifespan=lifespan,
+    docs_url=None if _production else "/docs",
+    redoc_url=None if _production else "/redoc",
+)
 app.include_router(conversation_router)
+
+
+@app.get("/health")
+async def health() -> dict:
+    return {"status": "ok"}
 
 
 @app.exception_handler(RequestValidationError)
