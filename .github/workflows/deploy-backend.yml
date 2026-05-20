@@ -15,16 +15,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy to Fly.io
+  build-and-deploy:
+    name: Build, push, and deploy
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
+      - uses: docker/setup-buildx-action@v3
+
       - uses: superfly/flyctl-actions/setup-flyctl@master
 
+      - name: Authenticate Docker with Fly.io registry
+        run: flyctl auth docker
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Set image tag
+        run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: |
+            registry.fly.io/growth-chat-api:${{ github.run_number }}-${{ env.SHORT_SHA }}
+            registry.fly.io/growth-chat-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Deploy
-        run: flyctl deploy --remote-only --config backend/fly.toml
+        run: flyctl deploy --image registry.fly.io/growth-chat-api:${{ github.run_number }}-${{ env.SHORT_SHA }} --config backend/fly.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
