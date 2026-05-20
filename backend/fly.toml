@@ -1,0 +1,31 @@
+# Fly.io app configuration — growth-chat backend
+# Deploy from repo root: flyctl deploy --config backend/fly.toml
+
+app = "growth-chat-api"
+primary_region = "fra"
+
+[build]
+  dockerfile = "backend/Dockerfile"
+
+[http_service]
+  internal_port        = 8080
+  force_https          = true
+  auto_stop_machines   = "stop"
+  min_machines_running = 0
+  max_machines_running = 1
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 25
+    soft_limit = 20
+
+[[http_service.checks]]
+  grace_period = "15s"
+  interval     = "30s"
+  method       = "GET"
+  path         = "/health"
+  timeout      = "5s"
+
+[[vm]]
+  size   = "shared-cpu-1x"
+  memory = "256mb"
