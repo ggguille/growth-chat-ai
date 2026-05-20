@@ -57,12 +57,20 @@ docker build -f backend/Dockerfile -t growth-chat-backend .
 ### Run
 
 ```bash
-docker run --env-file backend/.env -p 8000:8000 growth-chat-backend
+docker run --env-file backend/.env -p 8080:8080 growth-chat-backend
 ```
 
-The API is available at `http://localhost:8000`. Interactive docs (`/docs`, `/redoc`) are **disabled** in the container because `APP_ENV=production` is baked into the image — set `APP_ENV=development` in your env file to re-enable them.
+The API is available at `http://localhost:8080`. Interactive docs (`/docs`, `/redoc`) are **disabled** in the container because `APP_ENV=production` is baked into the image — set `APP_ENV=development` in your env file to re-enable them.
 
 Health check: `GET /health` → `{"status": "ok"}`
+
+## Deployment
+
+The backend is deployed to Fly.io (Frankfurt region). Configuration lives in `backend/fly.toml` — auto-scales to 0 machines when idle, max 1 VM, `shared-cpu-1x`, 256 MB memory.
+
+**Production port:** 8080 (differs from the dev port 8000).
+
+CI/CD deploys automatically on push to `main` when `backend/`, `shared/`, `pyproject.toml`, or `uv.lock` change. Required GitHub secret: `FLY_API_TOKEN` (in the `production` environment).
 
 ---
 

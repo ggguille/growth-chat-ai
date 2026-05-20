@@ -60,15 +60,35 @@ cd ./frontend
 # Start dev server with HMR
 npm run dev
 
-# Build self-contained IIFE bundle to dist/growth_chat.js
+# Build self-contained IIFE bundle to dist/chat.js
 npm run build
 ```
 
 ### Embed on any page
 
 ```html
-<script src="dist/growth_chat.js" defer></script>
-<growth-chat api-url="https://api.example.com/chat"></growth-chat>
+<script src="<CDN_URL>/chat.js" defer></script>
+<growth-chat api-url="<VITE_API_URL>"></growth-chat>
 ```
 
 See [`frontend/README.md`](./frontend/README.md) for attributes and full UI docs.
+
+## CI/CD
+
+Three automated pipelines deploy each module on push to `main`. All support manual runs via `workflow_dispatch`. See `.github/workflows/` for full details.
+
+| Workflow | Trigger paths | Deploys to |
+| --- | --- | --- |
+| `deploy-backend.yml` | `backend/`, `shared/`, `pyproject.toml`, `uv.lock` | Fly.io |
+| `deploy-frontend.yml` | `frontend/` | Fly Tigris object storage (CDN) |
+| `deploy-documentation.yml` | `documentation/` | GitHub Pages |
+
+### Required GitHub secrets
+
+The following secrets must be set in the `production` GitHub environment:
+
+| Secret | Workflow | Purpose |
+| --- | --- | --- |
+| `FLY_API_TOKEN` | deploy-backend | Fly.io authentication |
+| `TIGRIS_ACCESS_KEY_ID` | deploy-frontend | Object storage write access |
+| `TIGRIS_SECRET_ACCESS_KEY` | deploy-frontend | Object storage write access |

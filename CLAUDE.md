@@ -62,3 +62,22 @@ The widget is a `<growth-chat>` Custom Element (Web Component) that mounts React
 - Code is organised by business domain, not technical layer (conversation, qualification, knowledge, handoff, analytics).
 - Each module is independent; there is no root-level build system.
 - The `backend/` package uses src layout (`src/backend/`). Import as `from backend.x import y`.
+
+## CI/CD and Deployment
+
+Three workflows in `.github/workflows/`: `deploy-backend.yml`, `deploy-frontend.yml`, `deploy-documentation.yml`. All trigger on push to `main` and support `workflow_dispatch` for manual runs.
+
+Required secrets — must be set in the `production` GitHub environment:
+
+- `FLY_API_TOKEN` — authenticates Docker push and Fly.io deploy (backend)
+- `TIGRIS_ACCESS_KEY_ID` / `TIGRIS_SECRET_ACCESS_KEY` — S3-compatible credentials for Fly Tigris object storage (frontend)
+
+**Backend:** Production runs on port **8080** (dev uses 8000). Fly.io config is `backend/fly.toml` (Frankfurt region, auto-scale to 0, `shared-cpu-1x`, 256 MB). Docker build context must be the **project root** so the uv workspace is available:
+
+```bash
+docker build -f backend/Dockerfile -t growth-chat-api .
+```
+
+**Frontend:** Build artifact is `dist/chat.js` (single IIFE). The CI workflow uploads it to Fly Tigris object storage with a 1-hour cache TTL. CDN bucket name and endpoint URL live in the workflow env vars — not in source. Required build-time env vars (`VITE_API_URL`, `VITE_FALLBACK_URL`, `VITE_GDPR_NOTICE_TEXT`) are also set in the workflow; copy `frontend/.env.example` for local development.
+
+**Documentation:** GitHub Pages deployment; custom domain is set via CNAME in the workflow.
