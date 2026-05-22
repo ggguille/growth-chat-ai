@@ -6,6 +6,7 @@ on:
     paths:
       - 'backend/**'
       - 'shared/**'
+      - 'data/**'
       - 'pyproject.toml'
       - 'uv.lock'
   workflow_dispatch:
@@ -15,10 +16,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  migrate:
+    name: Run database migrations
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Run database migrations
+        run: uv run --package database python -m database.migrate
+        env:
+          CHECKPOINT_DB_URL: ${{ secrets.CHECKPOINT_DB_URL }}
+
   build-and-deploy:
     name: Build, push, and deploy
     runs-on: ubuntu-latest
     environment: production
+    needs: migrate
 
     steps:
       - uses: actions/checkout@v6
