@@ -23,19 +23,29 @@ cp backend/.env.example backend/.env   # then fill in the values
 | --- | --- | --- |
 | `ZGC_API_KEY` | Yes | Static key issued to each widget deployment. Must match the `ZGC-API-KEY` header sent by the frontend. |
 | `LLM_STREAM_TIMEOUT_MS` | No (default: `10000`) | Max milliseconds to wait for the first LLM token before emitting a `STREAM_TIMEOUT` error event. |
-| `DATABASE_URL` | Yes | Neon PostgreSQL connection string (`postgresql+asyncpg://...`). |
+| `CHECKPOINT_DB_URL` | Yes | Neon PostgreSQL connection string (`postgresql+asyncpg://...`). |
 | `SLACK_WEBHOOK_URL` | Yes | Incoming webhook URL for the `#new-leads` channel. |
 | `SLACK_BOT_TOKEN` | Yes | Bot token used to update Slack messages after CRM record creation. |
-| `HANDOFF_FALLBACK_EMAIL` | Yes | Internal `sales@` address for last-resort handoff delivery. |
+| `FALLBACK_EMAIL_ADDRESS` | Yes | Internal `sales@` address for last-resort handoff delivery. |
 | `SMTP_HOST` | Yes | SMTP server host. |
 | `SMTP_PORT` | No (default: `587`) | SMTP server port. |
-| `SMTP_USER` | Yes | SMTP authentication username. |
+| `SMTP_USERNAME` | Yes | SMTP authentication username. |
 | `SMTP_PASSWORD` | Yes | SMTP authentication password. |
 
 ## Development
 
+Start the local database first (see [`data/database/README.md`](../data/database/README.md)):
+
 ```bash
-# Dev server with hot reload (from project root)
+cp data/database/.env.example data/database/.env
+docker compose up -d
+uv run --package database python -m database.migrate
+```
+
+Then start the dev server:
+
+```bash
+# From project root
 uv run --package backend uvicorn backend.main:app --reload --port 8000
 
 # Or from the backend/ directory
@@ -70,7 +80,7 @@ The backend is deployed to Fly.io (Frankfurt region). Configuration lives in `ba
 
 **Production port:** 8080 (differs from the dev port 8000).
 
-CI/CD deploys automatically on push to `main` when `backend/`, `shared/`, `pyproject.toml`, or `uv.lock` change. Required GitHub secret: `FLY_API_TOKEN` (in the `production` environment).
+CI/CD deploys automatically on push to `main` when `backend/`, `shared/`, `data/`, `pyproject.toml`, or `uv.lock` change. Required GitHub secret: `FLY_API_TOKEN` (in the `production` environment).
 
 ---
 

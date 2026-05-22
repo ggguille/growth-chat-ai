@@ -1,0 +1,12 @@
+[project]
+name = "database"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = ["psycopg[binary]>=3.2.0", "python-dotenv>=1.0.0"]
+
+[build-system]
+requires = ["hatchling>=1.29.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/database"]

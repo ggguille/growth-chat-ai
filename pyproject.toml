@@ -8,6 +8,7 @@ dependencies = []
 members = [
     "backend",
     "evaluation",
-    "knowledge-ingest",
+    "data/database",
+    "data/ingestion",
     "shared/knowledge_base",
 ]

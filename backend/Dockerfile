@@ -10,10 +10,11 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 
 # Member manifests — needed for workspace dependency resolution
-COPY backend/pyproject.toml          backend/
-COPY backend/README.md               backend/
-COPY evaluation/pyproject.toml       evaluation/
-COPY knowledge_ingest/pyproject.toml knowledge_ingest/
+COPY backend/pyproject.toml              backend/
+COPY backend/README.md                   backend/
+COPY evaluation/pyproject.toml           evaluation/
+COPY data/database/pyproject.toml        data/database/
+COPY data/ingestion/pyproject.toml       data/ingestion/
 COPY shared/knowledge_base/pyproject.toml shared/knowledge_base/
 
 # Backend source — required so hatchling editable install registers the .pth file

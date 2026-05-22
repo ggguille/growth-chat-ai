@@ -1,0 +1,1 @@
+-- No seed data yet. Add sample knowledge_chunks_dev rows here for local dev.

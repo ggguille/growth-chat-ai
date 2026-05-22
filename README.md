@@ -31,6 +31,21 @@ npx docmd dev
 npx docmd build
 ```
 
+## Database
+
+Local development uses a Postgres container with the pgvector extension. Start it, then apply migrations before running the backend.
+
+```bash
+# Configure and start local Postgres (pgvector/pgvector:pg16)
+cp data/database/.env.example data/database/.env
+docker compose up -d
+
+# Apply all pending migrations
+uv run --package database python -m database.migrate
+```
+
+See [`data/database/README.md`](./data/database/README.md) for rollback, seeds, and CI/CD setup.
+
 ## Backend
 
 FastAPI backend in `./backend` — streaming `POST /chat` endpoint via SSE, with LangGraph orchestration, RAG retrieval, and lead handoff delivery.
@@ -41,7 +56,7 @@ FastAPI backend in `./backend` — streaming `POST /chat` endpoint via SSE, with
 # Install all workspace dependencies (from project root)
 uv sync
 
-# Start dev server with hot reload
+# Start dev server with hot reload (database must be running — see above)
 uv run --package backend uvicorn backend.main:app --reload --port 8000
 ```
 
@@ -79,7 +94,7 @@ Three automated pipelines deploy each module on push to `main`. All support manu
 
 | Workflow | Trigger paths | Deploys to |
 | --- | --- | --- |
-| `deploy-backend.yml` | `backend/`, `shared/`, `pyproject.toml`, `uv.lock` | Fly.io |
+| `deploy-backend.yml` | `backend/`, `shared/`, `data/`, `pyproject.toml`, `uv.lock` | Fly.io |
 | `deploy-frontend.yml` | `frontend/` | Fly Tigris object storage (CDN) |
 | `deploy-documentation.yml` | `documentation/` | GitHub Pages |
 
@@ -90,5 +105,6 @@ The following secrets must be set in the `production` GitHub environment:
 | Secret | Workflow | Purpose |
 | --- | --- | --- |
 | `FLY_API_TOKEN` | deploy-backend | Fly.io authentication |
+| `CHECKPOINT_DB_URL` | deploy-backend | Neon PostgreSQL connection string for pre-deploy migrations |
 | `TIGRIS_ACCESS_KEY_ID` | deploy-frontend | Object storage write access |
 | `TIGRIS_SECRET_ACCESS_KEY` | deploy-frontend | Object storage write access |
