@@ -9,7 +9,9 @@ Growth Chat is an AI engineering learning project structured as a monorepo with 
 - `documentation/` — DocMD static site (implemented)
 - `backend/` — FastAPI backend with SSE streaming and domain-driven structure (scaffolded)
 - `frontend/` — React + TypeScript + Vite chat widget (scaffolded)
-- `evaluation/`, `knowledge_ingest/`, `shared/` — Python uv workspace members (stubs)
+- `data/database/` — SQL migration runner (implemented)
+- `data/ingestion/` — knowledge ingestion pipeline (stub)
+- `evaluation/`, `shared/` — Python uv workspace members (stubs)
 
 Node version: v24.15.0 (see `.nvmrc`; use `nvm use` before working in `documentation/`).
 
@@ -45,6 +47,36 @@ Source lives in `backend/src/backend/`. Domain structure:
 
 `backend/.env.example` lists all required environment variables. Copy to `backend/.env` before running.
 
+## Database Module
+
+Managed as a uv workspace member (`data/database`). All commands run from the project root:
+
+```bash
+uv run --package database python -m database.migrate            # apply pending migrations
+uv run --package database python -m database.migrate --dry-run  # preview without applying
+uv run --package database python -m database.migrate --rollback N  # roll back last N
+```
+
+Migrations are plain SQL files in `data/database/migrations/`, numbered `0001`–`0005`. Each has a matching `.down.sql` rollback file. The runner tracks applied versions in a `schema_migrations` table it creates on first run.
+
+**Local development** uses Docker Compose (pgvector/pgvector:pg17). Start it with:
+
+```bash
+docker compose up -d
+```
+
+Copy `data/database/.env.example` to `data/database/.env` and set `CHECKPOINT_DB_URL` to the local Postgres URL before running migrations locally.
+
+**Production** database is Neon PostgreSQL. The connection string is set via `CHECKPOINT_DB_URL` in the backend's environment and in the `production` GitHub environment secret.
+
+Schema summary:
+
+- `knowledge_chunks` — production vector store (1536-dim, OpenAI embeddings)
+- `knowledge_chunks_dev` — dev vector store (384-dim, HuggingFace embeddings)
+- `handoff_records` — human handoff audit trail
+- `leads` — CRM substitute (structured lead records)
+- `checkpoints` / `checkpoint_writes` — created at backend startup by LangGraph's `AsyncPostgresSaver`
+
 ## Frontend Module
 
 All commands run from `frontend/`:
@@ -58,7 +90,7 @@ The widget is a `<growth-chat>` Custom Element (Web Component) that mounts React
 
 ## Architecture Notes
 
-- The uv workspace root is `pyproject.toml`. Members: `backend`, `evaluation`, `knowledge-ingest`, `shared/knowledge_base`.
+- The uv workspace root is `pyproject.toml`. Members: `backend`, `data/database`, `data/ingestion`, `evaluation`, `shared/knowledge_base`.
 - Code is organised by business domain, not technical layer (conversation, qualification, knowledge, handoff, analytics).
 - Each module is independent; there is no root-level build system.
 - The `backend/` package uses src layout (`src/backend/`). Import as `from backend.x import y`.
@@ -70,9 +102,10 @@ Three workflows in `.github/workflows/`: `deploy-backend.yml`, `deploy-frontend.
 Required secrets — must be set in the `production` GitHub environment:
 
 - `FLY_API_TOKEN` — authenticates Docker push and Fly.io deploy (backend)
+- `CHECKPOINT_DB_URL` — Neon PostgreSQL connection string; used by the migration job in `deploy-backend.yml`
 - `TIGRIS_ACCESS_KEY_ID` / `TIGRIS_SECRET_ACCESS_KEY` — S3-compatible credentials for Fly Tigris object storage (frontend)
 
-**Backend:** Production runs on port **8080** (dev uses 8000). Fly.io config is `backend/fly.toml` (Frankfurt region, auto-scale to 0, `shared-cpu-1x`, 256 MB). Docker build context must be the **project root** so the uv workspace is available:
+**Backend:** The deploy workflow runs two sequential jobs: `migrate` (applies pending SQL migrations to Neon via the `database` package) then `build-and-deploy` (builds and pushes the Docker image to Fly.io). A migration failure blocks the deploy. Production runs on port **8080** (dev uses 8000). Fly.io config is `backend/fly.toml` (Frankfurt region, auto-scale to 0, `shared-cpu-1x`, 256 MB). Docker build context must be the **project root** so the uv workspace is available:
 
 ```bash
 docker build -f backend/Dockerfile -t growth-chat-api .
