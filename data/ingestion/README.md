@@ -6,30 +6,69 @@ Knowledge base ingestion pipeline for Growth Chat. Chunks source documents, gene
 
 | Component | Status |
 | --- | --- |
-| `chunker.py` | Stub — `chunk_document()` raises `NotImplementedError` |
-| `embedder.py` | Stub — `get_embeddings()` raises `NotImplementedError` |
-| `pipeline.py` | Stub — `run_pipeline()` raises `NotImplementedError` |
+| `chunker.py` | Implemented — `RecursiveCharacterTextSplitter`, deterministic `chunk_id` |
+| `embedder.py` | Implemented — dev mode (`HuggingFaceEmbeddings`, 384-dim) |
+| `pipeline.py` | Implemented — walks source dir, strips frontmatter, chunks, embeds, upserts |
 
 ## Embedding models
 
 | Environment | Model | Dimensions | Table |
 | --- | --- | --- | --- |
-| Production | `text-embedding-3-small` (OpenAI) | 1536 | `knowledge_chunks` |
 | Development | `all-MiniLM-L6-v2` (HuggingFace, local) | 384 | `knowledge_chunks_dev` |
+| Production | `text-embedding-3-small` (OpenAI) | 1536 | `knowledge_chunks` |
 
-Configure via `OPENAI_EMBEDDING_MODEL` and `KNOWLEDGE_TABLE_NAME`. See `trd-infrastructure-requirements.md` for the full variable reference.
+The dev model runs in-process with no API key. On first run it downloads ~90 MB to `~/.cache/huggingface/`.
 
-## Running the pipeline
+## Running the pipeline (dev)
 
-Prerequisites: database migrations must have been applied (`data/database`).
+Prerequisites: Docker Compose running, database migrations applied.
 
 ```bash
-# Local development
-uv run --package ingestion python -m ingestion.pipeline --source <docs_dir>
+# 1. Start local Postgres
+docker compose up -d
 
-# Production — one-off Fly Machine using the same image as the API
-flyctl machine run --app growth-chat-api \
-  --image registry.fly.io/growth-chat-api:latest \
-  --entrypoint "python -m ingestion.pipeline" \
-  -- --source /app/knowledge
+# 2. Apply migrations
+uv run --package database python -m database.migrate
+
+# 3. Run ingestion
+# Bash
+CHECKPOINT_DB_URL=postgresql://growth:growth@localhost:5432/growth_chat \
+uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-base
+
+# PowerShell
+$env:CHECKPOINT_DB_URL = "postgresql://growth:growth@localhost:5432/growth_chat"
+uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-base
 ```
+
+## Environment variables
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `CHECKPOINT_DB_URL` | Yes | — | psycopg3 connection string (`postgresql://...`) |
+| `CHUNK_SIZE` | No | `512` | Tokens per chunk |
+| `CHUNK_OVERLAP` | No | `64` | Token overlap between adjacent chunks |
+
+Copy `.env.example` to `.env` as a reference — variables must be exported manually, not loaded automatically.
+
+## Verifying the result
+
+```sql
+SELECT source, COUNT(*) AS chunks
+FROM knowledge_chunks_dev
+GROUP BY source ORDER BY source;
+```
+
+Expected: one row per source document, each with 1–5 chunks.
+
+## Document format
+
+Source files must be Markdown (`.md`). Files with YAML frontmatter are supported — the pipeline strips the frontmatter before chunking and uses the `source` field as the chunk identifier:
+
+```yaml
+---
+source: my-document-slug
+category: services
+---
+```
+
+If no frontmatter is present, the filename stem is used as the source.
