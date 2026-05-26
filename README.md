@@ -46,6 +46,24 @@ uv run --package database python -m database.migrate
 
 See [`data/database/README.md`](./data/database/README.md) for rollback, seeds, and CI/CD setup.
 
+## Ingestion
+
+Knowledge base ingestion pipeline in `./data/ingestion` — chunks Markdown documents, generates embeddings, and upserts them into the pgvector store. In dev mode it uses a local HuggingFace model (no API key needed).
+
+Source documents live in `./data/knowledge-base/`.
+
+```bash
+# Ensure Docker Compose is running and migrations are applied (see Database above)
+
+# Copy env file and configure connection string
+cp data/ingestion/.env.example data/ingestion/.env
+
+# Run the dev ingestion pipeline
+uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-base
+```
+
+See [`data/ingestion/README.md`](./data/ingestion/README.md) for environment variables and embedding model details.
+
 ## Backend
 
 FastAPI backend in `./backend` — streaming `POST /chat` endpoint via SSE, with LangGraph orchestration, RAG retrieval, and lead handoff delivery.

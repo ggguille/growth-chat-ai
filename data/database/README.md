@@ -40,6 +40,7 @@ SQL files live in `migrations/`. Every migration has a companion `.down.sql` fil
 | `0003_knowledge_chunks_dev` | Dev knowledge store — 384-dim HNSW index |
 | `0004_handoff_records` | Human handoff audit trail |
 | `0005_leads` | CRM substitute — lead records |
+| `0006_knowledge_chunks_metadata` | Adds `category`, `title`, `description`, `proactive_eligible` to both knowledge tables |
 
 **Rollback ordering:** `0001` (pgvector extension) cannot be rolled back while `knowledge_chunks` tables exist. Roll back `0003` and `0002` first.
 

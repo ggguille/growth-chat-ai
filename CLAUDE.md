@@ -10,7 +10,8 @@ Growth Chat is an AI engineering learning project structured as a monorepo with 
 - `backend/` — FastAPI backend with SSE streaming and domain-driven structure (scaffolded)
 - `frontend/` — React + TypeScript + Vite chat widget (scaffolded)
 - `data/database/` — SQL migration runner (implemented)
-- `data/ingestion/` — knowledge ingestion pipeline (stub)
+- `data/ingestion/` — knowledge ingestion pipeline (implemented, dev mode)
+- `data/knowledge-base/` — source Markdown documents for ingestion (15 docs: services, team, case studies, engagement, FAQ)
 - `evaluation/`, `shared/` — Python uv workspace members (stubs)
 
 Node version: v24.15.0 (see `.nvmrc`; use `nvm use` before working in `documentation/`).
@@ -57,7 +58,7 @@ uv run --package database python -m database.migrate --dry-run  # preview withou
 uv run --package database python -m database.migrate --rollback N  # roll back last N
 ```
 
-Migrations are plain SQL files in `data/database/migrations/`, numbered `0001`–`0005`. Each has a matching `.down.sql` rollback file. The runner tracks applied versions in a `schema_migrations` table it creates on first run.
+Migrations are plain SQL files in `data/database/migrations/`, numbered `0001`–`0006`. Each has a matching `.down.sql` rollback file. The runner tracks applied versions in a `schema_migrations` table it creates on first run.
 
 **Local development** uses Docker Compose (pgvector/pgvector:pg17). Start it with:
 
@@ -71,11 +72,35 @@ Copy `data/database/.env.example` to `data/database/.env` and set `CHECKPOINT_DB
 
 Schema summary:
 
-- `knowledge_chunks` — production vector store (1536-dim, OpenAI embeddings)
-- `knowledge_chunks_dev` — dev vector store (384-dim, HuggingFace embeddings)
+- `knowledge_chunks` — production vector store (1536-dim, OpenAI embeddings); columns: `chunk_id`, `source`, `chunk_index`, `content`, `content_hash`, `embedding`, `category`, `title`, `description`, `proactive_eligible`
+- `knowledge_chunks_dev` — dev vector store (384-dim, HuggingFace embeddings); same columns as above
 - `handoff_records` — human handoff audit trail
 - `leads` — CRM substitute (structured lead records)
 - `checkpoints` / `checkpoint_writes` — created at backend startup by LangGraph's `AsyncPostgresSaver`
+
+## Ingestion Module
+
+Managed as a uv workspace member (`data/ingestion`). All commands run from the project root:
+
+```bash
+uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-base
+```
+
+Source lives in `data/ingestion/src/ingestion/`:
+
+- `chunker.py` — `RecursiveCharacterTextSplitter`, deterministic SHA-256 `chunk_id`
+- `embedder.py` — dev mode: `HuggingFaceEmbeddings` (`all-MiniLM-L6-v2`, 384-dim, no API key; ~90 MB downloaded to `~/.cache/huggingface/` on first run)
+- `pipeline.py` — walks source dir, strips YAML frontmatter, chunks, embeds, upserts to `knowledge_chunks_dev`
+
+Environment variables (copy `data/ingestion/.env.example` to `data/ingestion/.env`; loaded automatically at startup):
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `CHECKPOINT_DB_URL` | Yes | — | psycopg3 connection string |
+| `CHUNK_SIZE` | No | `512` | Tokens per chunk |
+| `CHUNK_OVERLAP` | No | `64` | Token overlap between adjacent chunks |
+
+Source documents live in `data/knowledge-base/` as Markdown files with YAML frontmatter (`source`, `category`, `title`, `description`, `proactive_eligible`). 15 synthetic documents covering services, team, case studies, engagement models, and FAQ.
 
 ## Frontend Module
 
