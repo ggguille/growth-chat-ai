@@ -30,13 +30,11 @@ docker compose up -d
 # 2. Apply migrations
 uv run --package database python -m database.migrate
 
-# 3. Run ingestion
-# Bash
-CHECKPOINT_DB_URL=postgresql://growth:growth@localhost:5432/growth_chat \
-uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-base
+# 3. Copy env file and set your connection string
+cp data/ingestion/.env.example data/ingestion/.env
+# edit data/ingestion/.env as needed
 
-# PowerShell
-$env:CHECKPOINT_DB_URL = "postgresql://growth:growth@localhost:5432/growth_chat"
+# 4. Run ingestion
 uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-base
 ```
 
@@ -48,7 +46,7 @@ uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-
 | `CHUNK_SIZE` | No | `512` | Tokens per chunk |
 | `CHUNK_OVERLAP` | No | `64` | Token overlap between adjacent chunks |
 
-Copy `.env.example` to `.env` as a reference — variables must be exported manually, not loaded automatically.
+Copy `.env.example` to `.env` — the pipeline loads it automatically on startup. Production values are set as GitHub Actions secrets; no `.env` file is used there.
 
 ## Verifying the result
 

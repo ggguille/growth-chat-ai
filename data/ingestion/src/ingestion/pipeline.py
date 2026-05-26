@@ -6,6 +6,11 @@ from pathlib import Path
 
 import psycopg
 import yaml
+from dotenv import load_dotenv
+
+_PACKAGE_DIR = Path(__file__).parent.parent.parent  # data/ingestion/
+
+load_dotenv(_PACKAGE_DIR / ".env", override=False)
 
 from ingestion.chunker import Chunk, chunk_document
 from ingestion.embedder import get_embeddings
