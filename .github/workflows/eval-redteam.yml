@@ -1,0 +1,45 @@
+name: Red Team Evaluation
+
+on:
+  # TODO(Phase 5): add pull_request trigger once the conversation agent is deployed to staging
+  #   paths: [backend/**, data/knowledge-base/**, evaluation/redteam/**]
+  # TODO(Phase 5): add workflow_run trigger (Deploy Backend, completed, branches: [main])
+  workflow_dispatch:
+
+concurrency:
+  group: eval-redteam-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  redteam:
+    name: promptfoo red team (baseline 20 cases)
+    runs-on: ubuntu-latest
+    environment: evaluation
+    # Disabled — enable in Phase 5 when the conversation agent is deployed to staging.
+    # Remove `if: false` when backend/src/backend/conversation/ has a working LangGraph agent
+    # and it is deployed to staging. Also remove the TODO comments above and add the triggers.
+    if: false
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install promptfoo
+        run: npm install -g promptfoo
+
+      - name: Run baseline adversarial tests (TC-ADV-001..020)
+        # TODO(Phase 5): add a second step for adaptive attacks:
+        #   promptfoo redteam run --config evaluation/redteam/promptfooconfig.yaml
+        # Adaptive attacks (GOAT/Crescendo) are expensive — run as a separate manual gate.
+        run: promptfoo eval --config evaluation/redteam/promptfooconfig.yaml --no-cache
+        env:
+          EVAL_API_URL: ${{ vars.EVAL_API_URL }}
+          ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
+          PROMPTFOO_GRADING_PROVIDER: anthropic:messages:claude-haiku-4-5-20251001
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
