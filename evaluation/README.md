@@ -44,11 +44,11 @@ Live end-to-end tests that drive the real backend API over SSE. Each test create
 | Metric | Type | When required |
 | --- | --- | --- |
 | `SingleQuestionPerExchangeMetric` | Deterministic (counts `?`) | Most tests — validates CDD §2.2 |
-| `NoPricingDisclosureMetric` | LLM-as-judge (GEval, OpenAI) | All tests — zero tolerance for rates |
-| `NoFabricationWithoutContextMetric` | LLM-as-judge (GEval, OpenAI) | Tests with `[NO RELEVANT RESULTS]` context |
-| Inline `GEval` metrics | LLM-as-judge (GEval, OpenAI) | Per-test criteria specific to each case |
+| `NoPricingDisclosureMetric` | LLM-as-judge (GEval, multi-provider) | All tests — zero tolerance for rates |
+| `NoFabricationWithoutContextMetric` | LLM-as-judge (GEval, multi-provider) | Tests with `[NO RELEVANT RESULTS]` context |
+| Inline `GEval` metrics | LLM-as-judge (GEval, multi-provider) | Per-test criteria specific to each case |
 
-LLM-as-judge metrics **require `OPENAI_API_KEY`** — tests skip automatically if the key is missing.
+LLM-as-judge metrics require a configured judge provider (Ollama, Claude, or OpenAI) — tests skip automatically when none is active.
 
 ### Layer 2 — Red team (`redteam/`)
 
@@ -118,11 +118,10 @@ Ollama through DeepEval's env-var detection. No test file changes needed.
 > criteria. Tests with `threshold=1.0` require a model with strong instruction
 > following (≥ 8B parameters recommended).
 
-#### 2b — CI/production: Claude Sonnet 4.6 via Anthropic API
+#### 2b — CI/production: Claude Haiku 4.5 via Anthropic API
 
-DeepEval ≥ 4.0.4 ships a native `AnthropicModel` class whose default model is
-`claude-sonnet-4-6`. No custom wrappers or extra packages beyond `anthropic` are
-needed.
+DeepEval ≥ 4.0.4 ships a native `AnthropicModel` class. No custom wrappers or extra
+packages beyond `anthropic` are needed.
 
 In `evaluation/.env` (or as CI environment secrets):
 
@@ -132,11 +131,11 @@ In `evaluation/.env` (or as CI environment secrets):
    ```text
    USE_ANTHROPIC_MODEL=true
    ANTHROPIC_API_KEY=<your-key>
-   # ANTHROPIC_MODEL_NAME=claude-sonnet-4-6   # optional; this is already the default
+   ANTHROPIC_MODEL_NAME=claude-haiku-4-5-20251001
    ```
 
-All `GEval` instances (custom and inline) auto-route to Claude Sonnet when
-`USE_ANTHROPIC_MODEL=true` and no `OPENAI_API_KEY` is present.
+All `GEval` instances (custom and inline) auto-route to Claude Haiku when
+`USE_ANTHROPIC_MODEL=true`.
 
 #### Environment variable reference
 
@@ -149,8 +148,7 @@ All `GEval` instances (custom and inline) auto-route to Claude Sonnet when
 | `OLLAMA_BASE_URL` | dev | No | `http://localhost:11434` | Ollama endpoint |
 | `USE_ANTHROPIC_MODEL` | CI | Yes (CI) | — | Set to `true` to use Claude |
 | `ANTHROPIC_API_KEY` | CI | Yes (CI) | — | Anthropic API key |
-| `ANTHROPIC_MODEL_NAME` | CI | No | `claude-sonnet-4-6` | Override the Claude model |
-| `OPENAI_API_KEY` | — | No | — | Legacy fallback; takes priority if set |
+| `ANTHROPIC_MODEL_NAME` | CI | No | `claude-haiku-4-5-20251001` | Claude model for CI judge |
 | `LANGFUSE_PUBLIC_KEY` | both | No | — | Enables eval score logging to Langfuse |
 | `LANGFUSE_SECRET_KEY` | both | No | — | Langfuse secret (pair with public key) |
 | `LANGFUSE_HOST` | both | No | `https://eu.cloud.langfuse.com` | Langfuse instance URL |
@@ -248,3 +246,49 @@ promptfoo eval --output results.json
 When `LANGFUSE_PUBLIC_KEY` is set, DeepEval automatically ships eval scores as traces to Langfuse. No code changes are needed — `behaviour/conftest.py` sets the required environment variables at startup.
 
 This lets you correlate eval scores with production traces in the same Langfuse project.
+
+---
+
+## CI
+
+The behaviour suite runs automatically in GitHub Actions via `.github/workflows/eval-behaviour.yml`.
+
+### Triggers
+
+The workflow currently runs **manually only** (`workflow_dispatch`). Automatic triggers are added in Phase 2 once the conversation agent is deployed to staging:
+
+| Trigger | Phase | When | Backend under test | Purpose |
+| --- | --- | --- | --- | --- |
+| `workflow_dispatch` | Now | Manual | Whatever is deployed | On-demand validation |
+| `pull_request` | Phase 2 | PR opens/updates on `backend/**`, `data/knowledge-base/**`, `evaluation/**` | Currently deployed staging | Soft gate — confirms suite runs without errors |
+| `workflow_run` (Deploy Backend) | Phase 2 | After a backend deploy completes on `main` | Freshly deployed staging | **Real regression gate** — verifies new code passes eval |
+
+> **Note on the PR trigger:** it runs against the *currently deployed* staging backend, not the PR branch. The authoritative check is the `workflow_run` trigger, which fires after the PR is merged and deployed.
+
+### Disabled state
+
+The workflow job is guarded by `if: false` until the backend conversation agent is implemented. Tests have no meaningful backend to call before Phase 2.
+
+**To enable in Phase 2:**
+
+1. Remove the `if: false` line from the `behaviour` job in `.github/workflows/eval-behaviour.yml`.
+2. Confirm `EVAL_API_URL` and `ANTHROPIC_API_KEY` are set in the `evaluation` GitHub environment (see below).
+3. Trigger a manual run via `workflow_dispatch` to verify the 8 Phase 2 tests pass.
+
+**To promote to the full 60-test gate in Phase 5:**
+
+Remove the `-m phase2` filter from the `pytest` command in the workflow. The `TODO(Phase 5)` comment marks the exact line.
+
+### GitHub environment: `evaluation`
+
+Create a dedicated `evaluation` environment in GitHub Settings › Environments (separate from `production`). Add the following secrets:
+
+| Secret | Required | Value |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | Yes | Anthropic API key — used by DeepEval's `AnthropicModel` for GEval judge calls |
+| `EVAL_API_URL` | Yes | Staging backend URL (`https://growth-chat-api.fly.dev`) |
+| `LANGFUSE_PUBLIC_KEY` | No | Add when Langfuse is provisioned — enables eval score logging |
+| `LANGFUSE_SECRET_KEY` | No | Langfuse secret (pair with public key) |
+| `LANGFUSE_HOST` | No | Langfuse instance URL (default: `https://eu.cloud.langfuse.com`) |
+
+`ZGC_API_KEY` is **not** a secret — the fixture defaults to `dev-key` when unset.
