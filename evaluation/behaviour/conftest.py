@@ -27,7 +27,7 @@ def _llm_judge_available() -> bool:
     """
     return bool(
         os.getenv("LOCAL_MODEL_API_KEY") == "ollama"  # dev: Ollama
-        or os.getenv("USE_ANTHROPIC_MODEL")           # CI: Claude Sonnet
+        or os.getenv("USE_ANTHROPIC_MODEL")           # CI: Claude Haiku
     )
 
 
