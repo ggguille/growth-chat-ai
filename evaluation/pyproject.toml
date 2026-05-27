@@ -1,7 +1,28 @@
 [project]
 name = "evaluation"
 version = "0.1.0"
-description = "Add your description here"
+description = "Evaluation suite: DeepEval behaviour tests, promptfoo red team, RAGAS RAG pipeline"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "anthropic>=0.50.0",
+    "deepeval>=4.0.4",
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
+    "langfuse>=4.6.1",
+    "httpx>=0.28.1",
+    "python-dotenv>=1.2.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["behaviour"]
+asyncio_mode = "auto"
+markers = [
+    "p1: Evaluating CTO persona",
+    "p2: Exploring Founder persona",
+    "p3: Referred Decision-Maker persona",
+    "n1: Competitor persona",
+    "n2: Curious Researcher persona",
+    "pattern: Specific conversation pattern",
+    "phase2: Phase 2 first eval cycle scope",
+]
