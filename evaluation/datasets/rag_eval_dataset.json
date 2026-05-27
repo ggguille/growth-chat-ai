@@ -1,0 +1,395 @@
+[
+  {
+    "id": "rag-001",
+    "question": "Do you build RAG pipelines?",
+    "ground_truth": "Yes. RAG pipeline development is part of Zartis's GenAI Development service. Zartis engineers LLM application development and RAG (retrieval-augmented generation) pipelines that turn real workflows into reliable systems, with the right data, integrations, and quality controls to make solutions secure, measurable, and scalable.",
+    "relevant_document": "services/service-ai-development.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-002",
+    "question": "What AI agent frameworks do you use?",
+    "ground_truth": "Zartis builds agentic systems using LangGraph, LangChain, and custom orchestration frameworks. As an Anthropic partner, Zartis builds primarily on Claude and Claude Code, and also works across other leading model providers.",
+    "relevant_document": "services/service-ai-agents.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-003",
+    "question": "Do you offer AI transformation services?",
+    "ground_truth": "Yes. Zartis's AI Transformation service covers Organisation (AI strategy, governance, AI-augmented SDLC), People (AI workshops including Claude Code labs, embedded expertise, AI tools adoption), and Product (AI development, AI agents, AI data platform). Zartis combines AI strategy, engineering depth, and enterprise-level delivery.",
+    "relevant_document": "services/service-ai-transformation.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-004",
+    "question": "What industries do you serve?",
+    "ground_truth": "Zartis serves Financial Services, Energy & Climate, Healthcare & Life Sciences, Regulatory Compliance, Logistics & Supply Chain, and Telecommunications. AI transformation is tailored to sector-specific constraints and regulatory realities for each industry.",
+    "relevant_document": "services/service-ai-transformation.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-005",
+    "question": "Are you an Anthropic partner?",
+    "ground_truth": "Yes. Zartis is an official Anthropic partner and Microsoft partner. Zartis supports organisations building with Claude and Claude Code, from implementation and integration through to enablement and adoption.",
+    "relevant_document": "services/service-ai-development.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-006",
+    "question": "Do you do data engineering?",
+    "ground_truth": "Yes. Data engineering is part of Zartis's Software Engineering service. Zartis builds data pipelines, environments, and operational workflows that AI and analytical systems depend on — production-ready data that is reliable and well-structured. The AI Development service also covers semantic layer and data platform development as a dedicated capability.",
+    "relevant_document": "services/service-software-engineering.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-007",
+    "question": "What is AI-augmented SDLC?",
+    "ground_truth": "AI-augmented SDLC refers to integrating AI tooling and practices across the software development lifecycle. Zartis builds AI agents specifically for SDLC use cases: code review agents, test generation agents, and documentation agents — practical productivity tools built on Claude and Claude Code.",
+    "relevant_document": "services/service-ai-agents.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-008",
+    "question": "Do you offer software architecture consulting?",
+    "ground_truth": "Yes. Software architecture consulting is part of Zartis's Software Engineering service. This covers designing systems for scale, resilience, and long-term maintainability, including independent review and advisory for existing systems as well as greenfield design.",
+    "relevant_document": "services/service-software-engineering.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-009",
+    "question": "Can you help us build an agentic system?",
+    "ground_truth": "Yes. Zartis designs and builds agentic architectures — systems where AI agents plan, reason, use tools, and collaborate across complex workflows. This includes single agents with tool use, multi-agent pipelines, orchestrator-subagent patterns, and human-in-the-loop systems. As an Anthropic partner, Zartis works primarily on Claude and Claude Code alongside other leading model providers and agent tooling including LangGraph and LangChain.",
+    "relevant_document": "services/service-ai-agents.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-010",
+    "question": "We need help with our data platform for AI.",
+    "ground_truth": "Zartis builds the data foundation AI needs to work — designing AI-specific data platforms, engineering the pipelines that feed models, and ensuring data is production-ready. This is covered under Semantic Layer and Data Platform Development within the AI Development service.",
+    "relevant_document": "services/service-ai-development.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-011",
+    "question": "Do you work with Claude or OpenAI?",
+    "ground_truth": "Zartis is an Anthropic partner and builds agentic systems primarily on Claude and Claude Code, as well as across other leading model providers and the full agent tooling ecosystem including LangGraph and LangChain.",
+    "relevant_document": "services/service-ai-agents.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-012",
+    "question": "Can you handle DevOps and CI/CD?",
+    "ground_truth": "Yes. DevOps is part of Zartis's Software Engineering service, covering infrastructure, CI/CD pipelines, deployment workflows, and operational practices that allow teams to ship reliably and at speed.",
+    "relevant_document": "services/service-software-engineering.md",
+    "relevant_category": "service",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-013",
+    "question": "Where is Zartis headquartered?",
+    "ground_truth": "Zartis is headquartered in Cork, Ireland, where it was founded in 2009.",
+    "relevant_document": "team/team-profile.md",
+    "relevant_category": "team",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-014",
+    "question": "How many engineers does Zartis have?",
+    "ground_truth": "Zartis has 280+ engineers working with 60+ clients across a wide range of industries and technologies.",
+    "relevant_document": "team/team-profile.md",
+    "relevant_category": "team",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-015",
+    "question": "What timezones does your team cover?",
+    "ground_truth": "The majority of Zartis's engineering capacity operates in CET/GMT (Central European Time and UK time). Zartis has offices in Ireland (Cork, headquarters), Germany (Berlin), UK, Spain (Madrid), Poland (Wroclaw), Portugal, and Croatia. Distributed remote engineers also operate from Cyprus, South Africa, Egypt, Latin America, the US, and beyond.",
+    "relevant_document": "team/team-locations-timezone.md",
+    "relevant_category": "team",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-016",
+    "question": "Do you have European coverage for daily standups?",
+    "ground_truth": "Yes. For UK and EU clients, coverage is full working-day overlap with no timezone gap. For US clients, the Zartis team provides meaningful daily overlap — the team is at work while US teams are finishing the previous day and starting the current one. Daily standups, code review, and pair programming work in real time, not async-only.",
+    "relevant_document": "team/team-locations-timezone.md",
+    "relevant_category": "team",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-017",
+    "question": "Are your engineers based in Europe?",
+    "ground_truth": "The majority of Zartis's engineering capacity is based in Europe. Offices are in Ireland, Germany, UK, Spain, Poland, Portugal, and Croatia. Distributed remote engineers also operate from Cyprus, South Africa, Egypt, Latin America, and the US.",
+    "relevant_document": "team/team-locations-timezone.md",
+    "relevant_category": "team",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-018",
+    "question": "What is Zartis's size and background?",
+    "ground_truth": "Zartis is a global technology consulting partner founded in Cork, Ireland in 2009. The company has grown to 280+ engineers working with 60+ clients. Originally a SaaS HR software company, Zartis evolved into a services company and expanded internationally — Spain (2015), Germany (2017), Poland (2017), Portugal and Czech Republic (2021), Croatia (2023). By 2025 the company completed its pivot to an AI transformation-focused consultancy. Zartis is an Anthropic partner and Microsoft partner.",
+    "relevant_document": "team/team-profile.md",
+    "relevant_category": "team",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-019",
+    "question": "Do you have experience with AI in compliance or regulatory software?",
+    "ground_truth": "Yes. Zartis worked with RegEdge, a B2B SaaS company that helps organisations manage product compliance and regulatory requirements. Zartis provided embedded AI engineers who worked directly with RegEdge's internal subject matter experts (SMEs). The model was complementary: RegEdge owned the domain knowledge, Zartis owned the AI engineering. The engagement accelerated AI adoption within RegEdge's compliance platform.",
+    "relevant_document": "case-studies/case-study-compliance-risks-ai.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-020",
+    "question": "Have you worked on AI security or data classification projects?",
+    "ground_truth": "Yes. Zartis provided senior AI and software engineers to DataShield, an advanced AI-based data security platform. Zartis engineers embedded directly into DataShield's team to deliver AI-based data classification and enterprise-grade security platform capabilities. DataShield was subsequently acquired by ClearGuard, a global cybersecurity leader.",
+    "relevant_document": "case-studies/case-study-getvisibility-ai-security.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-021",
+    "question": "Do you have energy sector experience?",
+    "ground_truth": "Yes. Zartis has a 4+ year partnership with Voltara, a Meridian Energy Group company that powers intelligent energy platforms for large energy suppliers. Zartis scaled Voltara's engineering capacity from 4 to nearly 30 engineers embedded across multiple product squads, delivering a real-time power management system for smart EV charging.",
+    "relevant_document": "case-studies/case-study-kaluza-ev-charging.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-022",
+    "question": "What results did the EV charging project achieve?",
+    "ground_truth": "The Voltara smart EV charging platform achieved: 70% reduction in EV charging costs for customers (up to £500 annually), 55% reduction in peak demand through intelligent charging optimisation, 384 MWh delivered with 215 MWh (56%) shifted away from peak times, and 6.2 tonnes of CO2 savings in an 11-month pilot with 300 EV users. The platform has since scaled globally across multiple energy providers.",
+    "relevant_document": "case-studies/case-study-kaluza-ev-charging.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-023",
+    "question": "Can you give a concrete example of team scale-up you've done?",
+    "ground_truth": "Yes. For Voltara (Meridian Energy Group), Zartis scaled engineering capacity from 4 to nearly 30 engineers embedded across multiple product squads over a 4+ year partnership. The engineers used Go, React, Node.js, TypeScript, microservices, and cloud infrastructure to deliver the smart EV charging platform.",
+    "relevant_document": "case-studies/case-study-kaluza-ev-charging.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-024",
+    "question": "Have you worked with companies that were later acquired?",
+    "ground_truth": "Yes. DataShield, an AI-based data security platform that Zartis helped build and scale, was acquired by ClearGuard, a global cybersecurity leader. The acquisition was a validation of the platform's quality and market position that Zartis engineers helped achieve.",
+    "relevant_document": "case-studies/case-study-getvisibility-ai-security.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-025",
+    "question": "Do you have fintech or finance case studies?",
+    "ground_truth": "Zartis serves Financial Services as a key industry vertical and has experience in AI engineering applied in heavily regulated, compliance-driven domains. The engagement with RegEdge — a B2B SaaS company for product compliance and regulatory management — is an example of AI engineering in a domain with close parallels to financial services.",
+    "relevant_document": "case-studies/case-study-compliance-risks-ai.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-026",
+    "question": "What was the technical stack on the EV project?",
+    "ground_truth": "For the Voltara smart EV charging platform, the Zartis team worked across Go, React, Node.js, TypeScript, microservices architecture, and cloud infrastructure. The system required real-time power management with sub-second scheduling decisions at scale.",
+    "relevant_document": "case-studies/case-study-kaluza-ev-charging.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-027",
+    "question": "Do you have examples of rapid team augmentation?",
+    "ground_truth": "Yes. For DataShield, Zartis provided senior AI and software engineers who integrated directly into the team and started contributing immediately — in the words of the Co-Founder and CEO: 'experts in their field who can slot into and augment the team very, very quickly.' The engagement scaled with DataShield's growth trajectory through to acquisition.",
+    "relevant_document": "case-studies/case-study-getvisibility-ai-security.md",
+    "relevant_category": "case-study",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-028",
+    "question": "How does the team extension model work?",
+    "ground_truth": "In team extension, Zartis engineers become part of the client's engineering organisation — working on the client's codebase, following the client's processes, attending the client's standups and sprint ceremonies. The engineers are typically senior; ramp time is measured in days, not weeks. Commercial structure is time and materials. There is no lock-in — the engagement continues as long as it delivers value.",
+    "relevant_document": "engagement/engagement-model-team-extension.md",
+    "relevant_category": "engagement",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-029",
+    "question": "What does end-to-end delivery involve?",
+    "ground_truth": "End-to-end delivery means Zartis takes ownership of a defined system or capability from design through to production: scoping (discovery to understand the problem and constraints), architecture design (client reviews and approves), delivery (engineering, testing, deployment with regular checkpoints), and handoff (documentation, knowledge transfer, support during transition). The client owns the final product; Zartis owns the delivery. Commercial structure is fixed price for well-defined scope, or time and materials for evolving scope.",
+    "relevant_document": "engagement/engagement-model-end-to-end.md",
+    "relevant_category": "engagement",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-030",
+    "question": "Do you take full ownership of building a system?",
+    "ground_truth": "Yes, through the End-to-End Delivery model. Zartis owns architecture, engineering, testing, deployment, and handoff of a defined system or capability. The engagement ends with a documented handoff and knowledge transfer so the client's team can maintain the system independently. Typical use cases include building AI features or RAG pipelines, designing and delivering data platforms, implementing agentic systems end-to-end, and MVP development.",
+    "relevant_document": "engagement/engagement-model-end-to-end.md",
+    "relevant_category": "engagement",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-031",
+    "question": "How quickly can engineers start?",
+    "ground_truth": "For common engineering and AI roles where Zartis has existing bench depth, introductions can happen within a week. For highly specialised profiles, the timeline depends on what is available. Zartis does not place people who are not right for the engagement just to fill a slot quickly.",
+    "relevant_document": "faq/faq-pricing-timelines.md",
+    "relevant_category": "faq",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-032",
+    "question": "Can you embed engineers directly in our team?",
+    "ground_truth": "Yes. This is Zartis's Team Extension model. Zartis engineers join the client's engineering organisation, work on the client's codebase, follow the client's processes, and attend the client's standups and sprint ceremonies. The engineers are senior and typically ramp in days rather than weeks. Commercial structure is time and materials; there is no lock-in.",
+    "relevant_document": "engagement/engagement-model-team-extension.md",
+    "relevant_category": "engagement",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-033",
+    "question": "Do you handle the full delivery or just provide engineers?",
+    "ground_truth": "Both. Zartis offers two engagement models: Team Extension (providing engineers who integrate into the client's team and work under the client's direction) and End-to-End Delivery (Zartis owns the full delivery from architecture through to handoff). For End-to-End, fixed price is used for well-defined scope and time and materials for evolving scope.",
+    "relevant_document": "engagement/engagement-model-end-to-end.md",
+    "relevant_category": "engagement",
+    "has_relevant_chunk": true,
+    "test_type": "paraphrase"
+  },
+  {
+    "id": "rag-034",
+    "question": "How do you price your services?",
+    "ground_truth": "Zartis does not publish fixed rates. Cost depends entirely on scope, team size, seniority mix, and duration. For team extension, the structure is typically time and materials with a day rate per engineer. For end-to-end delivery, fixed price is used for well-defined scope and time and materials for exploratory or evolving scope. The right first step is a short conversation — from there Zartis can give a figure that actually means something for the specific situation.",
+    "relevant_document": "faq/faq-pricing-timelines.md",
+    "relevant_category": "faq",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-035",
+    "question": "How long does a typical AI project take?",
+    "ground_truth": "It varies by type. For AI features and RAG pipelines, a production-ready delivery is typically 6–12 weeks. More complex systems involving data platforms, agentic architectures, or MLOps components can run 3–6 months. Team extension engagements are ongoing by definition — they continue as long as they deliver value. Zartis scopes before estimating.",
+    "relevant_document": "faq/faq-pricing-timelines.md",
+    "relevant_category": "faq",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-036",
+    "question": "Do you do academic AI research?",
+    "ground_truth": "No. Zartis is an engineering and consulting company, not a research lab. The work is applied: production systems, real workflows, business problems with measurable outcomes. If the goal is to publish a paper or push the frontier of ML research, Zartis is not the right partner.",
+    "relevant_document": "faq/faq-what-we-dont-do.md",
+    "relevant_category": "faq",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-037",
+    "question": "What happens if an engineer isn't the right fit?",
+    "ground_truth": "Zartis replaces them. The model only works if the right people are in place. If an engineer is not the right fit technically or culturally, Zartis addresses it with a direct conversation and a fast resolution — no bureaucratic process.",
+    "relevant_document": "faq/faq-how-we-work.md",
+    "relevant_category": "faq",
+    "has_relevant_chunk": true,
+    "test_type": "known_relevant"
+  },
+  {
+    "id": "rag-038",
+    "question": "What is Zartis's annual revenue?",
+    "ground_truth": null,
+    "relevant_document": null,
+    "relevant_category": null,
+    "has_relevant_chunk": false,
+    "test_type": "no_relevant_chunk",
+    "expected_behaviour": "acknowledge_limit"
+  },
+  {
+    "id": "rag-039",
+    "question": "What is the employee turnover rate at Zartis?",
+    "ground_truth": null,
+    "relevant_document": null,
+    "relevant_category": null,
+    "has_relevant_chunk": false,
+    "test_type": "no_relevant_chunk",
+    "expected_behaviour": "acknowledge_limit"
+  },
+  {
+    "id": "rag-040",
+    "question": "Do you have an office in Australia?",
+    "ground_truth": null,
+    "relevant_document": null,
+    "relevant_category": null,
+    "has_relevant_chunk": false,
+    "test_type": "no_relevant_chunk",
+    "expected_behaviour": "acknowledge_limit"
+  },
+  {
+    "id": "rag-041",
+    "question": "What internal project management tools does your team use?",
+    "ground_truth": null,
+    "relevant_document": null,
+    "relevant_category": null,
+    "has_relevant_chunk": false,
+    "test_type": "no_relevant_chunk",
+    "expected_behaviour": "acknowledge_limit"
+  },
+  {
+    "id": "rag-042",
+    "question": "What does your standard NDA look like?",
+    "ground_truth": null,
+    "relevant_document": null,
+    "relevant_category": null,
+    "has_relevant_chunk": false,
+    "test_type": "no_relevant_chunk",
+    "expected_behaviour": "acknowledge_limit"
+  },
+  {
+    "id": "rag-043",
+    "question": "Do you have a reseller or referral partner programme?",
+    "ground_truth": null,
+    "relevant_document": null,
+    "relevant_category": null,
+    "has_relevant_chunk": false,
+    "test_type": "no_relevant_chunk",
+    "expected_behaviour": "acknowledge_limit"
+  }
+]

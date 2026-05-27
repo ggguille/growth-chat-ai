@@ -12,6 +12,11 @@ dependencies = [
     "langfuse>=4.6.1",
     "httpx>=0.28.1",
     "python-dotenv>=1.2.2",
+    # ── RAGAS RAG evaluation ──────────────────────────────────────────────────
+    "ragas>=0.4.3",
+    "langchain-anthropic>=1.0.0",   # RAGAS judge LLM (Claude Haiku)
+    "sentence-transformers>=5.5.1", # dev embeddings: all-MiniLM-L6-v2 (384-dim)
+    "psycopg[binary]>=3.3.4",       # direct pgvector access
 ]
 
 [tool.pytest.ini_options]

@@ -63,15 +63,28 @@ Static adversarial cases plus GOAT and Crescendo adaptive attack strategies, run
 - **Persona boundary violations** — N1/N2 pivot attacks, late consultant reveal, hostile pressure
 - **Qualification logic bypass** — premature Stage 3 demands, false hot-lead signals, email-for-pricing trades
 
-### Layer 3 — RAG dataset (`datasets/`)
+### Layer 3 — RAG pipeline (`rag/`)
 
-43-item ground-truth dataset for evaluating retrieval quality. Used with RAGAS or a custom evaluation harness (not automated in this repo — the dataset is the authoritative reference). Items cover:
+RAGAS evaluation pipeline that measures retrieval quality against the 43-item ground-truth dataset (`datasets/rag_eval_dataset.json`). Requires a populated pgvector table (Phase 2+).
+
+**Dataset coverage:**
 
 | Type | Count | Purpose |
 | --- | --- | --- |
-| `known_relevant` | 25 | Question has a matching KB chunk — tests recall |
-| `paraphrase` | 12 | Same question rephrased — tests semantic robustness |
+| `known_relevant` | 25 | Question has a matching KB chunk — evaluates recall and precision |
+| `paraphrase` | 12 | Same question rephrased — evaluates semantic robustness |
 | `no_relevant_chunk` | 6 | No KB match exists — expected behaviour: acknowledge limit |
+
+**Metrics and thresholds (action plan §Phase 4):**
+
+| Metric | Threshold | Evaluated on |
+| --- | --- | --- |
+| `faithfulness` | > 0.8 | All 43 items |
+| `context_precision` | > 0.8 | 37 context items (`known_relevant` + `paraphrase`) |
+| `context_recall` | > 0.7 | 37 context items |
+| `answer_relevancy` | > 0.75 | All 43 items |
+
+**Pipeline:** For each item the runner embeds the question, retrieves the top-K chunks from pgvector, generates a grounded answer with Claude Haiku, then evaluates the `(question, answer, contexts, ground_truth)` tuple with RAGAS. Scores are logged to Langfuse as a Dataset experiment when `LANGFUSE_PUBLIC_KEY` is set.
 
 ---
 
@@ -230,6 +243,60 @@ Results open in the promptfoo browser UI by default. To output JSON:
 promptfoo eval --output results.json
 ```
 
+### Run the RAGAS evaluation
+
+> **Requires Phase 2+:** the KB must be ingested and `RAGAS_DB_URL` must point to
+> a pgvector database with the `knowledge_chunks_dev` (dev) or `knowledge_chunks`
+> (prod) table populated.
+
+```bash
+uv run --package evaluation python -m evaluation.rag.runner
+```
+
+With explicit options:
+
+```bash
+# Dev mode (sentence-transformers, knowledge_chunks_dev table) — default
+uv run --package evaluation python -m evaluation.rag.runner --embedding-mode dev
+
+# Prod mode (OpenAI embeddings, knowledge_chunks table)
+uv run --package evaluation python -m evaluation.rag.runner --embedding-mode prod
+
+# Custom dataset path
+uv run --package evaluation python -m evaluation.rag.runner \
+    --dataset evaluation/datasets/rag_eval_dataset.json
+```
+
+**RAGAS-specific environment variables** (add to `evaluation/.env`):
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `RAGAS_DB_URL` | Yes | `CHECKPOINT_DB_URL` | psycopg3 connection string to pgvector |
+| `RAGAS_EMBEDDING_MODE` | No | `dev` | `dev` (sentence-transformers 384-dim) or `prod` (OpenAI 1536-dim) |
+| `RAGAS_TOP_K` | No | `3` | Chunks retrieved per question |
+| `OPENAI_API_KEY` | prod only | — | Required when `RAGAS_EMBEDDING_MODE=prod` |
+| `ANTHROPIC_API_KEY` | Yes | — | Claude Haiku judge for faithfulness + answer_relevancy |
+
+Expected output:
+
+```
+[ragas] Loaded 43 evaluation items (mode: dev)
+[ragas] Running faithfulness, context_precision, context_recall, answer_relevancy…
+[ragas] Results:
+
+  Metric                   Score  Threshold  Pass
+  --------------------------------------------------
+  faithfulness             0.8540       0.80     ✓
+  context_precision        0.8120       0.80     ✓
+  context_recall           0.7340       0.70     ✓
+  answer_relevancy         0.8210       0.75     ✓
+
+[ragas] All thresholds passed. ✓
+```
+
+If `LANGFUSE_PUBLIC_KEY` is set, the run appears in Langfuse under
+**Datasets → rag_eval** as a named experiment (e.g. `ragas-20260601-140000`).
+
 ---
 
 ## Pytest markers
@@ -256,14 +323,15 @@ This lets you correlate eval scores with production traces in the same Langfuse 
 
 ## CI
 
-Two independent evaluation gates run in GitHub Actions:
+Three independent evaluation gates run in GitHub Actions:
 
 | Workflow | File | Scope | Gate type |
 | --- | --- | --- | --- |
 | Behaviour Evaluation | `eval-behaviour.yml` | DeepEval + pytest (60 behaviour tests) | Metric gate |
 | Red Team Evaluation | `eval-redteam.yml` | promptfoo (20 baseline adversarial cases) | Red-team gate |
+| RAG Evaluation | `eval-rag.yml` | RAGAS (43 Q/A pairs, 4 metrics) | RAG quality gate |
 
-Both are currently disabled (`if: false`) and triggered manually only. They are enabled independently in Phase 2 (behaviour) and Phase 5 (red team).
+All are currently disabled (`if: false`) and triggered manually only. They are enabled independently: behaviour in Phase 2, RAG in Phase 4, red team in Phase 5.
 
 ### Behaviour suite (`eval-behaviour.yml`)
 
@@ -318,17 +386,40 @@ The workflow job is guarded by `if: false` until the full agent is deployed to s
 
 Add a `promptfoo redteam run` step after `promptfoo eval`. The `TODO(Phase 5)` comment in the workflow marks the exact location.
 
+### RAG evaluation suite (`eval-rag.yml`)
+
+The RAG workflow runs **manually only** (`workflow_dispatch`). Automatic triggers are added in Phase 4 once the real KB is ingested and the RAGAS threshold has been calibrated:
+
+| Trigger | Phase | When | Purpose |
+| --- | --- | --- | --- |
+| `workflow_dispatch` | Now | Manual | On-demand validation |
+| `pull_request` | Phase 4 | PR touches `data/knowledge-base/**`, `evaluation/datasets/**`, `evaluation/rag/**` | Retrieval regression check |
+| `workflow_run` (Deploy Backend) | Phase 4 | After a backend deploy completes on `main` | **RAG quality gate** — detects KB/threshold regressions |
+
+### RAG disabled state
+
+The workflow job is guarded by `if: false` until the real KB is ingested and the RAGAS threshold is calibrated in Phase 4.
+
+**To enable in Phase 4:**
+
+1. Remove the `if: false` line from the `ragas` job in `.github/workflows/eval-rag.yml`.
+2. Confirm `RAGAS_DB_URL`, `OPENAI_API_KEY`, and `ANTHROPIC_API_KEY` are set in the `evaluation` GitHub environment.
+3. Trigger a manual run via `workflow_dispatch` to verify all 4 metrics meet their thresholds.
+4. A RAGAS failure is currently `continue-on-error: true` — it documents a regression but does not block the deploy. Remove that flag to make it a hard gate in Phase 5.
+
 ### GitHub environment: `evaluation`
 
 Create a dedicated `evaluation` environment in GitHub Settings › Environments (separate from `production`). Add the following secrets and variables:
 
 | Secret / Variable | Kind | Required by | Value |
 | --- | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | Secret | behaviour + redteam | Anthropic API key — LLM judge for DeepEval GEval and promptfoo llm-rubric |
-| `EVAL_API_URL` | Variable | both | Staging backend URL (`https://growth-chat-api.fly.dev`) |
+| `ANTHROPIC_API_KEY` | Secret | behaviour + redteam + ragas | Anthropic API key — LLM judge for DeepEval GEval, promptfoo llm-rubric, and RAGAS faithfulness/answer_relevancy |
+| `EVAL_API_URL` | Variable | behaviour + redteam | Staging backend URL (`https://growth-chat-api.fly.dev`) |
 | `ZGC_API_KEY` | Secret | redteam | API key sent in `ZGC-API-KEY` header to the staging backend |
-| `LANGFUSE_PUBLIC_KEY` | Secret | both | Add when Langfuse is provisioned — enables eval score logging |
-| `LANGFUSE_SECRET_KEY` | Secret | both | Langfuse secret (pair with public key) |
-| `LANGFUSE_HOST` | Variable | both | Langfuse instance URL (default: `https://eu.cloud.langfuse.com`) |
+| `RAGAS_DB_URL` | Secret | ragas | psycopg3 connection string to Neon pgvector (staging) |
+| `OPENAI_API_KEY` | Secret | ragas (prod mode) | OpenAI API key for `text-embedding-3-small` (CI uses prod embedding mode) |
+| `LANGFUSE_PUBLIC_KEY` | Secret | all | Add when Langfuse is provisioned — enables eval score logging |
+| `LANGFUSE_SECRET_KEY` | Secret | all | Langfuse secret (pair with public key) |
+| `LANGFUSE_HOST` | Variable | all | Langfuse instance URL (default: `https://eu.cloud.langfuse.com`) |
 
 `ZGC_API_KEY` defaults to `dev-key` in local development — only required as a secret in CI.

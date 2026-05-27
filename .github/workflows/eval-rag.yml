@@ -1,0 +1,56 @@
+name: RAG Evaluation (RAGAS)
+
+on:
+  # TODO(Phase 4): add pull_request trigger when real KB is merged
+  #   paths: [backend/**, data/knowledge-base/**, evaluation/datasets/**, evaluation/rag/**]
+  # TODO(Phase 4): add workflow_run trigger (Deploy Backend, completed, branches: [main])
+  #   — authoritative regression gate; fires after a backend deploy
+  workflow_dispatch:
+
+concurrency:
+  group: eval-rag-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ragas:
+    name: RAGAS RAG pipeline evaluation
+    runs-on: ubuntu-latest
+    environment: evaluation
+    # Disabled — enable in Phase 4 when the real KB is ingested and the RAG
+    # threshold has been calibrated (TRD §EC-05).
+    # Remove `if: false` to enable; confirm RAGAS_DB_URL points to the Neon
+    # staging database with knowledge_chunks populated.
+    if: false
+
+    env:
+      RAGAS_EMBEDDING_MODE: prod   # CI always uses the production OpenAI embeddings
+      RAGAS_TOP_K: "3"
+      ANTHROPIC_MODEL_NAME: claude-haiku-4-5-20251001
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Install workspace dependencies
+        run: uv sync
+
+      - name: Run RAGAS evaluation
+        # Exit code 1 if any metric falls below its threshold — see runner.py THRESHOLDS.
+        # A RAGAS failure does NOT block the deploy automatically; it requires explicit
+        # documented review before the next Phase 4 approval (see action plan §Phase 4).
+        # TODO(Phase 5): make this a hard gate by adding `continue-on-error: false`
+        # and wiring it as a required status check on the main branch.
+        continue-on-error: true
+        run: >
+          uv run --package evaluation python -m evaluation.rag.runner
+          --embedding-mode prod
+        env:
+          RAGAS_DB_URL: ${{ secrets.RAGAS_DB_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
