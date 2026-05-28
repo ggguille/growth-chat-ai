@@ -36,7 +36,7 @@ flowchart TD
 
     subgraph Notifications ["Notifications (exit points)"]
         SLACK[Slack Webhook\n#new-leads]
-        CRM[CRM Integration\nplatform TBD — OQ-04]
+        CRM[PostgreSQL leads table\nADR-009]
         EMAIL[Email Fallback\nsales@ — dual-channel failure only]
     end
 
@@ -56,26 +56,19 @@ flowchart TD
     HHS -->|partial failure fallback| EMAIL
 ```
 
-> **One component has a pending decision that affects this diagram:**
->
-> - **CRM platform (OQ-04):** Platform unconfirmed — owned by ops/commercial.
->   The Human Handoff Subsystem interface is specified in Section 3.4;
->   the CRM-specific adapter and lead record schema are defined in ADR-005
->   once OQ-04 is resolved. This blocks Section 5.2 and Phase 3 build.
-
 ---
 
 ## Component Responsibilities
 
 | Component | Responsibility | Technology | References |
 | --- | --- | --- | --- |
-| Chat Widget | Embeds on the company website; renders the conversation UI with streaming token display; shows GDPR data notice on first interaction; falls back to the contact form if the AI backend is unavailable | Custom JS / framework TBD | ADR (pending) |
+| Chat Widget | Embeds on the company website; renders the conversation UI with streaming token display; shows GDPR data notice on first interaction; falls back to the contact form if the AI backend is unavailable | Custom JS — `<growth-chat>` Web Component (React, Shadow DOM, Vite IIFE bundle) | ADR-005 |
 | Fallback Contact Form | Captures visitor name and email when the AI service is unavailable; submits via a path independent of the AI backend | Static endpoint / third-party form service | EC-07 |
-| Chat API | Authenticates the request, initiates or resumes a LangGraph session, pipes the token stream to the HTTP response | Backend API layer | ADR (pending) |
+| Chat API | Authenticates the request, initiates or resumes a LangGraph session, pipes the token stream to the HTTP response | FastAPI (Python) | trd-api-specification.md |
 | Conversation Orchestrator | Controls the full session lifecycle: qualification state updates, RAG triage routing, response generation, stall detection, escalation trigger | LangGraph (`StateGraph`) | ADR-002 |
 | Knowledge Retriever | Receives `retrieve_knowledge` tool calls from the LLM; embeds the query; executes HNSW vector search against pgvector; returns chunks above the relevance threshold | Internal module — pgvector + OpenAI Embeddings | ADR-003 |
 | Business Hours Detection | Determines whether the current timestamp falls within business hours (Mon–Fri 09:00–18:00 CET/CEST); DST-aware via IANA identifier `Europe/Madrid` | Python `zoneinfo` | EC-04 |
-| Human Handoff Subsystem | Generates the context packet; dispatches to Slack and CRM in parallel; handles partial failure; falls back to email on dual-channel failure | Internal module | EC-03, FR-19 |
+| Human Handoff Subsystem | Generates the context packet; dispatches to Slack and PostgreSQL `leads` table in parallel; records delivery outcome in `handoff_records`; handles partial failure; falls back to email on dual-channel failure | Internal module | ADR-009, EC-03, FR-19 |
 | LLM — Claude Haiku 4.5 | Generates conversational responses; executes the three-stage conversation model; signals when domain retrieval is required via `retrieve_knowledge` tool call | Anthropic API | ADR-001 |
 | OpenAI Embeddings | Converts query text to vectors at retrieval time; indexes document chunks at ingestion time | `text-embedding-3-small` | ADR-003 |
 | PostgreSQL | Single storage backend: pgvector extension for document chunks and HNSW index; `langgraph-checkpoint-postgres` tables for session state | PostgreSQL + pgvector | ADR-003, ADR-004 |

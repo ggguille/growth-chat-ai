@@ -112,15 +112,13 @@ Three deliverables that do not block the start but must be resolved in parallel:
 **Backend:**
 
 - FastAPI project scaffolding
-- Implement `POST /chat/message` endpoint (streaming SSE)
-- Implement `POST /chat/session` for session creation
+- Implement `POST /chat` endpoint (streaming SSE)
 - Implement `GET /health` and `GET /ready`
 - Basic LangGraph integration: empty graph returning a fixed response
 - Connect `MemorySaver` for local development
 - Configure `langgraph-checkpoint-postgres` for staging
 - Run checkpointer schema migration on staging
 - Basic rate limiting with `slowapi` (20 msg / 5 min)
-- GDPR data notice on the first message of each session
 
 **Frontend (chat widget):**
 
@@ -147,13 +145,14 @@ Three deliverables that do not block the start but must be resolved in parallel:
 
 **Conversation Orchestrator (LangGraph graph):**
 
-- Implement full `SessionState`: `QualificationState`, `turn_counter`, `stall_turn_counter`, `is_business_hours`, `handoff_triggered`
-- Graph nodes:
-  - `classify_input` — detects persona and intent
-  - `score_router` — deterministic evaluation of hot/warm/cold threshold (Problem + Authority + Company/Timing)
-  - `generate_response` — LLM call with Claude Haiku 4.5, streaming
-  - `stall_check` — stall detection (6 turns without `propose_handoff`)
-  - `update_state` — updates `QualificationState` after each turn
+- Implement full `SessionState`: `QualificationState`, `turn_counter`, `is_business_hours`, `handoff_triggered`
+- Graph nodes (6-node cyclic LangGraph `StateGraph`, executed once per visitor turn):
+  - `update_state` — constrained structured LLM call; extracts qualification signals from the visitor message; updates `QualificationState` via `QualificationDelta`
+  - `score_router` — deterministic evaluation (no LLM) of hot/warm/cold threshold (Problem + Authority + Company/Timing); routes to `propose_handoff` or `generate_response`
+  - `generate_response` — LLM call with Claude Haiku 4.5, streaming; may invoke `retrieve_knowledge` tool
+  - `stall_check` — increments `turn_counter`; checks if `turn_counter >= STALL_TURN_THRESHOLD` (6); routes to `propose_handoff` if stalled
+  - `propose_handoff` — generates Stage 3 proposal; emits `HandoffRequest`; resets stall counter
+  - `write_state` — persists `SessionState` to PostgreSQL checkpointer; emits analytics event via `emit_event()`
 - Business Hours Detection Module: `zoneinfo` + `Europe/Madrid`, DST-correct, `BUSINESS_HOURS_TIMEZONE` env variable
 
 **System prompt:**
@@ -168,9 +167,11 @@ Three deliverables that do not block the start but must be resolved in parallel:
 **RAG (placeholder):**
 
 - Implement `retrieve_knowledge` tool in `generate_response`
-- Indexing pipeline: chunking, embedding (OpenAI EU endpoint), insert into pgvector
+- Indexing pipeline: chunking, embedding, insert into pgvector
+  - Local dev: `all-MiniLM-L6-v2` (HuggingFace, 384-dim, no API key; `knowledge_chunks_dev` table)
+  - Staging/prod: `text-embedding-3-small` (OpenAI EU endpoint, 1536-dim; `knowledge_chunks` table)
 - Ingest the Week 0 KB placeholder
-- `RAG_RELEVANCE_THRESHOLD=0.70` (provisional value for Phases 1-2)
+- `RAG_RELEVANCE_THRESHOLD` — required env var with no default; set to `0.70` as provisional value for Phases 1-2; service will not start if unset; must be tuned in Phase 4 before production deployment
 - `RAG_TOP_K` configurable
 
 **Eval — first cycle (DeepEval, behaviour):**
@@ -203,15 +204,17 @@ Three deliverables that do not block the start but must be resolved in parallel:
 
 **Slack integration:**
 
-- Webhook to `#new-leads`
-- Message formatted with the `ContextPacket`
+- Webhook to `#new-leads` via `SLACK_WEBHOOK_URL` (initial message post)
+- `SLACK_BOT_TOKEN` required for `chat.update` — adds the CRM record link button to the Slack message once `crm_record_id` is available from the `leads` insert
+- Message formatted with the `ContextPacket` (Slack Block Kit)
 - Retry logic: on failure, log + alert; handoff not considered complete until delivery is confirmed
 
 **PostgreSQL CRM (`PostgresCRMClient`):**
 
-- `leads` table schema (ADR-009): `session_id`, `email`, `lead_level`, `context_packet` (JSONB), `created_at`, `slack_delivered`, `crm_delivered`
-- `PostgresCRMClient.write(context_packet)` → insert into `leads`
-- Partial failure handling: if Slack fails but DB succeeds (or vice versa), log the failure, retry the failed delivery, do not mark handoff as complete until both destinations confirm
+- `leads` table schema (ADR-009): `id`, `session_id`, `created_at`, `lead_level`, `handoff_reason`, `visitor_email`, `visitor_name`, `visitor_company`, `visitor_role`, `problem_fit`, `authority_fit`, `company_fit`, `timing_fit`, `is_consultant`, `referral_mentioned`, `turn_count`, `signals_observed` (JSONB), `conversation_summary`
+- `PostgresCRMClient.write(context_packet)` → insert into `leads`; returns `crm_record_id` used for the Slack `chat.update`
+- `handoff_records` table tracks delivery audit trail separately: `slack_status`, `slack_attempts`, `slack_last_http`, `crm_status`, `crm_attempts`, `crm_record_id`, `crm_last_http`, `fallback_sent`, `outcome` (`complete` / `partial_failure` / `total_failure`)
+- Partial failure handling: if Slack fails but DB succeeds (or vice versa), log the failure, retry the failed delivery, persist outcome to `handoff_records`; do not mark handoff as complete until both destinations confirm
 - Email fallback to `sales@` if both channels fail
 
 **Exit gate:** End-to-end test: hot lead detected → Slack message in `#new-leads` + row inserted in `leads` table. Outside-hours flow works correctly.
@@ -321,6 +324,15 @@ Three deliverables that do not block the start but must be resolved in parallel:
 - [ ] Token budget: `MAX_TOKENS_PER_SESSION` configured (default: 16,000 tokens)
 - [ ] Cost alerting: `MONTHLY_COST_CAP_USD` with alert at 80% of threshold ($50 default)
 - [ ] Context window: `CONTEXT_WINDOW_TURNS=10` active, `QualificationState` never evicted
+- [ ] All required env vars set (full list in TRD §6.4); critical items with no default:
+  - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`
+  - `CHECKPOINT_DB_URL`, `ALLOWED_ORIGIN`
+  - `RAG_RELEVANCE_THRESHOLD` (do not leave unset — service will not start)
+  - `BUSINESS_HOURS_TIMEZONE` (e.g. `Europe/Madrid` — service will not start if unset)
+  - `SLACK_WEBHOOK_URL`, `SLACK_BOT_TOKEN`
+  - `FALLBACK_EMAIL_ADDRESS`, `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`
+  - `VITE_API_URL`, `VITE_FALLBACK_URL`, `VITE_GDPR_NOTICE_TEXT` (widget build-time)
+  - `TIGRIS_BUCKET_NAME`, `TIGRIS_ACCESS_KEY_ID`, `TIGRIS_SECRET_ACCESS_KEY` (backup cron)
 - [ ] Real KB ingested and threshold tuned (EC-05)
 - [ ] DeepEval: 60/60 behaviour test cases passing (EC-11)
 - [ ] promptfoo: red team with no unreviewed critical failures documented
