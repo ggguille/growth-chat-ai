@@ -76,9 +76,12 @@ uv sync
 
 # Start dev server with hot reload (database must be running — see above)
 uv run --package backend uvicorn backend.main:app --reload --port 8000
+
+# Run unit tests
+uv run --package backend pytest backend/tests/ --ignore=backend/tests/acceptance -v
 ```
 
-See [`backend/README.md`](./backend/README.md) for environment variables and full API docs.
+See [`backend/README.md`](./backend/README.md) for environment variables, full API docs, and acceptance tests.
 
 ## Frontend
 

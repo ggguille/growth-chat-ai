@@ -40,13 +40,26 @@ uv run --package backend uvicorn backend.main:app --reload --port 8000   # dev s
 
 Source lives in `backend/src/backend/`. Domain structure:
 
-- `conversation/` — `POST /chat` SSE route, request/response models, `SessionState`
+- `conversation/` — `POST /chat` SSE route, `SessionState`, `graph.py` (LangGraph `StateGraph` + `build_graph` factory)
 - `qualification/` — `LeadLevel`, `FitLevel`, `QualificationState`
-- `knowledge/` — `retrieve_knowledge()` stub (RAG interface)
+- `knowledge/` — `retrieve_knowledge()` stub (RAG interface, wired in Phase 2)
 - `handoff/` — `dispatch_handoff()` stub, `is_business_hours()`, `CRMClient` protocol
 - `analytics/` — `emit_event()` stub
+- `limiter.py` — shared slowapi `Limiter` keyed on `ZGC-Session-ID` (20 req / 5 min)
 
 `backend/.env.example` lists all required environment variables. Copy to `backend/.env` before running.
+
+Unit tests live in `backend/tests/`. Run with:
+
+```bash
+uv run --package backend pytest backend/tests/ --ignore=backend/tests/acceptance -v
+```
+
+Acceptance tests (require a running server) live in `backend/tests/acceptance/`. Run with:
+
+```bash
+uv run --package backend pytest backend/tests/acceptance/ -v
+```
 
 ## Database Module
 
