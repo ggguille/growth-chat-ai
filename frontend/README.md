@@ -29,7 +29,7 @@ npm run build    # type-check + IIFE bundle → dist/chat.js
 
 ## Demo
 
-After building, open `demo/index.html` in a browser (or `npx serve .` → `/demo/`) to see the widget embedded in a mock landing page.
+**Local:** build the widget, then open `demo/index.html` in a browser (or `npx serve .` → `/demo/`).
 
 ```bash
 npm run build
@@ -37,7 +37,15 @@ npx serve .
 # open http://localhost:3000/demo/
 ```
 
-The demo requires the backend running at `http://localhost:8000/chat`. See the root README for backend setup.
+The local demo requires the backend running at `http://localhost:8000/chat`. See the root README for backend setup.
+
+**Cloud:** after deploying, the demo is live at:
+
+```text
+https://fly.storage.tigris.dev/growth-chat-assets/demo/index.html
+```
+
+The source file keeps local dev values (`../dist/chat.js`, `localhost:8000`). CI patches them with the CDN URL, production API URL, and API key before uploading — the source is never modified.
 
 ## Embed
 
@@ -55,7 +63,14 @@ Two lines of HTML, no framework required on the host page:
 
 ## Deployment
 
-The built `dist/chat.js` is uploaded to Fly Tigris object storage via CI/CD. The CDN URL and bucket are configured in the workflow — not in source.
+CI/CD builds `dist/chat.js`, patches `demo/index.html` with production values, and uploads both to Fly Tigris object storage. The CDN URL and bucket name are configured in the workflow — not in source.
+
+Assets after deploy:
+
+| Path | Cache |
+| --- | --- |
+| `growth-chat-assets/chat.js` | 1 minute |
+| `growth-chat-assets/demo/index.html` | no-store |
 
 Required GitHub secrets (in the `production` environment):
 
@@ -63,6 +78,7 @@ Required GitHub secrets (in the `production` environment):
 | --- | --- |
 | `TIGRIS_ACCESS_KEY_ID` | Object storage write access |
 | `TIGRIS_SECRET_ACCESS_KEY` | Object storage write access |
+| `VITE_API_KEY` | Baked into `chat.js`; injected into `demo/index.html` |
 
 Required build-time env vars (set in the workflow; copy `frontend/.env.example` for local development):
 

@@ -83,8 +83,9 @@ jobs:
           aws s3 cp frontend/dist/chat.js \
             s3://$TIGRIS_BUCKET_NAME/chat.js \
             --endpoint-url https://fly.storage.tigris.dev \
-            --cache-control "public, max-age=3600" \
-            --content-type "application/javascript"
+            --cache-control "public, max-age=60" \
+            --content-type "application/javascript" \
+            --acl public-read
 
       - name: Upload demo page to Fly Tigris
         env:
@@ -96,4 +97,5 @@ jobs:
             s3://$TIGRIS_BUCKET_NAME/demo/index.html \
             --endpoint-url https://fly.storage.tigris.dev \
             --cache-control "no-store" \
-            --content-type "text/html"
+            --content-type "text/html" \
+            --acl public-read
