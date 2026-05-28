@@ -3,6 +3,7 @@ from typing import AsyncGenerator
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import MemorySaver
 from slowapi.errors import RateLimitExceeded
@@ -42,6 +43,13 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.allowed_origin],
+    allow_methods=["POST", "GET"],
+    allow_headers=["Content-Type", "Accept", "ZGC-Session-ID", "ZGC-API-KEY"],
+    allow_credentials=False,
+)
 app.include_router(conversation_router)
 
 
