@@ -42,7 +42,7 @@ The local demo requires the backend running at `http://localhost:8000/chat`. See
 **Cloud:** after deploying, the demo is live at:
 
 ```text
-https://fly.storage.tigris.dev/growth-chat-assets/demo/index.html
+https://growth-chat-assets.fly.storage.tigris.dev/demo/index.html
 ```
 
 The source file keeps local dev values (`../dist/chat.js`, `localhost:8000`). CI patches them with the CDN URL, production API URL, and API key before uploading — the source is never modified.
@@ -69,8 +69,8 @@ Assets after deploy:
 
 | Path | Cache |
 | --- | --- |
-| `growth-chat-assets/chat.js` | 1 minute |
-| `growth-chat-assets/demo/index.html` | no-store |
+| `https://growth-chat-assets.fly.storage.tigris.dev/chat.js` | 1 minute |
+| `https://growth-chat-assets.fly.storage.tigris.dev/demo/index.html` | no-store |
 
 Required GitHub secrets (in the `production` environment):
 

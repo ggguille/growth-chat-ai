@@ -68,7 +68,7 @@ jobs:
 
       - name: Patch demo page for production
         run: |
-          CDN="https://fly.storage.tigris.dev/$TIGRIS_BUCKET_NAME"
+          CDN="https://$TIGRIS_BUCKET_NAME.fly.storage.tigris.dev"
           sed -i "s|WIDGET_SRC *= *'[^']*'|WIDGET_SRC = '$CDN/chat.js'|" frontend/demo/index.html
           sed -i "s|API_URL *= *'[^']*'|API_URL = '$VITE_API_URL'|"      frontend/demo/index.html
           sed -i "s|API_KEY *= *'[^']*'|API_KEY = '$VITE_API_KEY'|"      frontend/demo/index.html
