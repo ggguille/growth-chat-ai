@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import json
 import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend.config import settings
@@ -15,7 +13,9 @@ from backend.conversation.models import (
     ErrorDetail,
     HTTPErrorResponse,
     SSEDoneEvent,
+    SSETokenEvent,
 )
+from backend.limiter import limiter
 
 router = APIRouter()
 
@@ -33,7 +33,9 @@ def _is_uuid4(value: str) -> bool:
 
 
 @router.post("/chat")
+@limiter.limit("20/5 minutes")
 async def chat(
+    request: Request,
     body: ChatRequest,
     zgc_session_id: Annotated[str, Header(alias="ZGC-Session-ID")],
     zgc_api_key: Annotated[str, Header(alias="ZGC-API-KEY")],
@@ -72,21 +74,31 @@ async def chat(
             ).model_dump(),
         )
 
+    graph = request.app.state.graph
     return StreamingResponse(
-        _stream(body, zgc_session_id),
+        _stream(body, zgc_session_id, graph),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
     )
 
 
-async def _stream(body: ChatRequest, session_id: str) -> AsyncGenerator[str, None]:
-    # Stub — yields a single done event. Orchestrator wired in next phase.
+async def _stream(body: ChatRequest, session_id: str, graph) -> AsyncGenerator[str, None]:
+    config = {"configurable": {"thread_id": session_id}}
+    initial_state = {
+        "messages": [{"role": "user", "content": body.message}],
+        "session_id": session_id,
+        "turn_count": 0,
+    }
+    result = await graph.ainvoke(initial_state, config=config)
+    content: str = result["messages"][-1].content
+    for word in content.split(" "):
+        yield _sse(SSETokenEvent(content=word + " ").model_dump())
     done = SSEDoneEvent(
         session_id=session_id,
         lead_level="cold",
         current_stage=1,
         stage3_proposal_issued=False,
         handoff_reason=None,
-        turn_count=1,
+        turn_count=result["turn_count"],
     )
     yield _sse(done.model_dump())

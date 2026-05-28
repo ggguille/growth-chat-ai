@@ -1,9 +1,8 @@
-from __future__ import annotations
-
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    app_env: str = "development"
     zgc_api_key: str = ""
     llm_stream_timeout_ms: int = 10000
     slack_webhook_url: str = ""
