@@ -9,7 +9,23 @@ dependencies = [
     "pydantic>=2.13.4",
     "pydantic-settings>=2.14.1",
     "tzdata>=2026.2",
+    "langgraph>=1.2.2",
+    "langgraph-checkpoint-postgres>=3.1.0",
+    "anthropic>=0.104.1",
+    "slowapi>=0.1.9",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+    "pytest-asyncio>=1.4.0",
+    "httpx>=0.28.1",
+    "asgi-lifespan>=2.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["hatchling>=1.29.0"]
