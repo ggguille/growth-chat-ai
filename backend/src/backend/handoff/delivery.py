@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from backend.handoff.models import HandoffRequest
 
 
