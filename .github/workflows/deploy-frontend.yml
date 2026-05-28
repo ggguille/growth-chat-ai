@@ -18,10 +18,32 @@ env:
   TIGRIS_BUCKET_NAME: growth-chat-assets
 
 jobs:
+  test:
+    name: Run frontend tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run tests
+        run: npm test
+        working-directory: frontend
+
   build-and-deploy:
     name: Build and upload to Fly Tigris CDN
     runs-on: ubuntu-latest
     environment: production
+    needs: test
 
     steps:
       - uses: actions/checkout@v6
