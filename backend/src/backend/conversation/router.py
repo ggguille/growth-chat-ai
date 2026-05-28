@@ -51,7 +51,6 @@ async def chat(
                 )
             ).model_dump(),
         )
-
     if zgc_api_key != settings.zgc_api_key:
         raise HTTPException(
             status_code=401,
