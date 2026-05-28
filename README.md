@@ -85,7 +85,7 @@ See [`backend/README.md`](./backend/README.md) for environment variables, full A
 
 ## Frontend
 
-React + TypeScript chat widget scaffolded in `./frontend`, built as a `<growth-chat>` Web Component with Shadow DOM.
+React + TypeScript chat widget in `./frontend`, built as a `<growth-chat>` Web Component with Shadow DOM. Streams responses from the backend via SSE, with GDPR consent flow and automatic fallback when the backend is unavailable.
 
 ### Commands
 
@@ -98,16 +98,24 @@ npm run dev
 
 # Build self-contained IIFE bundle to dist/chat.js
 npm run build
+
+# Run tests (vitest)
+npm test
 ```
 
 ### Embed on any page
 
 ```html
 <script src="<CDN_URL>/chat.js" defer></script>
-<growth-chat api-url="<VITE_API_URL>"></growth-chat>
+<growth-chat
+  api-url="<API_URL>"
+  fallback-url="<CONTACT_URL>"
+  api-key="<API_KEY>"
+  data-gdpr-text="This chat is powered by AI…"
+></growth-chat>
 ```
 
-See [`frontend/README.md`](./frontend/README.md) for attributes and full UI docs.
+See [`frontend/README.md`](./frontend/README.md) for all attributes, custom events, and demo instructions.
 
 ## CI/CD
 

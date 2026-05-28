@@ -122,9 +122,21 @@ All commands run from `frontend/`:
 ```bash
 npm run dev    # dev server with HMR at localhost:5173
 npm run build  # type-check + IIFE bundle to dist/chat.js
+npm test       # run all tests once (vitest)
 ```
 
 The widget is a `<growth-chat>` Custom Element (Web Component) that mounts React inside a Shadow DOM. `src/GrowthChat.ts` is the wrapper; `src/components/ChatWidget.tsx` is the React component. `vite build` produces a single self-contained `dist/chat.js` IIFE for CDN distribution.
+
+Key implementation details:
+
+- `GrowthChat.ts` — manages Shadow DOM, injects `widget.css` via `?inline` import, generates UUID v4 session ID stored in `sessionStorage`, observes `api-url`, `fallback-url`, `api-key` attributes
+- `src/lib/sseAdapter.ts` — `ChatModelAdapter` implementation; parses SSE `token`/`done`/`error` events; triggers fallback only on first-request failure (network error, HTTP 4xx/5xx, stream timeout)
+- `src/components/ChatThread.tsx` — uses `@assistant-ui/react` runtime primitives (`ThreadPrimitive`, `MessagePrimitive`, `ComposerPrimitive`); styled with injected shadow-root CSS (no Radix portals)
+- `src/components/GDPRNotice.tsx` — consent screen; persists acceptance in `sessionStorage`; dispatches `zgc:gdpr_acknowledged`
+- `src/components/FallbackView.tsx` — shown permanently after first-request failure; links to `fallback-url`
+- `demo/index.html` — standalone demo page loading `dist/chat.js`; no build step required beyond `npm run build`
+
+Required build-time env vars: `VITE_API_URL`, `VITE_FALLBACK_URL`, `VITE_API_KEY`, `VITE_GDPR_NOTICE_TEXT` (optional), `VITE_STREAM_TIMEOUT_MS` (optional, default 10000). Copy `frontend/.env.example` for local development.
 
 ## Architecture Notes
 
