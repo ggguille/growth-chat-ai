@@ -1,0 +1,363 @@
+<!doctype html>
+<!--
+  Growth Chat — Widget Demo Page
+  ================================
+  How to run this demo:
+
+  1. Build the widget:
+       cd frontend && npm run build
+
+  2. Start the backend:
+       uv run --package backend uvicorn backend.main:app --reload --port 8000
+
+  3. Open this file in your browser, or serve it:
+       npx serve frontend/   → open http://localhost:3000/demo/
+
+  For production demo:
+  - Change WIDGET_SRC to the CDN URL (e.g. https://cdn.example.com/chat.js)
+  - Change API_URL to your production API
+  - Set the correct API_KEY
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zartis AI Engineering — Demo</title>
+    <style>
+      /* ── Reset + base ──────────────────────────────────────────────── */
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        --blue: #1a56db;
+        --blue-dark: #1648c4;
+        --text: #111827;
+        --muted: #6b7280;
+        --bg: #f9fafb;
+        --card: #fff;
+        --border: #e5e7eb;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      a { color: var(--blue); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      img { max-width: 100%; }
+
+      /* ── Nav ───────────────────────────────────────────────────────── */
+      .nav {
+        background: #fff;
+        border-bottom: 1px solid var(--border);
+        padding: 0 40px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .nav-logo {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.3px;
+      }
+      .nav-logo span { color: var(--blue); }
+      .nav-links { display: flex; gap: 32px; font-size: 14px; color: var(--muted); }
+      .nav-cta {
+        background: var(--blue);
+        color: #fff;
+        border-radius: 8px;
+        padding: 8px 18px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .nav-cta:hover { background: var(--blue-dark); text-decoration: none; }
+
+      /* ── Hero ──────────────────────────────────────────────────────── */
+      .hero {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 80px 40px 64px;
+        text-align: center;
+      }
+      .hero-badge {
+        display: inline-block;
+        background: #eff6ff;
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        padding: 4px 12px;
+        border-radius: 20px;
+        margin-bottom: 20px;
+      }
+      .hero h1 {
+        font-size: clamp(32px, 5vw, 52px);
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -1px;
+        margin-bottom: 20px;
+      }
+      .hero h1 em { color: var(--blue); font-style: normal; }
+      .hero p {
+        font-size: 18px;
+        color: var(--muted);
+        max-width: 600px;
+        margin: 0 auto 36px;
+        line-height: 1.7;
+      }
+      .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+      .btn-primary {
+        background: var(--blue);
+        color: #fff;
+        border-radius: 10px;
+        padding: 14px 28px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .btn-primary:hover { background: var(--blue-dark); text-decoration: none; }
+      .btn-secondary {
+        background: #fff;
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px 28px;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .btn-secondary:hover { background: var(--bg); text-decoration: none; }
+
+      /* ── Logos ─────────────────────────────────────────────────────── */
+      .logos {
+        background: #fff;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        padding: 24px 40px;
+        text-align: center;
+      }
+      .logos-label { font-size: 12px; color: var(--muted); margin-bottom: 16px; letter-spacing: 0.5px; text-transform: uppercase; }
+      .logos-row { display: flex; gap: 48px; justify-content: center; align-items: center; flex-wrap: wrap; }
+      .logos-row span { font-size: 14px; font-weight: 600; color: #9ca3af; letter-spacing: -0.3px; }
+
+      /* ── Services ──────────────────────────────────────────────────── */
+      .services {
+        max-width: 1100px;
+        margin: 80px auto;
+        padding: 0 40px;
+      }
+      .section-label { font-size: 12px; color: var(--blue); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+      .section-title { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 12px; }
+      .section-subtitle { font-size: 16px; color: var(--muted); margin-bottom: 48px; max-width: 560px; line-height: 1.6; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 28px;
+      }
+      .card-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: #eff6ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        font-size: 22px;
+      }
+      .card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+      .card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+      /* ── Stats ─────────────────────────────────────────────────────── */
+      .stats {
+        background: var(--blue);
+        color: #fff;
+        padding: 64px 40px;
+        text-align: center;
+      }
+      .stats-grid { display: flex; gap: 64px; justify-content: center; flex-wrap: wrap; max-width: 800px; margin: 0 auto; }
+      .stat-value { font-size: 40px; font-weight: 800; }
+      .stat-label { font-size: 14px; opacity: 0.8; margin-top: 4px; }
+
+      /* ── CTA ───────────────────────────────────────────────────────── */
+      .cta {
+        max-width: 700px;
+        margin: 80px auto;
+        padding: 0 40px;
+        text-align: center;
+      }
+      .cta h2 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 12px; }
+      .cta p { font-size: 16px; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+
+      /* ── Footer ────────────────────────────────────────────────────── */
+      .footer {
+        background: #fff;
+        border-top: 1px solid var(--border);
+        padding: 32px 40px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      /* ── Demo badge ────────────────────────────────────────────────── */
+      .demo-notice {
+        position: fixed;
+        top: 72px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        color: #92400e;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 6px 14px;
+        border-radius: 20px;
+        z-index: 9997;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Demo notice -->
+    <div class="demo-notice">
+      ⚡ Widget demo — chat bubble at bottom-right
+    </div>
+
+    <!-- Nav -->
+    <nav class="nav">
+      <div class="nav-logo">Zartis <span>AI</span></div>
+      <div class="nav-links">
+        <a href="#">Services</a>
+        <a href="#">Case Studies</a>
+        <a href="#">Team</a>
+        <a href="#">Blog</a>
+      </div>
+      <a class="nav-cta" href="#">Talk to us</a>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge">AI Engineering Partner</div>
+      <h1>Build AI products that<br /><em>actually work in production</em></h1>
+      <p>
+        We embed senior AI engineers into your team. From RAG pipelines and LLM orchestration to
+        MLOps and nearshore delivery — we ship fast and we ship right.
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="#">Start a conversation</a>
+        <a class="btn-secondary" href="#">View case studies</a>
+      </div>
+    </section>
+
+    <!-- Client logos -->
+    <div class="logos">
+      <div class="logos-label">Trusted by engineering teams at</div>
+      <div class="logos-row">
+        <span>FinTech Co.</span>
+        <span>ScaleUp SaaS</span>
+        <span>Enterprise Corp.</span>
+        <span>GrowthStage Ltd.</span>
+        <span>AIFirst Inc.</span>
+      </div>
+    </div>
+
+    <!-- Services -->
+    <section class="services">
+      <div class="section-label">What we do</div>
+      <div class="section-title">AI engineering,<br />end to end</div>
+      <div class="section-subtitle">
+        From early prototype to production hardening — our team covers the full AI engineering
+        stack so you don't have to hire it all in-house.
+      </div>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🤖</div>
+          <h3>LLM Orchestration</h3>
+          <p>Production-grade pipelines with LangGraph, semantic routing, tool use, and streaming — ready for real traffic.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔍</div>
+          <h3>RAG &amp; Knowledge Systems</h3>
+          <p>pgvector, OpenAI embeddings, hybrid search, and eval-driven threshold calibration. Hallucination is not on the menu.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚙️</div>
+          <h3>MLOps &amp; Observability</h3>
+          <p>Langfuse tracing, RAGAS eval suites, CI/CD for prompts, and cost alerting — because prod AI needs real ops.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🌍</div>
+          <h3>Nearshore Teams</h3>
+          <p>Senior engineers in EU timezone. Embedded in your squad or running an end-to-end engagement — your call.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="stats">
+      <div class="stats-grid">
+        <div>
+          <div class="stat-value">50+</div>
+          <div class="stat-label">AI projects shipped</div>
+        </div>
+        <div>
+          <div class="stat-value">8y</div>
+          <div class="stat-label">Engineering expertise</div>
+        </div>
+        <div>
+          <div class="stat-value">EU</div>
+          <div class="stat-label">Timezone overlap</div>
+        </div>
+        <div>
+          <div class="stat-value">100%</div>
+          <div class="stat-label">Senior engineers</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+      <h2>Ready to build something?</h2>
+      <p>
+        Tell us what you're working on. Our team will review it and come back with a concrete
+        proposal — no fluff, no NDAs before the first call.
+      </p>
+      <a class="btn-primary" href="#">Get in touch</a>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>© 2026 Zartis AI Engineering · <a href="#">Privacy Policy</a> · <a href="#">Terms</a></p>
+    </footer>
+
+    <!-- ── Widget config ─────────────────────────────────────────────── -->
+    <script>
+      // Change these values to point to your environment
+      var WIDGET_SRC    = '../dist/chat.js';          // swap for CDN URL in production
+      var API_URL       = 'http://localhost:8000/chat';
+      var FALLBACK_URL  = 'https://example.com/contact';
+      var API_KEY       = 'dev-key';
+      var GDPR_TEXT     = 'This chat is powered by AI. Messages are processed to help us respond to your enquiry. By continuing you agree to this.';
+    </script>
+
+    <!-- ── Widget embed ──────────────────────────────────────────────── -->
+    <script>
+      (function () {
+        var s = document.createElement('script');
+        s.src = WIDGET_SRC;
+        s.defer = true;
+        s.onload = function () {
+          var el = document.createElement('growth-chat');
+          el.setAttribute('api-url', API_URL);
+          el.setAttribute('fallback-url', FALLBACK_URL);
+          el.setAttribute('api-key', API_KEY);
+          if (GDPR_TEXT) el.setAttribute('data-gdpr-text', GDPR_TEXT);
+          document.body.appendChild(el);
+        };
+        document.head.appendChild(s);
+      })();
+    </script>
+  </body>
+</html>

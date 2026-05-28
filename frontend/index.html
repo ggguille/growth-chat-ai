@@ -6,7 +6,11 @@
     <title>Growth Chat — Dev</title>
   </head>
   <body>
-    <growth-chat api-url="http://localhost:8000/chat"></growth-chat>
+    <growth-chat
+      api-url="http://localhost:8000/chat"
+      fallback-url="http://localhost:5173/contact"
+      api-key="dev-key"
+    ></growth-chat>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
