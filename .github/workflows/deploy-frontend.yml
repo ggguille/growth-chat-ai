@@ -45,6 +45,9 @@ jobs:
     environment: production
     needs: test
 
+    env:
+      VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+
     steps:
       - uses: actions/checkout@v6
 
@@ -61,7 +64,14 @@ jobs:
       - name: Build widget
         working-directory: frontend
         run: npm run build
-        # all VITE_* vars are inherited from the workflow-level env block
+        # VITE_* vars are inherited from the workflow-level env block and job-level env
+
+      - name: Patch demo page for production
+        run: |
+          CDN="https://fly.storage.tigris.dev/$TIGRIS_BUCKET_NAME"
+          sed -i "s|WIDGET_SRC *= *'[^']*'|WIDGET_SRC = '$CDN/chat.js'|" frontend/demo/index.html
+          sed -i "s|API_URL *= *'[^']*'|API_URL = '$VITE_API_URL'|"      frontend/demo/index.html
+          sed -i "s|API_KEY *= *'[^']*'|API_KEY = '$VITE_API_KEY'|"      frontend/demo/index.html
 
       - name: Upload chat.js to Fly Tigris
         # Tigris is S3-compatible — the AWS CLI connects to the Tigris endpoint, not AWS
@@ -75,3 +85,15 @@ jobs:
             --endpoint-url https://fly.storage.tigris.dev \
             --cache-control "public, max-age=3600" \
             --content-type "application/javascript"
+
+      - name: Upload demo page to Fly Tigris
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.TIGRIS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TIGRIS_SECRET_ACCESS_KEY }}
+          AWS_REGION: auto
+        run: |
+          aws s3 cp frontend/demo/index.html \
+            s3://$TIGRIS_BUCKET_NAME/demo/index.html \
+            --endpoint-url https://fly.storage.tigris.dev \
+            --cache-control "no-store" \
+            --content-type "text/html"
