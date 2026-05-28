@@ -16,10 +16,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Run unit tests
+        run: uv run --package backend pytest backend/tests/ --ignore=backend/tests/acceptance -v
+
   migrate:
     name: Run database migrations
     runs-on: ubuntu-latest
     environment: production
+    needs: test
 
     steps:
       - uses: actions/checkout@v6
@@ -70,3 +85,8 @@ jobs:
         run: flyctl deploy --image registry.fly.io/growth-chat-api:${{ github.run_number }}-${{ env.SHORT_SHA }} --config backend/fly.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Smoke test — readiness probe
+        run: |
+          curl --fail --retry 6 --retry-delay 10 --retry-all-errors \
+            https://growth-chat-api.fly.dev/ready
