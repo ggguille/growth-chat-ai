@@ -11,4 +11,4 @@ class AnalyticsEvent:
 
 
 async def emit_event(event: AnalyticsEvent) -> None:
-    raise NotImplementedError
+    pass  # Phase 3: implement analytics pipeline
