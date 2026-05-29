@@ -14,21 +14,24 @@ from backend.conversation.graph import build_graph
 from backend.conversation.models import ErrorCode, ErrorDetail, HTTPErrorResponse
 from backend.conversation.router import router as conversation_router
 from backend.limiter import limiter
+from backend.llm.factory import create_llm_client
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    llm_client = create_llm_client(settings)
+
     if settings.app_env != "development" and settings.checkpoint_db_url:
         from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
         async with await AsyncPostgresSaver.from_conn_string(settings.checkpoint_db_url) as cp:
             await cp.setup()
-            app.state.graph = build_graph(cp)
+            app.state.graph = build_graph(cp, llm_client)
             app.state.ready = True
             yield
     else:
         cp = MemorySaver()
-        app.state.graph = build_graph(cp)
+        app.state.graph = build_graph(cp, llm_client)
         app.state.ready = True
         yield
 
@@ -82,7 +85,6 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONRe
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    # Return the detail dict directly so error responses match HTTPErrorResponse shape.
     if isinstance(exc.detail, dict):
         return JSONResponse(status_code=exc.status_code, content=exc.detail)
     return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})

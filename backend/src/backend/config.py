@@ -19,7 +19,35 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     allowed_origin: str = "http://localhost:3000"
 
+    # LLM — production (Anthropic)
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-haiku-4-5-20251001"
+
+    # LLM — development (Ollama, ADR-001: Llama 3.1 8B)
+    ollama_model: str = "llama3.1:8b"
+    ollama_base_url: str = "http://localhost:11434"
+
+    # RAG — required in all environments, no default (service will not start if unset)
+    rag_relevance_threshold: float = 0.0  # validated below
+    rag_top_k: int = 5
+    knowledge_table_name: str = "knowledge_chunks"
+    openai_api_key: str = ""
+
+    # Conversation orchestrator
+    stall_turn_threshold: int = 6
+    context_window_turns: int = 10
+
+    # Business hours — required, no default (service will not start if unset)
+    business_hours_timezone: str = ""  # validated below
+
     model_config = {"env_file": str(_env_file), "env_file_encoding": "utf-8", "extra": "ignore"}
+
+    def model_post_init(self, __context) -> None:
+        if self.app_env != "development":
+            if not self.rag_relevance_threshold:
+                raise ValueError("RAG_RELEVANCE_THRESHOLD must be set (non-zero) in non-development environments")
+            if not self.business_hours_timezone:
+                raise ValueError("BUSINESS_HOURS_TIMEZONE must be set in non-development environments")
 
 
 settings = Settings()
