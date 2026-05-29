@@ -124,7 +124,7 @@ the Anthropic block for CI runs. Only one provider should be active at a time �
 Ollama is the default judge for local development, as per ADR-001.
 
 1. Install and start Ollama: <https://ollama.com>
-2. Pull a capable model: `ollama pull llama4:8b`
+2. Pull a capable model: `ollama pull llama3.1:8b`
 3. Keep the Ollama block active in `evaluation/.env` (it is the default).
 
 `LOCAL_MODEL_API_KEY`, `LOCAL_MODEL_NAME`, and `OLLAMA_BASE_URL` are the only
@@ -161,7 +161,7 @@ All `GEval` instances (custom and inline) auto-route to Claude Haiku when
 | `EVAL_API_URL` | both | No | `http://localhost:8000` | Backend URL the tests call |
 | `ZGC_API_KEY` | both | No | `dev-key` | API key sent in `ZGC-API-KEY` header |
 | `LOCAL_MODEL_API_KEY` | dev | Yes (dev) | — | Set to `ollama` to use Ollama |
-| `LOCAL_MODEL_NAME` | dev | Yes (dev) | — | Ollama model tag, e.g. `llama4:8b` |
+| `LOCAL_MODEL_NAME` | dev | Yes (dev) | — | Ollama model tag, e.g. `llama3.1:8b` |
 | `OLLAMA_BASE_URL` | dev | No | `http://localhost:11434` | Ollama endpoint |
 | `USE_ANTHROPIC_MODEL` | CI | Yes (CI) | — | Set to `true` to use Claude |
 | `ANTHROPIC_API_KEY` | CI | Yes (CI) | — | Anthropic API key |
@@ -169,7 +169,7 @@ All `GEval` instances (custom and inline) auto-route to Claude Haiku when
 | `LANGFUSE_PUBLIC_KEY` | both | No | — | Enables eval score logging to Langfuse |
 | `LANGFUSE_SECRET_KEY` | both | No | — | Langfuse secret (pair with public key) |
 | `LANGFUSE_HOST` | both | No | `https://eu.cloud.langfuse.com` | Langfuse instance URL |
-| `PROMPTFOO_GRADING_PROVIDER` | redteam | Yes (redteam) | — | LLM judge for `llm-rubric` assertions: `ollama:chat:llama4:8b` (dev) or `anthropic:messages:claude-haiku-4-5-20251001` (CI) |
+| `PROMPTFOO_GRADING_PROVIDER` | redteam | Yes (redteam) | — | LLM judge for `llm-rubric` assertions: `ollama:chat:llama3.1:8b` (dev) or `anthropic:messages:claude-haiku-4-5-20251001` (CI) |
 
 ### 3. Start the backend
 

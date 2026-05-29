@@ -31,7 +31,7 @@ redteam:
 
 # LLM judge for llm-rubric assertions.
 # Set PROMPTFOO_GRADING_PROVIDER in your environment:
-#   Dev  — ollama:chat:llama4:8b          (requires Ollama running locally)
+#   Dev  — ollama:chat:llama3.1:8b          (requires Ollama running locally)
 #   CI   — anthropic:messages:claude-haiku-4-5-20251001
 # See evaluation/.env.example for the full multi-provider configuration.
 defaultTest:

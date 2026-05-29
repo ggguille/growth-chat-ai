@@ -29,7 +29,7 @@ minimum cost and complexity. No model routing layer is planned for v1. The
 selected model must perform acceptably across the full range of conversation
 scenarios without requiring a secondary model for escalation or cost optimisation.
 
-A local model (Llama 4 8B via Ollama) will be used exclusively for development
+A local model (Llama 3.1 8B via Ollama) will be used exclusively for development
 and offline testing. It is not part of the production stack and is not evaluated
 as a production candidate here.
 
