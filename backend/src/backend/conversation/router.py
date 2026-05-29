@@ -11,6 +11,7 @@ from backend.conversation.models import (
     ChatRequest,
     ErrorCode,
     ErrorDetail,
+    GraphState,
     HTTPErrorResponse,
     SSEDoneEvent,
     SSETokenEvent,
@@ -83,21 +84,37 @@ async def chat(
 
 async def _stream(body: ChatRequest, session_id: str, graph) -> AsyncGenerator[str, None]:
     config = {"configurable": {"thread_id": session_id}}
-    initial_state = {
-        "messages": [{"role": "user", "content": body.message}],
+    input_state: dict = {
         "session_id": session_id,
-        "turn_count": 0,
+        "messages": [{"role": "user", "content": body.message}],
     }
-    result = await graph.ainvoke(initial_state, config=config)
-    content: str = result["messages"][-1].content
-    for word in content.split(" "):
-        yield _sse(SSETokenEvent(content=word + " ").model_dump())
+
+    final_output: dict = {}
+
+    try:
+        async for event in graph.astream_events(input_state, config=config, version="v2"):
+            kind = event.get("event", "")
+
+            if kind == "on_custom_event" and event.get("name") == "token":
+                content = event.get("data", {}).get("content", "")
+                if content:
+                    yield _sse(SSETokenEvent(content=content).model_dump())
+
+            elif kind == "on_chain_end" and event.get("name") == "LangGraph":
+                output = event.get("data", {}).get("output")
+                if isinstance(output, dict):
+                    final_output = output
+
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("stream error for session %s", session_id)
+
     done = SSEDoneEvent(
         session_id=session_id,
-        lead_level="cold",
-        current_stage=1,
-        stage3_proposal_issued=False,
-        handoff_reason=None,
-        turn_count=result["turn_count"],
+        lead_level=final_output.get("lead_level", "cold"),
+        current_stage=final_output.get("current_stage", 1),
+        stage3_proposal_issued=bool(final_output.get("stage3_proposals_issued", 0)),
+        handoff_reason=final_output.get("handoff_reason"),
+        turn_count=final_output.get("turn_counter", 0),
     )
     yield _sse(done.model_dump())

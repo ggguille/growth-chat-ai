@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
-from enum import StrEnum
-from typing import Literal
+from datetime import datetime
+from typing import Annotated, Literal, TypedDict
 
+from langgraph.graph.message import add_messages
 from pydantic import BaseModel, Field, field_validator
 
 from backend.qualification.models import (
@@ -9,7 +9,48 @@ from backend.qualification.models import (
     HandoffReason,
     LeadLevel,
     QualificationState,
+    merge_qualification,
 )
+
+
+# ── LangGraph graph state ────────────────────────────────────────────────────
+
+class GraphState(TypedDict, total=False):
+    """Full session state (TRD §4.1 SessionState schema).
+
+    total=False so nodes can return partial updates.
+    All fields accessed via state.get(field, default) inside nodes.
+    """
+    # Session identity
+    session_id: str
+    created_at: datetime | None
+    last_updated_at: datetime | None
+
+    # Conversation history — LangGraph add_messages reducer (append-only merge)
+    messages: Annotated[list, add_messages]
+
+    # Qualification — monotonic merge reducer (confidence levels never downgrade)
+    qualification: Annotated[QualificationState, merge_qualification]
+
+    # Session control
+    lead_level: LeadLevel
+    current_stage: ConversationStage
+    turn_counter: int
+    stage3_proposals_issued: int
+    explicit_human_request: bool
+
+    # Visitor data
+    visitor_email: str | None
+    visitor_name: str | None
+    visitor_company: str | None
+    visitor_role: str | None
+    is_consultant: bool
+    referral_mentioned: bool
+
+    # Session outcome
+    handoff_triggered: bool
+    handoff_reason: HandoffReason | None
+    termination_type: str | None
 
 
 # ── SSE event types ──────────────────────────────────────────────────────────
@@ -37,7 +78,7 @@ class SSEErrorEvent(BaseModel):
 
 # ── HTTP error responses (pre-stream) ────────────────────────────────────────
 
-class ErrorCode(StrEnum):
+class ErrorCode:
     INVALID_MESSAGE = "INVALID_MESSAGE"
     MISSING_ACCEPT_HEADER = "MISSING_ACCEPT_HEADER"
     INVALID_API_KEY = "INVALID_API_KEY"
@@ -64,15 +105,3 @@ class ChatRequest(BaseModel):
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         return v.strip()
-
-
-# ── Session state (LangGraph thread state) ───────────────────────────────────
-
-@dataclass
-class SessionState:
-    session_id: str
-    turn_count: int = 0
-    lead_level: LeadLevel = "cold"
-    current_stage: ConversationStage = 1
-    qualification: QualificationState = field(default_factory=QualificationState)
-    messages: list[dict] = field(default_factory=list)
