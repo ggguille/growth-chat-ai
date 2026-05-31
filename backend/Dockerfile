@@ -19,6 +19,7 @@ COPY shared/knowledge_base/pyproject.toml shared/knowledge_base/
 
 # Backend source — required so hatchling editable install registers the .pth file
 COPY backend/src/ backend/src/
+COPY shared/knowledge_base/src/ shared/knowledge_base/src/
 
 # Install backend deps into .venv; no dev extras, honour the lock file
 RUN uv sync --package backend --no-dev --frozen
@@ -39,6 +40,7 @@ COPY --from=builder /app/.venv /app/.venv
 
 # Copy backend source from the build context
 COPY backend/src/ backend/src/
+COPY shared/knowledge_base/src/ shared/knowledge_base/src/
 
 # Non-root user
 RUN groupadd --system appgroup \

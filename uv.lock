@@ -199,6 +199,7 @@ source = { editable = "backend" }
 dependencies = [
     { name = "anthropic" },
     { name = "fastapi" },
+    { name = "knowledge-base" },
     { name = "langgraph" },
     { name = "langgraph-checkpoint-postgres" },
     { name = "ollama" },
@@ -222,6 +223,7 @@ dev = [
 requires-dist = [
     { name = "anthropic", specifier = ">=0.104.1" },
     { name = "fastapi", specifier = ">=0.136.1" },
+    { name = "knowledge-base", editable = "shared/knowledge_base" },
     { name = "langgraph", specifier = ">=1.2.2" },
     { name = "langgraph-checkpoint-postgres", specifier = ">=3.1.0" },
     { name = "ollama", specifier = ">=0.6.2" },
@@ -836,28 +838,24 @@ name = "ingestion"
 version = "0.1.0"
 source = { editable = "data/ingestion" }
 dependencies = [
+    { name = "knowledge-base" },
     { name = "langchain" },
-    { name = "langchain-huggingface" },
-    { name = "langchain-openai" },
     { name = "langchain-postgres" },
     { name = "langchain-text-splitters" },
     { name = "openai" },
     { name = "psycopg", extra = ["binary"] },
     { name = "python-dotenv" },
-    { name = "sentence-transformers" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "knowledge-base", editable = "shared/knowledge_base" },
     { name = "langchain", specifier = ">=1.3.1" },
-    { name = "langchain-huggingface", specifier = ">=1.2.2" },
-    { name = "langchain-openai", specifier = ">=1.2.2" },
     { name = "langchain-postgres", specifier = ">=0.0.17" },
     { name = "langchain-text-splitters", specifier = ">=1.1.2" },
     { name = "openai", specifier = ">=2.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
-    { name = "sentence-transformers", specifier = ">=5.0.0" },
 ]
 
 [[package]]
@@ -970,6 +968,20 @@ wheels = [
 name = "knowledge-base"
 version = "0.1.0"
 source = { editable = "shared/knowledge_base" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "langchain-huggingface" },
+    { name = "langchain-openai" },
+    { name = "sentence-transformers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-core", specifier = ">=1.4.0" },
+    { name = "langchain-huggingface", specifier = ">=1.2.2" },
+    { name = "langchain-openai", specifier = ">=1.2.2" },
+    { name = "sentence-transformers", specifier = ">=5.5.1" },
+]
 
 [[package]]
 name = "langchain"
