@@ -1,0 +1,37 @@
+name: Ingest Knowledge Base
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'data/knowledge-base/**'
+      - 'data/ingestion/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ingest-knowledge
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    name: Run ingestion pipeline (dev embeddings → knowledge_chunks_dev)
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Restore HuggingFace model cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface/
+          key: huggingface-all-MiniLM-L6-v2
+
+      - name: Run ingestion pipeline
+        run: uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-base
+        env:
+          CHECKPOINT_DB_URL: ${{ secrets.CHECKPOINT_DB_URL }}
