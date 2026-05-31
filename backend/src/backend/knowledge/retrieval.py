@@ -55,36 +55,9 @@ async def retrieve_knowledge(query: str) -> RetrievalResult:
 
 
 async def _embed_query(query: str) -> list[float]:
-    if settings.openai_api_key:
-        return await _openai_embed(query)
-    return await _huggingface_embed(query)
+    from knowledge_base import get_embeddings
 
-
-async def _openai_embed(query: str) -> list[float]:
-    from openai import AsyncOpenAI
-
-    client = AsyncOpenAI(api_key=settings.openai_api_key)
-    response = await client.embeddings.create(
-        model="text-embedding-3-small",
-        input=query,
-    )
-    return response.data[0].embedding
-
-
-async def _huggingface_embed(query: str) -> list[float]:
-    try:
-        from sentence_transformers import SentenceTransformer
-    except ImportError:
-        raise RuntimeError(
-            "sentence-transformers is required for local dev embeddings. "
-            "Install it or set OPENAI_API_KEY to use OpenAI embeddings."
-        )
-    import asyncio
-
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-    loop = asyncio.get_event_loop()
-    vector = await loop.run_in_executor(None, lambda: model.encode(query).tolist())
-    return vector
+    return await get_embeddings().aembed_query(query)
 
 
 async def _vector_search(embedding: list[float]) -> list[RetrievedChunk]:

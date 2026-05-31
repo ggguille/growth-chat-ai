@@ -15,7 +15,11 @@ dependencies = [
     "openai>=2.38.0",
     "ollama>=0.6.2",
     "slowapi>=0.1.9",
+    "knowledge-base",
 ]
+
+[tool.uv.sources]
+knowledge-base = { workspace = true }
 
 [dependency-groups]
 dev = [
