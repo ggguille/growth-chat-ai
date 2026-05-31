@@ -5,14 +5,15 @@ requires-python = ">=3.14"
 dependencies = [
     "python-dotenv>=1.1.0",
     "langchain>=1.3.1",
-    "langchain-openai>=1.2.2",
-    "langchain-huggingface>=1.2.2",
     "langchain-postgres>=0.0.17",
     "langchain-text-splitters>=1.1.2",
     "psycopg[binary]>=3.2.0",
-    "sentence-transformers>=5.0.0",
     "openai>=2.0.0",
+    "knowledge-base",
 ]
+
+[tool.uv.sources]
+knowledge-base = { workspace = true }
 
 [build-system]
 requires = ["hatchling>=1.29.0"]
