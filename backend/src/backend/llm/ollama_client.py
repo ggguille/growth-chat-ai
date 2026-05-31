@@ -26,9 +26,17 @@ class OllamaLLMClient(BaseLLMClient):
         full_messages = self._prepend_system(system, messages)
         kwargs: dict = {"model": self._model, "messages": full_messages}
         if tools:
-            # Wrap tools in Ollama's expected format
+            # Convert Anthropic-format tools (input_schema) to OpenAI/Ollama format (parameters)
             kwargs["tools"] = [
-                {"type": "function", "function": t} for t in tools
+                {
+                    "type": "function",
+                    "function": {
+                        "name": t["name"],
+                        "description": t.get("description", ""),
+                        "parameters": t.get("input_schema", t.get("parameters", {})),
+                    },
+                }
+                for t in tools
             ]
 
         response = await self._client.chat(**kwargs)
