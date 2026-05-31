@@ -75,7 +75,7 @@ The API will be available at `http://localhost:8000`. Interactive docs at `http:
 
 On startup the server logs which LLM backend is selected:
 
-```
+```text
 INFO  LLM backend: Ollama (llama3.1:8b @ http://localhost:11434)
 ```
 
@@ -125,12 +125,30 @@ CI/CD deploys automatically on push to `main` when `backend/`, `shared/`, `data/
 
 ```bash
 flyctl secrets set \
+  ZGC_API_KEY=<key> \
   ANTHROPIC_API_KEY=<key> \
-  OPENAI_API_KEY=<key> \
   RAG_RELEVANCE_THRESHOLD=0.70 \
   BUSINESS_HOURS_TIMEZONE=Europe/Madrid \
+  CHECKPOINT_DB_URL=<neon-connection-string> \
   --config backend/fly.toml
 ```
+
+> **Launch note — embedding model and table must match.**
+>
+> The shared `get_embeddings()` factory (`shared/knowledge_base`) picks the embedding model based on whether `OPENAI_API_KEY` is set:
+>
+> - **No key** → HuggingFace `all-MiniLM-L6-v2` (384-dim) → query must target `knowledge_chunks_dev`
+> - **Key present** → OpenAI `text-embedding-3-small` (1536-dim) → query must target `knowledge_chunks`
+>
+> `KNOWLEDGE_TABLE_NAME` defaults to `knowledge_chunks`. **Until the production ingestion pipeline is in place** (OpenAI embeddings, `knowledge_chunks` table), add these two secrets so the backend queries the populated dev table:
+>
+> ```bash
+> flyctl secrets set \
+>   KNOWLEDGE_TABLE_NAME=knowledge_chunks_dev \
+>   --config backend/fly.toml
+> ```
+>
+> Do **not** set `OPENAI_API_KEY` while using `knowledge_chunks_dev` — mismatched dimensions (1536 vs 384) will cause pgvector to return no results. When switching to production embeddings: set `OPENAI_API_KEY`, remove the `KNOWLEDGE_TABLE_NAME` override (or set it to `knowledge_chunks`), and run the production ingestion pipeline first.
 
 ---
 
