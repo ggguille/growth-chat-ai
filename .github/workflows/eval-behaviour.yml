@@ -20,6 +20,7 @@ jobs:
     if: false
 
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       USE_ANTHROPIC_MODEL: "true"
       ANTHROPIC_MODEL_NAME: "claude-haiku-4-5-20251001"
 

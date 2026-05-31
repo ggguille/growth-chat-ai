@@ -17,6 +17,8 @@ jobs:
     name: Run ingestion pipeline (dev embeddings → knowledge_chunks_dev)
     runs-on: ubuntu-latest
     environment: production
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - uses: actions/checkout@v6

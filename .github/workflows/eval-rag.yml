@@ -23,6 +23,7 @@ jobs:
     if: false
 
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       RAGAS_EMBEDDING_MODE: prod   # CI always uses the production OpenAI embeddings
       RAGAS_TOP_K: "3"
       ANTHROPIC_MODEL_NAME: claude-haiku-4-5-20251001
