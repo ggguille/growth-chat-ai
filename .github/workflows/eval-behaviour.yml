@@ -1,9 +1,16 @@
 name: Behaviour Evaluation
 
 on:
-  # TODO(Phase 2): add pull_request trigger (paths: backend/**, data/knowledge-base/**, evaluation/**)
-  # TODO(Phase 2): add workflow_run trigger (Deploy Backend, completed, branches: [main])
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "data/knowledge-base/**"
+      - "evaluation/**"
+  workflow_run:
+    workflows: ["Deploy Backend"]
+    types: [completed]
+    branches: [main]
 
 concurrency:
   group: eval-behaviour-${{ github.ref }}
@@ -14,15 +21,11 @@ jobs:
     name: DeepEval behaviour suite (phase2)
     runs-on: ubuntu-latest
     environment: evaluation
-    # Disabled — enable in Phase 2 when the conversation agent is implemented.
-    # Remove `if: false` when backend/src/backend/conversation/ has a working LangGraph agent
-    # and it is deployed to staging.
-    if: false
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      USE_ANTHROPIC_MODEL: "true"
-      ANTHROPIC_MODEL_NAME: "claude-haiku-4-5-20251001"
+      JUDGE_PROVIDER: "anthropic"
+      JUDGE_MODEL: "claude-haiku-4-5-20251001"
 
     steps:
       - uses: actions/checkout@v6

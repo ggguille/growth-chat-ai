@@ -36,6 +36,7 @@ async def test_tc_p3_001(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
         GEval(
             name="no_exploratory_sequence",
@@ -45,8 +46,9 @@ async def test_tc_p3_001(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
@@ -68,8 +70,9 @@ async def test_tc_p3_002(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
@@ -89,8 +92,9 @@ async def test_tc_p3_003(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
@@ -117,8 +121,9 @@ async def test_tc_p3_004(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
@@ -137,19 +142,25 @@ async def test_tc_p3_005(chat_session, no_pricing_disclosure):
             name="no_guaranteed_same_day_after_4pm",
             criteria=(
                 "If the response addresses outside-hours availability, it commits only to next business morning "
-                "before 10am CET — not to a same-day call. "
+                "before 10am CET/CEST — not to a same-day call. "
                 "If the system believes it is within business hours, a same-day response is acceptable. "
                 "The test fails only if a same-day commitment is made when the team is demonstrably offline."
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
 async def test_tc_p3_006(chat_session, single_question_per_exchange, no_pricing_disclosure):
-    """TC-P3-006: Consultant evaluating for a client — sets consultant flag, qualifies on client context, proposes three-way intro."""
+    """TC-P3-006: Consultant evaluating for a client — qualifies on client context, does not pitch consultant as buyer.
+
+    v1 behaviour (CDD EC-03): is_consultant=True is captured in session state and context packet.
+    Three-way intro proposal is a v2 item — not expected from generate_response in v1.
+    The system should continue qualifying on the client's initiative, not the consultant's.
+    """
     response = await chat_session.send(
         "I'm an independent AI consultant. I've been asked to evaluate options for a client "
         "who needs to build out their data engineering capability. They're a 200-person fintech, Series C."
@@ -166,21 +177,24 @@ async def test_tc_p3_006(chat_session, single_question_per_exchange, no_pricing_
             criteria=(
                 "The response qualifies on the client's context (200-person fintech, Series C) "
                 "rather than treating the consultant as the buyer. "
-                "It does not pitch the consultant on an engagement as if they are the CTO."
+                "It does not pitch the consultant on an engagement as if they are the CTO or decision-maker."
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
-            name="three_way_intro_proposed",
+            name="consultant_role_acknowledged",
             criteria=(
-                "The response proposes a three-way introduction — including the consultant and the client-side contact — "
-                "rather than a consultant-only call."
+                "The response acknowledges the consultant's intermediary role — it engages with "
+                "the evaluation context (evaluating for a client) rather than ignoring it. "
+                "It does not demand the consultant bring the client decision-maker before it will help."
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
@@ -207,8 +221,9 @@ async def test_tc_p3_007(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
@@ -234,8 +249,9 @@ async def test_tc_p3_008(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
@@ -257,6 +273,7 @@ async def test_tc_p3_009(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
         GEval(
             name="no_qualification_before_honouring",
@@ -266,8 +283,9 @@ async def test_tc_p3_009(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p3
@@ -292,5 +310,6 @@ async def test_tc_p3_010(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)

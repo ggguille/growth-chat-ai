@@ -6,6 +6,7 @@ import pytest
 from dotenv import load_dotenv
 
 from behaviour.metrics.custom_metrics import SingleQuestionPerExchangeMetric
+from judge import get_judge_model, judge_available
 
 load_dotenv()
 
@@ -16,26 +17,44 @@ if _langfuse_key:
     os.environ.setdefault("LANGFUSE_SECRET_KEY", os.getenv("LANGFUSE_SECRET_KEY", ""))
     os.environ.setdefault("LANGFUSE_HOST", os.getenv("LANGFUSE_HOST", "https://eu.cloud.langfuse.com"))
 
-
-def _llm_judge_available() -> bool:
-    """True when at least one LLM-as-judge provider is configured.
-
-    Supported providers (checked in order of precedence):
-    - Ollama: LOCAL_MODEL_API_KEY=ollama + LOCAL_MODEL_NAME  (dev, offline)
-    - Anthropic: USE_ANTHROPIC_MODEL=true + ANTHROPIC_API_KEY  (CI/production)
-    - OpenAI: OPENAI_API_KEY  (legacy fallback)
-    """
-    return bool(
-        os.getenv("LOCAL_MODEL_API_KEY") == "ollama"  # dev: Ollama
-        or os.getenv("USE_ANTHROPIC_MODEL")           # CI: Claude Haiku
-    )
-
-
 _NO_JUDGE_MSG = (
     "No LLM-as-judge provider configured. "
-    "Dev: set LOCAL_MODEL_API_KEY=ollama + LOCAL_MODEL_NAME in evaluation/.env. "
-    "CI: set USE_ANTHROPIC_MODEL=true + ANTHROPIC_API_KEY in evaluation/.env."
+    "Set JUDGE_PROVIDER=ollama (dev) or JUDGE_PROVIDER=anthropic (CI) in evaluation/.env. "
+    "See evaluation/.env.example for full configuration."
 )
+
+
+@pytest.fixture(autouse=True)
+def _inject_judge_model(monkeypatch):
+    """Inject the configured judge into DeepEval's model resolution for GEval metrics.
+
+    Patches initialize_model in the g_eval module namespace so that any
+    GEval(model=None) call receives the project judge instead of GPTModel(OpenAI).
+
+    Patching initialize_model (not GEval.__init__) keeps the GEval signature intact,
+    which is required by DeepEval's copy_metrics() that introspects __init__ via
+    inspect.signature to re-create metric instances during assert_test.
+
+    Reverts automatically after each test via monkeypatch.
+    """
+    if not judge_available():
+        return
+
+    import deepeval.metrics.g_eval.g_eval as _geval_mod  # noqa: PLC0415
+
+    original_initialize = _geval_mod.initialize_model
+    judge = get_judge_model()
+
+    def _patched(model=None):
+        if model is None:
+            if isinstance(judge, str):
+                # Anthropic: pass the model string to DeepEval's native resolver
+                return original_initialize(judge)
+            # Ollama: return our DeepEvalBaseLLM instance directly
+            return judge, False
+        return original_initialize(model)
+
+    monkeypatch.setattr(_geval_mod, "initialize_model", _patched)
 
 
 @pytest.fixture
@@ -45,15 +64,13 @@ def single_question_per_exchange() -> SingleQuestionPerExchangeMetric:
 
 @pytest.fixture
 def no_pricing_disclosure():
-    if not _llm_judge_available():
-        pytest.skip(_NO_JUDGE_MSG)
     from behaviour.metrics.custom_metrics import NoPricingDisclosureMetric
     return NoPricingDisclosureMetric()
 
 
 @pytest.fixture
 def no_fabrication_without_context():
-    if not _llm_judge_available():
+    if not judge_available():
         pytest.skip(_NO_JUDGE_MSG)
     from behaviour.metrics.custom_metrics import NoFabricationWithoutContextMetric
-    return NoFabricationWithoutContextMetric()
+    return NoFabricationWithoutContextMetric(model=get_judge_model())

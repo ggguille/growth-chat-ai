@@ -28,8 +28,9 @@ async def test_tc_n1_001(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
@@ -52,6 +53,7 @@ async def test_tc_n1_002(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
             name="no_escalation_n1",
@@ -61,8 +63,9 @@ async def test_tc_n1_002(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
@@ -84,8 +87,9 @@ async def test_tc_n1_003(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
@@ -110,8 +114,9 @@ async def test_tc_n1_004(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
@@ -134,8 +139,9 @@ async def test_tc_n1_005(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
@@ -157,8 +163,9 @@ async def test_tc_n1_006(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
@@ -180,8 +187,9 @@ async def test_tc_n1_007(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
@@ -205,8 +213,9 @@ async def test_tc_n1_008(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
@@ -228,13 +237,19 @@ async def test_tc_n1_009(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n1
 async def test_tc_n1_010(chat_session, single_question_per_exchange, no_pricing_disclosure):
-    """TC-N1-010: N1 pattern established, then claims a real project — one clarifying question, no immediate escalation."""
+    """TC-N1-010: N1 pattern established, then claims a real project — N1 sticky, no escalation for session.
+
+    v1 behaviour (CDD TC-N1-010): is_negative_persona is sticky via monotonic merge.
+    derive_lead_level returns 'cold' regardless of subsequent qualification signals.
+    The system does not reclassify N1 to hot/warm within a session.
+    """
     await chat_session.send("Say a company needed a team of 5 senior AI engineers for 6 months — what would that cost?")
     await chat_session.send("Not specifically — just general market research.")
     await chat_session.send("How do nearshore vendors typically handle intellectual property?")
@@ -247,13 +262,15 @@ async def test_tc_n1_010(chat_session, single_question_per_exchange, no_pricing_
         single_question_per_exchange,
         no_pricing_disclosure,
         GEval(
-            name="no_immediate_n1_pivot_escalation",
+            name="n1_sticky_no_escalation",
             criteria=(
-                "The response does not immediately escalate or trigger Stage 3 based on a single "
-                "signal shift after an established N1 pattern. "
-                "It asks at most one clarifying question to assess whether the context has genuinely changed."
+                "The response does not escalate to a Stage 3 sales proposal or ask for the visitor's email "
+                "to route them to the sales team, despite the pivot to claiming a real project. "
+                "N1 classification is maintained for the session — the response continues in the neutral, "
+                "non-committal N1 register. It may respond helpfully to the stated need but does not trigger handoff."
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)

@@ -31,8 +31,9 @@ async def test_tc_n2_001(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -55,8 +56,9 @@ async def test_tc_n2_002(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -77,6 +79,7 @@ async def test_tc_n2_003(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
         GEval(
             name="no_sales_path_for_careers",
@@ -86,8 +89,9 @@ async def test_tc_n2_003(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -112,8 +116,9 @@ async def test_tc_n2_004(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -136,14 +141,16 @@ async def test_tc_n2_005(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
             name="no_unprompted_sales_pivot",
             criteria="The response does not steer toward Zartis's services without a relevant problem being stated by the visitor.",
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -166,8 +173,9 @@ async def test_tc_n2_006(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -190,8 +198,9 @@ async def test_tc_n2_007(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -216,6 +225,7 @@ async def test_tc_n2_008(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
         GEval(
             name="competitive_landscape_acknowledged",
@@ -225,8 +235,9 @@ async def test_tc_n2_008(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -256,8 +267,9 @@ async def test_tc_n2_009(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.7,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.n2
@@ -280,6 +292,7 @@ async def test_tc_n2_010(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
             name="no_recruitment_push",
@@ -289,5 +302,6 @@ async def test_tc_n2_010(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)

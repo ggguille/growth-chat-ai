@@ -169,6 +169,48 @@ def _print_results(scores: dict[str, float]) -> bool:
     return all_pass
 
 
+def _write_local_report(
+    scores: dict[str, float],
+    run_name: str,
+    all_pass: bool,
+    embedding_mode: str,
+) -> None:
+    """Write a JSON report to evaluation/.evaluation-reports/<run_name>.json.
+
+    The report captures enough context to compare runs over time without
+    needing to re-run the pipeline or query Langfuse.
+    """
+    import datetime  # noqa: PLC0415
+    import json      # noqa: PLC0415
+
+    report_dir = Path(__file__).parent.parent / ".evaluation-reports"
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    report = {
+        "run_name": run_name,
+        "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+        "embedding_mode": embedding_mode,
+        "all_pass": all_pass,
+        "thresholds": THRESHOLDS,
+        "scores": {
+            metric: {
+                "value": scores.get(metric),
+                "threshold": THRESHOLDS[metric],
+                "pass": (
+                    scores[metric] >= THRESHOLDS[metric]
+                    if metric in scores and scores[metric] is not None
+                    else None
+                ),
+            }
+            for metric in THRESHOLDS
+        },
+    }
+
+    report_path = report_dir / f"{run_name}.json"
+    report_path.write_text(json.dumps(report, indent=2))
+    print(f"  → Local report written: {report_path}")
+
+
 # ── Main pipeline ─────────────────────────────────────────────────────────────
 
 def main(dataset_path: str | None, embedding_mode: str) -> int:
@@ -271,11 +313,12 @@ def main(dataset_path: str | None, embedding_mode: str) -> int:
     print("[ragas] Results:")
     all_pass = _print_results(avg_scores)
 
-    # ── Log to Langfuse ───────────────────────────────────────────────────────
+    # ── Log to Langfuse + local report ───────────────────────────────────────
     import datetime  # noqa: PLC0415
 
     run_name = f"ragas-{datetime.datetime.now(datetime.UTC).strftime('%Y%m%d-%H%M%S')}"
     _log_to_langfuse(avg_scores, run_name)
+    _write_local_report(avg_scores, run_name, all_pass, embedding_mode)
 
     if all_pass:
         print("[ragas] All thresholds passed. ✓")

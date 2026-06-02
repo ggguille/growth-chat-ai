@@ -38,14 +38,16 @@ async def test_tc_p2_001(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
             name="no_immediate_call_push",
             criteria="The response does not propose a call or ask for contact information in this first exchange.",
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -65,14 +67,16 @@ async def test_tc_p2_002(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
             name="no_two_questions",
             criteria="The response contains at most one question directed at the visitor.",
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -93,6 +97,7 @@ async def test_tc_p2_003(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
         GEval(
             name="email_tied_to_value",
@@ -102,8 +107,9 @@ async def test_tc_p2_003(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -128,8 +134,9 @@ async def test_tc_p2_004(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -153,6 +160,7 @@ async def test_tc_p2_005(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
             name="no_guarantee_on_behalf_of_team",
@@ -163,8 +171,9 @@ async def test_tc_p2_005(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -190,8 +199,9 @@ async def test_tc_p2_006(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -215,8 +225,9 @@ async def test_tc_p2_007(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -239,6 +250,7 @@ async def test_tc_p2_008(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
             name="no_contact_push_for_no_fit",
@@ -248,8 +260,9 @@ async def test_tc_p2_008(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -282,6 +295,7 @@ async def test_tc_p2_009(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.7,
+            async_mode=False,
         ),
         GEval(
             name="no_email_gate_at_stall",
@@ -291,8 +305,9 @@ async def test_tc_p2_009(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p2
@@ -318,6 +333,7 @@ async def test_tc_p2_010(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
         GEval(
             name="routes_legal_correctly",
@@ -327,5 +343,6 @@ async def test_tc_p2_010(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)

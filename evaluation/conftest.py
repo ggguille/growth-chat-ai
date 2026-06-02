@@ -47,7 +47,7 @@ class ChatSession:
                 "ZGC-API-KEY": self._api_key,
                 "Accept": "text/event-stream",
             },
-            timeout=30.0,
+            timeout=httpx.Timeout(10.0, read=120.0),
         ) as resp:
             resp.raise_for_status()
             async for line in resp.aiter_lines():

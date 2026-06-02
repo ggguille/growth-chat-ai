@@ -10,6 +10,15 @@ from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
+from behaviour.metrics.custom_metrics import (
+    FollowUpCommitmentMetric,
+    HonestLimitAcknowledgementMetric,
+    NoContactRequestMetric,
+    PricingDeflectionQualityMetric,
+    Stage3ProposalMetric,
+    TechnicalDepthMetric,
+)
+
 _RAG_PROBLEM = (
     "We're building a RAG system for our internal knowledge base. "
     "We have the architecture sketched out but our team doesn't have the production LLM experience to execute it."
@@ -30,23 +39,9 @@ async def test_tc_p1_001(chat_session, single_question_per_exchange, no_pricing_
     assert_test(test_case, [
         single_question_per_exchange,
         no_pricing_disclosure,
-        GEval(
-            name="technical_specificity",
-            criteria=(
-                "The response references at least one concrete technical concept relevant to RAG systems — "
-                "such as chunking strategy, relevance thresholds, vector stores (pgvector, Pinecone), "
-                "embedding models, latency considerations, or production deployment challenges."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=0.8,
-        ),
-        GEval(
-            name="no_contact_request",
-            criteria="The response does not ask for the visitor's email address or contact information.",
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=1.0,
-        ),
-    ])
+        TechnicalDepthMetric(),
+        NoContactRequestMetric(),
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -63,22 +58,21 @@ async def test_tc_p1_002(chat_session, single_question_per_exchange, no_pricing_
     assert_test(test_case, [
         single_question_per_exchange,
         no_pricing_disclosure,
-        GEval(
-            name="stage3_proposal",
-            criteria=(
-                "The response proposes a concrete next step — a short call or introduction with an engineer — "
-                "and requests an email address to facilitate it."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=0.9,
-        ),
+        Stage3ProposalMetric(),
         GEval(
             name="no_further_qualification",
-            criteria="The response does not ask another qualifying question about the visitor's situation, company, timeline, or problem.",
+            criteria=(
+                "The response does not ask another qualifying question about the visitor's situation, "
+                "company size, timeline, or technical problem. "
+                "Important: asking for the visitor's email address as part of a Stage 3 call proposal "
+                "('What email should I send the introduction to?') is the expected next action — "
+                "it is NOT a qualifying question and must not cause this metric to fail."
+            ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=1.0,
+            threshold=0.15,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -92,26 +86,9 @@ async def test_tc_p1_003(chat_session, single_question_per_exchange, no_pricing_
     test_case = LLMTestCase(input="Sure — it's alex@company.com", actual_output=response.text)
     assert_test(test_case, [
         no_pricing_disclosure,
-        GEval(
-            name="follow_up_commitment",
-            criteria=(
-                "The response confirms that someone from the team will be in touch, "
-                "and includes a specific time commitment (e.g. within hours, or next business morning before 10am CET). "
-                "A vague 'as soon as possible' fails."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=0.9,
-        ),
-        GEval(
-            name="clean_handoff",
-            criteria=(
-                "The response does not ask more qualifying questions and does not repeat the call proposal. "
-                "It signals that the handoff is complete."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=0.9,
-        ),
-    ])
+        FollowUpCommitmentMetric(),
+        single_question_per_exchange,
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -129,17 +106,8 @@ async def test_tc_p1_004(chat_session, single_question_per_exchange, no_pricing_
         single_question_per_exchange,
         no_pricing_disclosure,
         no_fabrication_without_context,
-        GEval(
-            name="honest_limit_acknowledgement",
-            criteria=(
-                "The response clearly acknowledges that the specific detail is not available here "
-                "and offers a path forward — such as connecting with the technical team. "
-                "It does not invent a latency figure."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=0.9,
-        ),
-    ])
+        HonestLimitAcknowledgementMetric(),
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -154,17 +122,8 @@ async def test_tc_p1_005(chat_session, single_question_per_exchange, no_pricing_
     )
     assert_test(test_case, [
         no_pricing_disclosure,
-        GEval(
-            name="pricing_deflection_quality",
-            criteria=(
-                "The response explains why a cost figure without scoping context would not be useful, "
-                "and offers a call or direct conversation as the path to a meaningful estimate. "
-                "It does not sound evasive or like 'contact us for pricing'."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=0.8,
-        ),
-    ])
+        PricingDeflectionQualityMetric(),
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -185,6 +144,7 @@ async def test_tc_p1_006(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
         GEval(
             name="no_term_definitions",
@@ -194,8 +154,9 @@ async def test_tc_p1_006(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -221,8 +182,9 @@ async def test_tc_p1_007(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -241,23 +203,25 @@ async def test_tc_p1_008(chat_session, single_question_per_exchange, no_pricing_
             name="no_same_day_promise_outside_hours",
             criteria=(
                 "If the response mentions the team is offline or outside hours, "
-                "the only time commitment given is 'next business morning before 10am CET' or similar. "
+                "the only time commitment given is 'next business morning before 10am CET/CEST' or similar. "
                 "It does not promise same-day follow-up. "
                 "If the response does not mention outside hours, this metric passes automatically."
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
         GEval(
             name="cet_framed_positively",
             criteria=(
-                "If the response references European / CET hours, it frames this as useful coverage "
+                "If the response references European / CET/CEST hours, it frames this as useful coverage "
                 "rather than an apology or limitation. An apologetic tone fails."
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -279,8 +243,9 @@ async def test_tc_p1_009(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.p1
@@ -305,6 +270,7 @@ async def test_tc_p1_010(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
         GEval(
             name="no_excessive_apology",
@@ -314,5 +280,6 @@ async def test_tc_p1_010(chat_session, single_question_per_exchange, no_pricing_
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)

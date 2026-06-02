@@ -5,16 +5,28 @@ description = "Evaluation suite: DeepEval behaviour tests, promptfoo red team, R
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "anthropic>=0.50.0",
-    "deepeval>=4.0.4",
+    "anthropic>=0.105.2",
+    "deepeval>=4.0.5",
     "pytest>=9.0.3",
     "pytest-asyncio>=1.4.0",
-    "langfuse>=4.6.1",
+    "pytest-html>=4.2.0",           # HTML reports for behaviour test runs
+    "langfuse>=4.7.1",
     "httpx>=0.28.1",
     "python-dotenv>=1.2.2",
-    # ── RAGAS RAG evaluation ──────────────────────────────────────────────────
+    # ── LLM-as-judge providers ────────────────────────────────────────────────
+    "ollama>=0.6.2",                # direct Ollama client used in judge.py
+    "langchain-core>=1.4.0",        # shared base for LangChain judge wrappers
+    "langchain-anthropic>=1.4.3",   # JUDGE_PROVIDER=anthropic (DeepEval AnthropicModel)
+    "langchain-ollama>=1.1.0",      # JUDGE_PROVIDER=ollama (local dev)
+]
+
+[project.optional-dependencies]
+# RAGAS requires scikit-network which has no Python 3.14 wheel for Windows.
+# Install with: uv sync --package evaluation --extra ragas
+# CI (Linux) installs this extra automatically (no source-build issue there).
+ragas = [
     "ragas>=0.4.3",
-    "langchain-anthropic>=1.0.0",   # RAGAS judge LLM (Claude Haiku)
+    "langchain-anthropic>=1.4.3",   # RAGAS judge LLM (Claude Haiku)
     "sentence-transformers>=5.5.1", # dev embeddings: all-MiniLM-L6-v2 (384-dim)
     "psycopg[binary]>=3.3.4",       # direct pgvector access
 ]
@@ -29,5 +41,6 @@ markers = [
     "n1: Competitor persona",
     "n2: Curious Researcher persona",
     "pattern: Specific conversation pattern",
+    "adversarial: Adversarial probes — extraction, injection, persona boundary, and logic bypass",
     "phase2: Phase 2 first eval cycle scope",
 ]

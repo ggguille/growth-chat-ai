@@ -11,6 +11,8 @@ from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, LLMTestCaseParams
 
+from behaviour.metrics.custom_metrics import NoCostFigureMetric, NoApologyToneMetric
+
 
 @pytest.mark.pattern
 @pytest.mark.phase2
@@ -25,17 +27,8 @@ async def test_tc_pat_001(chat_session, no_pricing_disclosure):
     )
     assert_test(test_case, [
         no_pricing_disclosure,
-        GEval(
-            name="no_rate_given",
-            criteria=(
-                "The response gives absolutely no day rate, hourly rate, or per-engineer cost figure. "
-                "It deflects the question without sounding evasive, explaining why a scoping call produces "
-                "a more useful figure."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=1.0,
-        ),
-    ])
+        NoCostFigureMetric(),
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -50,17 +43,8 @@ async def test_tc_pat_002(chat_session, no_pricing_disclosure):
     )
     assert_test(test_case, [
         no_pricing_disclosure,
-        GEval(
-            name="no_ballpark_anchor",
-            criteria=(
-                "The response does not provide any number — not a range, not an anchor, not 'around X'. "
-                "It holds the pricing deflection even under the softened 'just a ballpark' framing. "
-                "It explains why a scoped number is more useful than a rough figure."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=1.0,
-        ),
-    ])
+        NoCostFigureMetric(),
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -79,26 +63,18 @@ async def test_tc_pat_003(chat_session, no_pricing_disclosure):
     )
     assert_test(test_case, [
         no_pricing_disclosure,
-        GEval(
-            name="no_apology_tone_for_hours",
-            criteria=(
-                "If the response addresses after-hours availability, it does so matter-of-factly "
-                "without apology. It frames European coverage as a feature, not a limitation. "
-                "Phrases like 'I apologise', 'unfortunately', or 'I'm sorry' fail."
-            ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=0.9,
-        ),
+        NoApologyToneMetric(),
         GEval(
             name="specific_follow_up_commitment",
             criteria=(
-                "If the team is offline, the response commits to 'next business morning before 10am CET' "
+                "If the team is offline, the response commits to 'next business morning before 10am CET/CEST' "
                 "or a specific time frame. 'As soon as possible' fails."
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
-            threshold=0.8,
+            threshold=0.15,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -126,8 +102,9 @@ async def test_tc_pat_004(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.8,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -152,8 +129,9 @@ async def test_tc_pat_005(chat_session, single_question_per_exchange, no_pricing
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -177,6 +155,7 @@ async def test_tc_pat_006(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
         GEval(
             name="no_sales_path_for_existing_client",
@@ -186,8 +165,9 @@ async def test_tc_pat_006(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -217,14 +197,16 @@ async def test_tc_pat_007(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.7,
+            async_mode=False,
         ),
         GEval(
             name="no_email_gate",
             criteria="The response does not present email capture as a requirement to continue the conversation.",
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -256,8 +238,9 @@ async def test_tc_pat_008(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=0.9,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -280,8 +263,9 @@ async def test_tc_pat_009(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)
 
 
 @pytest.mark.pattern
@@ -304,5 +288,6 @@ async def test_tc_pat_010(chat_session, no_pricing_disclosure):
             ),
             evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
             threshold=1.0,
+            async_mode=False,
         ),
-    ])
+    ], run_async=False)

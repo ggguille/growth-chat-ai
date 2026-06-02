@@ -48,11 +48,19 @@ Live end-to-end tests that drive the real backend API over SSE. Each test create
 | Metric | Type | When required |
 | --- | --- | --- |
 | `SingleQuestionPerExchangeMetric` | Deterministic (counts `?`) | Most tests — validates CDD §2.2 |
-| `NoPricingDisclosureMetric` | LLM-as-judge (GEval, multi-provider) | All tests — zero tolerance for rates |
-| `NoFabricationWithoutContextMetric` | LLM-as-judge (GEval, multi-provider) | Tests with `[NO RELEVANT RESULTS]` context |
-| Inline `GEval` metrics | LLM-as-judge (GEval, multi-provider) | Per-test criteria specific to each case |
+| `NoPricingDisclosureMetric` | Deterministic (regex) | All tests — zero tolerance for pricing figures |
+| `NoCostFigureMetric` | Deterministic (regex) | Pricing-deflection tests — stricter than NoPricing |
+| `NoContactRequestMetric` | Deterministic (regex) | TC-P1-001 — no contact on turn 1 |
+| `TechnicalDepthMetric` | Deterministic (regex) | TC-P1-001 — technical terms in response |
+| `FollowUpCommitmentMetric` | Deterministic (regex) | TC-P1-003 — specific time commitment after email |
+| `Stage3ProposalMetric` | Deterministic (regex) | TC-P1-002 — call/connect word + email ask present |
+| `NoApologyToneMetric` | Deterministic (regex) | TC-PAT-003 — no apologetic language about CET hours |
+| `HonestLimitAcknowledgementMetric` | Deterministic (regex) | TC-P1-004 — acknowledges limit + offers forward path |
+| `PricingDeflectionQualityMetric` | Deterministic (regex) | TC-P1-005 — explains why + offers conversation path |
+| `NoFabricationWithoutContextMetric` | LLM-as-judge (GEval) | Tests with `[NO RELEVANT RESULTS]` context |
+| Inline `GEval` metrics | LLM-as-judge (GEval) | Per-test criteria not reducible to regex |
 
-LLM-as-judge metrics require a configured judge provider (Ollama, Claude, or OpenAI) — tests skip automatically when none is active.
+Deterministic metrics always run regardless of judge configuration. LLM-as-judge metrics require a configured judge provider (Ollama, Claude) — tests skip automatically when none is active.
 
 ### Layer 2 — Red team (`redteam/`)
 
