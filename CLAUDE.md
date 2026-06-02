@@ -40,7 +40,7 @@ uv run --package backend uvicorn backend.main:app --reload --port 8000   # dev s
 
 Source lives in `backend/src/backend/`. Domain structure:
 
-- `conversation/` — `POST /chat` SSE route, `SessionState`, `graph.py` (LangGraph `StateGraph` + `build_graph` factory)
+- `conversation/` — `POST /chat` SSE route, `SessionState`, `graph.py` (LangGraph `StateGraph` + `build_graph` factory); `graph.py` buffers LLM output before dispatching SSE tokens so post-processing (single-question enforcement, clean-close, turn-0 contact stripping, Rule-2 technical depth, apology stripping) is applied before the client sees any text; `prompt.py` (`build_system_prompt` + `build_proposal_prompt`) implements all 28 prohibited behaviours
 - `qualification/` — `LeadLevel`, `FitLevel`, `QualificationState`
 - `knowledge/` — `retrieve_knowledge()` stub (RAG interface, wired in Phase 2)
 - `handoff/` — `dispatch_handoff()` stub, `is_business_hours()`, `CRMClient` protocol
