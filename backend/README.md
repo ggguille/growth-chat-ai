@@ -217,10 +217,14 @@ src/backend/
 │   └── factory.py       # create_llm_client(settings) — selects backend by APP_ENV
 ├── conversation/        # Chat session orchestration and SSE streaming
 │   ├── graph.py         # 6-node LangGraph StateGraph — update_state, score_router,
-│   │                    #   generate_response, stall_check, propose_handoff, write_state
+│   │                    #   generate_response, stall_check, propose_handoff, write_state;
+│   │                    #   post-processing pipeline: _enforce_single_question,
+│   │                    #   _strip_turn0_contact_requests, _strip_apology_openers;
+│   │                    #   proposal guarantees: email ask + call/connect word always present
 │   ├── models.py        # GraphState TypedDict (full TRD schema), SSE event models, ChatRequest
 │   ├── prompt.py        # 9-layer system prompt builder (CDD §8.3) — build_system_prompt(),
-│   │                    #   build_proposal_prompt()
+│   │                    #   build_proposal_prompt(); all 28 CDD prohibited behaviours encoded;
+│   │                    #   outside-hours proposals use FORBIDDEN WORDS list (PB-24)
 │   └── router.py        # POST /chat — streams via graph.astream_events()
 ├── qualification/       # Lead scoring and classification
 │   └── models.py        # LeadLevel, FitLevel, QualificationState, SignalEntry,
@@ -247,8 +251,8 @@ src/backend/
 | `GET /ready` | ✅ Complete | Returns 503 until lifespan completes |
 | Rate limiting | ✅ Complete | slowapi — 20 requests / 5 min per session ID |
 | LLM abstraction layer | ✅ Phase 2 complete | Ollama (dev) / Anthropic Claude Haiku 4.5 (prod) |
-| 6-node LangGraph graph | ✅ Phase 2 complete | `update_state`, `score_router`, `generate_response`, `stall_check`, `propose_handoff`, `write_state` |
-| System prompt (9 layers) | ✅ Phase 2 complete | All 27 CDD prohibited behaviours encoded; dynamic qualification state injected per turn |
+| 6-node LangGraph graph | ✅ Phase 2 complete | `update_state`, `score_router`, `generate_response`, `stall_check`, `propose_handoff`, `write_state`; deterministic post-processing enforces Rules 1/2/3/5 after token buffering |
+| System prompt (9 layers) | ✅ Phase 2 complete | All 28 CDD prohibited behaviours encoded; dynamic qualification state injected per turn; outside-hours proposals enforce FORBIDDEN WORDS list (PB-24) |
 | Qualification state machine | ✅ Phase 2 complete | Monotonic confidence transitions; `derive_lead_level()`; P3 referral pattern |
 | `retrieve_knowledge` | ✅ Phase 2 complete | pgvector cosine search; OpenAI / HuggingFace embedding switch |
 | Business hours detection | ✅ Complete | `same_day_followup` param; `next_business_day_opening()` |
