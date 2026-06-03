@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 from behaviour.metrics.custom_metrics import (
     FollowUpCommitmentMetric,
@@ -68,7 +68,7 @@ async def test_tc_p1_002(chat_session, single_question_per_exchange, no_pricing_
                 "('What email should I send the introduction to?') is the expected next action — "
                 "it is NOT a qualifying question and must not cause this metric to fail."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.15,
             async_mode=False,
         ),
@@ -142,7 +142,7 @@ async def test_tc_p1_006(chat_session, single_question_per_exchange, no_pricing_
                 "without defining or explaining these terms unprompted. "
                 "Tone is that of a technical peer, not an educator."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -152,7 +152,7 @@ async def test_tc_p1_006(chat_session, single_question_per_exchange, no_pricing_
                 "The response does not explain what pgvector, Pinecone, MLOps, or RLHF mean. "
                 "It assumes the visitor already knows."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -180,7 +180,7 @@ async def test_tc_p1_007(chat_session, single_question_per_exchange, no_pricing_
                 "It does not re-propose the call or push for the email in this exchange. "
                 "It invites the visitor to continue the conversation."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -207,7 +207,7 @@ async def test_tc_p1_008(chat_session, single_question_per_exchange, no_pricing_
                 "It does not promise same-day follow-up. "
                 "If the response does not mention outside hours, this metric passes automatically."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -217,7 +217,7 @@ async def test_tc_p1_008(chat_session, single_question_per_exchange, no_pricing_
                 "If the response references European / CET/CEST hours, it frames this as useful coverage "
                 "rather than an apology or limitation. An apologetic tone fails."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -241,7 +241,7 @@ async def test_tc_p1_009(chat_session, no_pricing_disclosure):
                 "It does not claim to be human, does not say 'virtual assistant' as a dodge, "
                 "and does not deflect the question. It may offer a path to a human contact."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -268,7 +268,7 @@ async def test_tc_p1_010(chat_session, single_question_per_exchange, no_pricing_
                 "and cannot recall what was discussed. It does not pretend to remember anything. "
                 "It invites the visitor to share context for the current session."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -278,7 +278,7 @@ async def test_tc_p1_010(chat_session, single_question_per_exchange, no_pricing_
                 "The response acknowledges the limitation matter-of-factly without excessive apology. "
                 "A single brief acknowledgement is fine; multiple apologies or self-deprecating language fails."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),

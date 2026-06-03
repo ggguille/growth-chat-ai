@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 _REFERRAL_OPEN = (
     "Hi — a colleague at Accenture recommended your company for an AI project we're scoping. "
@@ -34,7 +34,7 @@ async def test_tc_p3_001(chat_session, single_question_per_exchange, no_pricing_
                 "The response acknowledges the referral from Accenture or the fact that the visitor "
                 "was recommended. It does not treat this as a cold open."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -44,7 +44,7 @@ async def test_tc_p3_001(chat_session, single_question_per_exchange, no_pricing_
                 "The response does not start an exploratory qualification sequence. "
                 "Given the referral and company size stated, it asks at most one focused scoping question."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -68,7 +68,7 @@ async def test_tc_p3_002(chat_session, single_question_per_exchange, no_pricing_
                 "The response triggers a Stage 3 proposal — a short call with an engineer and an email request. "
                 "No further qualifying questions are asked after the hot threshold is confirmed."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -90,7 +90,7 @@ async def test_tc_p3_003(chat_session, no_pricing_disclosure):
                 "The response confirms that someone will be in touch and gives a specific time commitment. "
                 "It does not ask more questions."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -119,7 +119,7 @@ async def test_tc_p3_004(chat_session, single_question_per_exchange, no_pricing_
                 "(e.g. DataShield, RegEdge, or Voltara) rather than inventing one. "
                 "If no directly matching case study exists, it acknowledges this rather than fabricating."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -146,7 +146,7 @@ async def test_tc_p3_005(chat_session, no_pricing_disclosure):
                 "If the system believes it is within business hours, a same-day response is acceptable. "
                 "The test fails only if a same-day commitment is made when the team is demonstrably offline."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -179,7 +179,7 @@ async def test_tc_p3_006(chat_session, single_question_per_exchange, no_pricing_
                 "rather than treating the consultant as the buyer. "
                 "It does not pitch the consultant on an engagement as if they are the CTO or decision-maker."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -190,7 +190,7 @@ async def test_tc_p3_006(chat_session, single_question_per_exchange, no_pricing_
                 "the evaluation context (evaluating for a client) rather than ignoring it. "
                 "It does not demand the consultant bring the client decision-maker before it will help."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -219,7 +219,7 @@ async def test_tc_p3_007(chat_session, single_question_per_exchange, no_pricing_
                 "to a direct conversation with the commercial team. "
                 "Any general IP claim ('clients typically own the code') fails."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -247,7 +247,7 @@ async def test_tc_p3_008(chat_session, single_question_per_exchange, no_pricing_
                 "It does not misrepresent the company's capabilities to retain the lead. "
                 "It closes with a positive impression."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -271,7 +271,7 @@ async def test_tc_p3_009(chat_session, no_pricing_disclosure):
                 "It does not ask qualifying questions before offering the connection. "
                 "It asks for an email or explains how to reach the team."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -281,7 +281,7 @@ async def test_tc_p3_009(chat_session, no_pricing_disclosure):
                 "The response does not ask about company size, problem, budget, or role before "
                 "acknowledging the explicit request for a human."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -308,7 +308,7 @@ async def test_tc_p3_010(chat_session, no_pricing_disclosure):
                 "The response confirms the email capture and acknowledges the visitor's preferred timeline "
                 "(after the 15th). It does not push for an earlier meeting or ignore the timeline preference."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),

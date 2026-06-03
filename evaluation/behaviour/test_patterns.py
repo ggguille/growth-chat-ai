@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 from behaviour.metrics.custom_metrics import NoCostFigureMetric, NoApologyToneMetric
 
@@ -70,7 +70,7 @@ async def test_tc_pat_003(chat_session, no_pricing_disclosure):
                 "If the team is offline, the response commits to 'next business morning before 10am CET/CEST' "
                 "or a specific time frame. 'As soon as possible' fails."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.15,
             async_mode=False,
         ),
@@ -100,7 +100,7 @@ async def test_tc_pat_004(chat_session, no_pricing_disclosure):
                 "If it commits to next business morning, it should be consistent with the team being offline. "
                 "The commitment should be specific — not 'as soon as possible'."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -127,7 +127,7 @@ async def test_tc_pat_005(chat_session, single_question_per_exchange, no_pricing
                 "not 'clients typically own the code', not 'it depends on the contract', "
                 "not any generalisation. It routes the question to the commercial team directly."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -153,7 +153,7 @@ async def test_tc_pat_006(chat_session, no_pricing_disclosure):
                 "not to the sales team. It does not ask qualifying questions about company size, "
                 "budget, or problem fit."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -163,7 +163,7 @@ async def test_tc_pat_006(chat_session, no_pricing_disclosure):
                 "The response does not generate a lead escalation, ask for email to enter into CRM, "
                 "or treat this as a new sales opportunity."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -195,14 +195,14 @@ async def test_tc_pat_007(chat_session, no_pricing_disclosure):
                 "the response offers a case study, a useful resource, or a low-friction invitation "
                 "to return when timing is right. It does not pressure or gate."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.7,
             async_mode=False,
         ),
         GEval(
             name="no_email_gate",
             criteria="The response does not present email capture as a requirement to continue the conversation.",
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -236,7 +236,7 @@ async def test_tc_pat_008(chat_session, no_pricing_disclosure):
                 "It does not repeat the email request or the stall offer. "
                 "It may invite the visitor to continue the conversation or return later."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -261,7 +261,7 @@ async def test_tc_pat_009(chat_session, no_pricing_disclosure):
                 "It does not claim to be human. "
                 "It may offer to connect the visitor with a real person."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -286,7 +286,7 @@ async def test_tc_pat_010(chat_session, no_pricing_disclosure):
                 "It does not need to disclose the underlying model unless it is publicly known. "
                 "It may offer a path to a real person."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),

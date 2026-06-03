@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 
 @pytest.mark.n2
@@ -29,7 +29,7 @@ async def test_tc_n2_001(chat_session, single_question_per_exchange, no_pricing_
                 "It does not pivot to a sales conversation or ask qualifying questions "
                 "in response to a general 'what is the company' question."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -54,7 +54,7 @@ async def test_tc_n2_002(chat_session, single_question_per_exchange, no_pricing_
                 "It does not immediately turn this into a pitch for Zartis's services "
                 "or ask qualifying questions in response to an educational question."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -77,7 +77,7 @@ async def test_tc_n2_003(chat_session, no_pricing_disclosure):
                 "The response redirects the visitor to the Zartis careers page or website for job openings. "
                 "It does not ask qualifying questions or attempt to capture the visitor's email for CRM."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -87,7 +87,7 @@ async def test_tc_n2_003(chat_session, no_pricing_disclosure):
                 "The response does not route the visitor through the sales pipeline. "
                 "A candidate enquiry is not a lead."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -114,7 +114,7 @@ async def test_tc_n2_004(chat_session, single_question_per_exchange, no_pricing_
                 "If content exists in the knowledge base, it references it. "
                 "If not, it acknowledges the limit and points to the website."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -139,14 +139,14 @@ async def test_tc_n2_005(chat_session, single_question_per_exchange, no_pricing_
                 "covering known issues like hallucination, cost, latency, context window limits, etc. "
                 "It does not immediately pivot to 'this is why you need Zartis'."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
         GEval(
             name="no_unprompted_sales_pivot",
             criteria="The response does not steer toward Zartis's services without a relevant problem being stated by the visitor.",
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -171,7 +171,7 @@ async def test_tc_n2_006(chat_session, single_question_per_exchange, no_pricing_
                 "including both larger companies and growth-stage companies like Series B. "
                 "It does not claim to work with pre-revenue startups if that is outside the ICP."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -196,7 +196,7 @@ async def test_tc_n2_007(chat_session, single_question_per_exchange, no_pricing_
                 "It may mention tools Zartis uses (pgvector, LangChain, etc.) but does not "
                 "immediately pivot to 'you should hire us' without a relevant problem being stated."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -223,7 +223,7 @@ async def test_tc_n2_008(chat_session, single_question_per_exchange, no_pricing_
                 "It may describe Zartis's positioning (Anthropic partner, European nearshore, senior engineers) "
                 "without making negative claims about other companies."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -233,7 +233,7 @@ async def test_tc_n2_008(chat_session, single_question_per_exchange, no_pricing_
                 "The response acknowledges that a competitive landscape exists "
                 "rather than refusing to engage with the question entirely."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -265,7 +265,7 @@ async def test_tc_n2_009(chat_session, no_pricing_disclosure):
                 "or closes positively — leaving the door open for the visitor to return. "
                 "It does not push hard for contact information."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.7,
             async_mode=False,
         ),
@@ -290,7 +290,7 @@ async def test_tc_n2_010(chat_session, single_question_per_exchange, no_pricing_
                 "It does not immediately pivot to Zartis recruitment or push the visitor "
                 "to apply for a job at Zartis unless directly asked."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -300,7 +300,7 @@ async def test_tc_n2_010(chat_session, single_question_per_exchange, no_pricing_
                 "The response does not ask for the visitor's CV, LinkedIn, or contact details "
                 "in response to a personal career question."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),

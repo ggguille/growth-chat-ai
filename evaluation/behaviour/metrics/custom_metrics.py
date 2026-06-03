@@ -4,7 +4,7 @@ import re
 
 from deepeval.metrics import GEval
 from deepeval.metrics.base_metric import BaseMetric
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 
 class SingleQuestionPerExchangeMetric(BaseMetric):
@@ -515,7 +515,7 @@ def NoFabricationWithoutContextMetric(model=None) -> GEval:
             "Acknowledging the limit and offering to connect with the team passes. "
             "Stating specific but unverifiable facts about the company fails."
         ),
-        evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT, LLMTestCaseParams.CONTEXT],
+        evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT, SingleTurnParams.CONTEXT],
         threshold=0.65,
         model=model,
         async_mode=False,

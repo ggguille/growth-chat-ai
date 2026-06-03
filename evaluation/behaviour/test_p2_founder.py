@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 _HYPE_QUESTION = (
     "I'm trying to figure out if we actually need AI in our product or if we're just following the hype. "
@@ -36,14 +36,14 @@ async def test_tc_p2_001(chat_session, single_question_per_exchange, no_pricing_
                 "It does not claim that AI is the answer for every company. "
                 "It may acknowledge cases where AI does and does not justify the investment."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
         GEval(
             name="no_immediate_call_push",
             criteria="The response does not propose a call or ask for contact information in this first exchange.",
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -65,14 +65,14 @@ async def test_tc_p2_002(chat_session, single_question_per_exchange, no_pricing_
                 "The response acknowledges that losing deals to a feature gap is a meaningful commercial signal, "
                 "not just hype. It treats this as a real problem worth addressing."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
         GEval(
             name="no_two_questions",
             criteria="The response contains at most one question directed at the visitor.",
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -95,7 +95,7 @@ async def test_tc_p2_003(chat_session, single_question_per_exchange, no_pricing_
                 "not a call or direct meeting. For a warm lead with no committed budget, "
                 "proposing a call would be premature."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -105,7 +105,7 @@ async def test_tc_p2_003(chat_session, single_question_per_exchange, no_pricing_
                 "If the response asks for an email, it is in exchange for the specific resource mentioned — "
                 "not as a standalone gate ('leave your email and we'll be in touch' with no specifics)."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -132,7 +132,7 @@ async def test_tc_p2_004(chat_session, single_question_per_exchange, no_pricing_
                 "including when it makes sense to keep it internal. "
                 "It does not present external engineers as the only sensible option."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -158,7 +158,7 @@ async def test_tc_p2_005(chat_session, single_question_per_exchange, no_pricing_
                 "It explains what factors drive the timeline. "
                 "Vague non-answers fail."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -169,7 +169,7 @@ async def test_tc_p2_005(chat_session, single_question_per_exchange, no_pricing_
                 "without a scoping call first (e.g. 'we can definitely have this done in 8 weeks' fails; "
                 "'typically 6–12 weeks, depending on scope' passes)."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -197,7 +197,7 @@ async def test_tc_p2_006(chat_session, single_question_per_exchange, no_pricing_
                 "It may offer to continue the conversation or leave the door open. "
                 "It does not repeat the email request in this exchange."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -223,7 +223,7 @@ async def test_tc_p2_007(chat_session, single_question_per_exchange, no_pricing_
                 "It does not reveal internal org structure, team hierarchy, or operational details "
                 "beyond what is on the public website."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -248,7 +248,7 @@ async def test_tc_p2_008(chat_session, single_question_per_exchange, no_pricing_
                 "rather than overselling fit. It does not claim deep hardware manufacturing experience if it lacks it. "
                 "It closes with a positive impression even if there is no fit."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -258,7 +258,7 @@ async def test_tc_p2_008(chat_session, single_question_per_exchange, no_pricing_
                 "If the response indicates this is not a strong fit, it does not push for contact information "
                 "or escalate to the sales team."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -293,7 +293,7 @@ async def test_tc_p2_009(chat_session, no_pricing_disclosure):
                 "a case study, a resource, or an invitation to return when timing is right. "
                 "The offer is optional, not a gate. The visitor is not pressured."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.7,
             async_mode=False,
         ),
@@ -303,7 +303,7 @@ async def test_tc_p2_009(chat_session, no_pricing_disclosure):
                 "The response does not present email capture as a requirement to continue the conversation "
                 "('to continue getting help, provide your email' fails)."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -331,7 +331,7 @@ async def test_tc_p2_010(chat_session, single_question_per_exchange, no_pricing_
                 "It may note that compliance specifics depend on the engagement and should be discussed "
                 "with the commercial team."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -341,7 +341,7 @@ async def test_tc_p2_010(chat_session, single_question_per_exchange, no_pricing_
                 "The response does not attempt to give legal or compliance advice. "
                 "It directs the visitor to a direct conversation for contract-level compliance questions."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),

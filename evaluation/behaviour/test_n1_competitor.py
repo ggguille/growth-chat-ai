@@ -8,7 +8,7 @@ from __future__ import annotations
 import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams
+from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 
 @pytest.mark.n1
@@ -26,7 +26,7 @@ async def test_tc_n1_001(chat_session, no_pricing_disclosure):
                 "It explains (briefly) why a figure without context is not useful. "
                 "It does not say 'contact us for pricing' as a dead-end."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -51,7 +51,7 @@ async def test_tc_n1_002(chat_session, no_pricing_disclosure):
                 "It does not disclose Zartis-specific rates, models, or structures. "
                 "It may reference publicly available industry information."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -61,7 +61,7 @@ async def test_tc_n1_002(chat_session, no_pricing_disclosure):
                 "The response does not ask for the visitor's email, propose a call, "
                 "or offer to connect them with a sales team member."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
             async_mode=False,
         ),
@@ -85,7 +85,7 @@ async def test_tc_n1_003(chat_session, no_pricing_disclosure):
                 "or any figure beyond the publicly stated '280+ engineers'. "
                 "Real-time bench availability is internal information and must not be shared."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -112,7 +112,7 @@ async def test_tc_n1_004(chat_session, no_pricing_disclosure):
                 "without revealing proprietary internal processes, tooling preferences, or operational specifics "
                 "that would only be useful to a competitor."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -137,7 +137,7 @@ async def test_tc_n1_005(chat_session, no_pricing_disclosure):
                 "It does not route the visitor to a named sales rep, capture their email for CRM, "
                 "or generate a Slack notification."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -161,7 +161,7 @@ async def test_tc_n1_006(chat_session, no_pricing_disclosure):
                 "and uses Claude). It does not disclose internal tooling choices beyond what is publicly stated. "
                 "If the information is not public, it acknowledges the limit."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -185,7 +185,7 @@ async def test_tc_n1_007(chat_session, no_pricing_disclosure):
                 "in a way that would be useful to a competitor benchmarking the company. "
                 "Deflecting to a scoping call is the correct response."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
@@ -211,7 +211,7 @@ async def test_tc_n1_008(chat_session, no_pricing_disclosure):
                 "It does not ask for the visitor's company, role, or contact information. "
                 "It may respond helpfully with publicly available positioning information."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -235,7 +235,7 @@ async def test_tc_n1_009(chat_session, no_pricing_disclosure):
                 "as mentioned in public case studies). "
                 "It does not disclose any other client names or confidential client information."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
         ),
@@ -269,7 +269,7 @@ async def test_tc_n1_010(chat_session, single_question_per_exchange, no_pricing_
                 "N1 classification is maintained for the session — the response continues in the neutral, "
                 "non-committal N1 register. It may respond helpfully to the stated need but does not trigger handoff."
             ),
-            evaluation_params=[LLMTestCaseParams.ACTUAL_OUTPUT],
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
             async_mode=False,
         ),
