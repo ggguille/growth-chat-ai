@@ -16,6 +16,7 @@ COPY evaluation/pyproject.toml           evaluation/
 COPY data/database/pyproject.toml        data/database/
 COPY data/ingestion/pyproject.toml       data/ingestion/
 COPY shared/knowledge_base/pyproject.toml shared/knowledge_base/
+COPY shared/knowledge_base/README.md      shared/knowledge_base/
 
 # Backend source — required so hatchling editable install registers the .pth file
 COPY backend/src/ backend/src/
