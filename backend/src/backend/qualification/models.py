@@ -1,7 +1,6 @@
-from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 LeadLevel = Literal["hot", "warm", "cold"]
 ConversationStage = Literal[1, 2, 3]
@@ -15,23 +14,21 @@ _LEVEL_ORDER: dict[FitLevel, int] = {
 }
 
 
-@dataclass
-class SignalEntry:
+class SignalEntry(BaseModel):
     dimension: Literal["problem_fit", "authority_fit", "company_fit", "timing_fit"]
     signal_type: Literal["explicit", "implicit"]
     evidence: str
     turn_index: int
 
 
-@dataclass
-class QualificationState:
+class QualificationState(BaseModel):
     problem_fit: FitLevel = "not_detected"
     authority_fit: FitLevel = "not_detected"
     company_fit: FitLevel = "not_detected"
     timing_fit: FitLevel = "not_detected"
     is_negative_persona: bool = False
     is_no_fit: bool = False
-    signals_observed: list[SignalEntry] = field(default_factory=list)
+    signals_observed: list[SignalEntry] = Field(default_factory=list)
 
 
 def merge_qualification(current: QualificationState | None, update: QualificationState) -> QualificationState:

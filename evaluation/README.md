@@ -54,6 +54,7 @@ Live end-to-end tests that drive the real backend API over SSE. Each test create
 | `TechnicalDepthMetric` | Deterministic (regex) | TC-P1-001 — technical terms in response |
 | `FollowUpCommitmentMetric` | Deterministic (regex) | TC-P1-003 — specific time commitment after email |
 | `Stage3ProposalMetric` | Deterministic (regex) | TC-P1-002 — call/connect word + email ask present |
+| `NoFurtherQualificationMetric` | Deterministic (sentence split) | TC-P1-002 — Stage 3 response asks for email only, no qualifying questions |
 | `NoApologyToneMetric` | Deterministic (regex) | TC-PAT-003 — no apologetic language about CET hours |
 | `HonestLimitAcknowledgementMetric` | Deterministic (regex) | TC-P1-004 — acknowledges limit + offers forward path |
 | `PricingDeflectionQualityMetric` | Deterministic (regex) | TC-P1-005 — explains why + offers conversation path |

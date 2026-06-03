@@ -14,6 +14,7 @@ from behaviour.metrics.custom_metrics import (
     FollowUpCommitmentMetric,
     HonestLimitAcknowledgementMetric,
     NoContactRequestMetric,
+    NoFurtherQualificationMetric,
     PricingDeflectionQualityMetric,
     Stage3ProposalMetric,
     TechnicalDepthMetric,
@@ -59,19 +60,7 @@ async def test_tc_p1_002(chat_session, single_question_per_exchange, no_pricing_
         single_question_per_exchange,
         no_pricing_disclosure,
         Stage3ProposalMetric(),
-        GEval(
-            name="no_further_qualification",
-            criteria=(
-                "The response does not ask another qualifying question about the visitor's situation, "
-                "company size, timeline, or technical problem. "
-                "Important: asking for the visitor's email address as part of a Stage 3 call proposal "
-                "('What email should I send the introduction to?') is the expected next action — "
-                "it is NOT a qualifying question and must not cause this metric to fail."
-            ),
-            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=0.15,
-            async_mode=False,
-        ),
+        NoFurtherQualificationMetric(),
     ], run_async=False)
 
 

@@ -280,6 +280,10 @@ Return JSON matching QualificationDelta schema. All fields are optional.
 """.strip()
 
 
+_VALID_SIGNAL_TYPES = frozenset(("explicit", "implicit"))
+_VALID_DIMENSIONS = frozenset(("problem_fit", "authority_fit", "company_fit", "timing_fit"))
+
+
 def _to_api_messages(messages: list, context_window: int = 10) -> list[dict]:
     """Convert LangGraph messages (LangChain objects or dicts) to API message format.
 
@@ -444,10 +448,10 @@ def _make_update_state(llm_client: "BaseLLMClient", context_window: int):
             is_no_fit=bool(delta.is_no_fit),
             signals_observed=[
                 SignalEntry(
-                    dimension=s.get("dimension", "problem_fit"),
-                    signal_type=s.get("signal_type", "implicit"),
-                    evidence=s.get("evidence", ""),
-                    turn_index=s.get("turn_index", turn_index),
+                    dimension=s.get("dimension") if s.get("dimension") in _VALID_DIMENSIONS else "problem_fit",
+                    signal_type=s.get("signal_type") if s.get("signal_type") in _VALID_SIGNAL_TYPES else "implicit",
+                    evidence=str(s.get("evidence") or ""),
+                    turn_index=int(s.get("turn_index") or turn_index),
                 )
                 for s in (delta.signals_observed or [])
             ],

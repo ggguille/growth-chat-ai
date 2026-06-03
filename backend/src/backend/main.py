@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -17,6 +18,14 @@ from backend.limiter import limiter
 from backend.llm.factory import create_llm_client
 
 
+_SERDE = JsonPlusSerializer(
+    allowed_msgpack_modules=[
+        ("backend.qualification.models", "QualificationState"),
+        ("backend.qualification.models", "SignalEntry"),
+    ]
+)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     llm_client = create_llm_client(settings)
@@ -24,13 +33,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.app_env != "development" and settings.checkpoint_db_url:
         from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
-        async with await AsyncPostgresSaver.from_conn_string(settings.checkpoint_db_url) as cp:
+        async with await AsyncPostgresSaver.from_conn_string(settings.checkpoint_db_url, serde=_SERDE) as cp:
             await cp.setup()
             app.state.graph = build_graph(cp, llm_client)
             app.state.ready = True
             yield
     else:
-        cp = MemorySaver()
+        cp = MemorySaver(serde=_SERDE)
         app.state.graph = build_graph(cp, llm_client)
         app.state.ready = True
         yield
