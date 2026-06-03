@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import threading
 
 import pytest
 from dotenv import load_dotenv
@@ -10,18 +11,75 @@ from judge import get_judge_model, judge_available
 
 load_dotenv()
 
-# Configure Langfuse integration when keys are present — DeepEval auto-detects
 _langfuse_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-if _langfuse_key:
-    os.environ.setdefault("LANGFUSE_PUBLIC_KEY", _langfuse_key)
-    os.environ.setdefault("LANGFUSE_SECRET_KEY", os.getenv("LANGFUSE_SECRET_KEY", ""))
-    os.environ.setdefault("LANGFUSE_HOST", os.getenv("LANGFUSE_HOST", "https://eu.cloud.langfuse.com"))
+
+# Thread-local storage for the current test node ID, used by _make_langfuse_assert_test.
+_test_context = threading.local()
+
+
+def _make_langfuse_assert_test(original_fn):
+    """Return a wrapper around assert_test that logs metric scores to Langfuse.
+
+    Follows the Langfuse external evaluation pipeline pattern:
+    create a trace per test, then call create_score(trace_id=...) for each metric.
+    GEval metrics carry a .reason string that is passed as the score comment.
+    """
+    def _wrapper(test_case, metrics, **kwargs):
+        try:
+            original_fn(test_case, metrics, **kwargs)
+        finally:
+            if not _langfuse_key:
+                return
+            from langfuse import Langfuse  # noqa: PLC0415
+            lf = Langfuse()
+            test_name = getattr(_test_context, "test_name", "unknown")
+            trace_id = lf.create_trace_id()
+            with lf.start_as_current_observation(name=test_name, trace_context={"trace_id": trace_id}):
+                for m in metrics:
+                    score = getattr(m, "score", None)
+                    if score is None:
+                        continue
+                    lf.create_score(
+                        trace_id=trace_id,
+                        name=type(m).__name__,
+                        value=float(score),
+                        comment=getattr(m, "reason", None),
+                    )
+            lf.flush()
+    return _wrapper
+
+
+def pytest_itemcollected(item):
+    """Patch assert_test in each test module's namespace to enable Langfuse logging.
+
+    Test files use `from deepeval import assert_test` (direct import), so the fix
+    must replace the name in the test module's own __dict__ rather than in deepeval.
+    Runs once per module at collection time — before any test executes.
+    """
+    if not _langfuse_key:
+        return
+    module = getattr(item, "module", None)
+    if module is None or getattr(module, "_lf_patched", False):
+        return
+    if not hasattr(module, "assert_test"):
+        return
+    module.assert_test = _make_langfuse_assert_test(module.assert_test)
+    module._lf_patched = True
+
 
 _NO_JUDGE_MSG = (
     "No LLM-as-judge provider configured. "
     "Set JUDGE_PROVIDER=ollama (dev) or JUDGE_PROVIDER=anthropic (CI) in evaluation/.env. "
     "See evaluation/.env.example for full configuration."
 )
+
+
+@pytest.fixture(autouse=True)
+def _set_test_context(request):
+    """Store the current test node ID so _make_langfuse_assert_test can name the trace."""
+    _test_context.test_name = request.node.nodeid
+    yield
+    _test_context.test_name = None
 
 
 @pytest.fixture(autouse=True)

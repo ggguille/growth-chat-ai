@@ -1,0 +1,5 @@
+# Evaluation reports (generated per run — inspect locally, not committed)
+.evaluation-reports/
+
+# DeepEval cache
+.deepeval/
