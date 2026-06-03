@@ -11,7 +11,7 @@ from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, SingleTurnParams
 
-from behaviour.metrics.custom_metrics import NoCostFigureMetric, NoApologyToneMetric
+from behaviour.metrics.custom_metrics import NoCostFigureMetric, NoApologyToneMetric, FollowUpCommitmentMetric
 
 
 @pytest.mark.pattern
@@ -64,16 +64,7 @@ async def test_tc_pat_003(chat_session, no_pricing_disclosure):
     assert_test(test_case, [
         no_pricing_disclosure,
         NoApologyToneMetric(),
-        GEval(
-            name="specific_follow_up_commitment",
-            criteria=(
-                "If the team is offline, the response commits to 'next business morning before 10am CET/CEST' "
-                "or a specific time frame. 'As soon as possible' fails."
-            ),
-            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=0.15,
-            async_mode=False,
-        ),
+        FollowUpCommitmentMetric(),
     ], run_async=False)
 
 

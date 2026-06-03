@@ -41,7 +41,7 @@ def _make_langfuse_assert_test(original_fn):
                         continue
                     lf.create_score(
                         trace_id=trace_id,
-                        name=type(m).__name__,
+                        name=f"{getattr(m, "name", None)} ({type(m).__name__})",
                         value=float(score),
                         comment=getattr(m, "reason", None),
                     )
