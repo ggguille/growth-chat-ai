@@ -1,4 +1,6 @@
+import asyncio
 import json
+import logging
 import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated
@@ -18,6 +20,7 @@ from backend.conversation.models import (
 )
 from backend.limiter import limiter
 
+_log = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -105,9 +108,11 @@ async def _stream(body: ChatRequest, session_id: str, graph) -> AsyncGenerator[s
                 if isinstance(output, dict):
                     final_output = output
 
+    except asyncio.CancelledError:
+        _log.warning("stream cancelled for session %s", session_id)
+        return  # client disconnected; let the generator exhaust cleanly without a done event
     except Exception:
-        import logging
-        logging.getLogger(__name__).exception("stream error for session %s", session_id)
+        _log.exception("stream error for session %s", session_id)
 
     done = SSEDoneEvent(
         session_id=session_id,

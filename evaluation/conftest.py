@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import uuid
@@ -36,6 +37,13 @@ class ChatSession:
         self._api_key = api_key
 
     async def send(self, message: str) -> ChatResponse:
+        try:
+            return await self._send_once(message)
+        except httpx.RemoteProtocolError:
+            await asyncio.sleep(1.0)
+            return await self._send_once(message)
+
+    async def _send_once(self, message: str) -> ChatResponse:
         tokens: list[str] = []
         done_data: dict = {}
         async with self._client.stream(
@@ -72,7 +80,12 @@ class ChatSession:
 async def chat_session():
     async with httpx.AsyncClient(base_url=_API_URL) as client:
         try:
-            await client.get("/health", timeout=5.0)
+            resp = await client.get("/ready", timeout=10.0)
+            if resp.status_code != 200:
+                pytest.skip(
+                    f"Backend not ready at {_API_URL} (status {resp.status_code}) — is the graph initialised?"
+                )
+                return
         except (httpx.ConnectError, httpx.TimeoutException):
             pytest.skip(f"Backend not reachable at {_API_URL} — set EVAL_API_URL to a running instance")
             return

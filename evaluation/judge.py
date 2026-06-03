@@ -40,8 +40,13 @@ from deepeval.models.base_model import DeepEvalBaseLLM
 
 
 def judge_available() -> bool:
-    """True when JUDGE_PROVIDER is set to a supported value."""
-    return os.getenv("JUDGE_PROVIDER", "").lower() in ("ollama", "anthropic")
+    """True when JUDGE_PROVIDER is set to a supported value AND the required credentials are present."""
+    provider = os.getenv("JUDGE_PROVIDER", "").lower()
+    if provider == "anthropic":
+        return bool(os.getenv("ANTHROPIC_API_KEY"))
+    if provider == "ollama":
+        return True  # no API key required
+    return False
 
 
 def get_judge_model() -> DeepEvalBaseLLM | str | None:
