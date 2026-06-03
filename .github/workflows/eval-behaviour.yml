@@ -4,8 +4,6 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "backend/**"
-      - "data/knowledge-base/**"
       - "evaluation/**"
   workflow_run:
     workflows: ["Deploy Backend"]
@@ -19,6 +17,7 @@ concurrency:
 jobs:
   behaviour:
     name: DeepEval behaviour suite (phase2)
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: evaluation
 
