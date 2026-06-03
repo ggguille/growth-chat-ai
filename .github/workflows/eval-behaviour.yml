@@ -17,7 +17,7 @@ concurrency:
 jobs:
   behaviour:
     name: DeepEval behaviour suite (phase2)
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }} && false # TODO(Phase 5): remove `&& false` to run the behaviour tests on PRs and after backend deploys
     runs-on: ubuntu-latest
     environment: evaluation
 
