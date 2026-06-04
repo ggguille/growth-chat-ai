@@ -23,7 +23,8 @@ COPY backend/src/ backend/src/
 COPY shared/knowledge_base/src/ shared/knowledge_base/src/
 
 # Install backend deps into .venv; no dev extras, honour the lock file
-RUN uv sync --package backend --no-dev --frozen
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --package backend --no-dev --frozen
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM python:3.14-slim-bookworm AS runtime
