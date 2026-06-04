@@ -39,7 +39,7 @@ jobs:
       - name: Warm up backend
         run: |
           uv run --package evaluation python - <<'EOF'
-          import httpx, sys, time, os
+          import httpx, sys, time, os, uuid
 
           url = os.environ["EVAL_API_URL"].rstrip("/")
           api_key = os.environ.get("ZGC_API_KEY", "dev-key")
@@ -60,7 +60,7 @@ jobs:
           with httpx.stream(
               "POST", f"{url}/chat",
               json={"message": "hello"},
-              headers={"ZGC-Session-ID": "ci-warmup", "ZGC-API-KEY": api_key,
+              headers={"ZGC-Session-ID": str(uuid.uuid4()), "ZGC-API-KEY": api_key,
                        "Accept": "text/event-stream"},
               timeout=httpx.Timeout(10.0, read=60.0),
           ) as resp:
