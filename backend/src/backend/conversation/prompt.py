@@ -284,6 +284,7 @@ def build_proposal_prompt(state: dict, reason: str, in_hours: bool) -> str:
             "Generate an explicit-request handoff:\n"
             "- Acknowledge the request immediately and without friction\n"
             "- State that you will make the introduction — do NOT ask if they want that\n"
+            "- State they will be contacted within a few hours\n"
             "- Ask ONE question only: their email address\n"
             "- Keep it short and human. No follow-up questions about context."
         ),
@@ -294,7 +295,7 @@ def build_proposal_prompt(state: dict, reason: str, in_hours: bool) -> str:
             "FORBIDDEN WORDS — do NOT use: 'unfortunately', 'I'm sorry', 'I'm afraid', "
             "'unavailable', 'offline'. Using them violates PB-24.\n\n"
             "REQUIRED structure:\n"
-            "- Lead with the commitment: state they will hear back before 10am CET next business morning.\n"
+            "- Lead with the commitment: state they will hear back first thing next business morning before 10am CET.\n"
             "- Frame the CET timezone as a feature, not an obstacle.\n"
             "- Ask ONE question only: their email address."
         ),

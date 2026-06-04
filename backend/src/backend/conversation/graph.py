@@ -631,6 +631,20 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
         # Guarantee a proposal word is present — prepend connection framing if missing.
         if not _STAGE3_PROPOSAL_RE.search(full_text):
             full_text = "I'll connect you with one of our engineers. " + full_text
+        # Guarantee a follow-up time commitment is present for explicit/hot-lead proposals.
+        # Mirrors the clean-close enforcement at lines 571-579; reuses _COMMITMENT_MARKERS and in_hours.
+        if reason != "stall" and not any(m in full_text.lower() for m in _COMMITMENT_MARKERS):
+            commitment = (
+                "One of our engineers will be in touch within a few hours."
+                if in_hours
+                else "They will reach out first thing next business morning before 10am CET."
+            )
+            sentences = re.split(r"(?<=[.!?])\s+", full_text)
+            non_q = [s for s in sentences if "?" not in s]
+            q_sents = [s for s in sentences if "?" in s]
+            base = " ".join(non_q).rstrip() if non_q else full_text
+            q_part = " " + " ".join(q_sents) if q_sents else ""
+            full_text = f"{base} {commitment}{q_part}".strip()
 
         # Dispatch post-processed text as tokens
         for word in full_text.split(" "):
