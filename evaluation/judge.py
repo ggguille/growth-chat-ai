@@ -23,9 +23,9 @@ Usage:
     metric = SomeGEvalMetric(model=get_judge_model())
 
 Design notes:
-    - For Anthropic, get_judge_model() returns a model name STRING. DeepEval's
-      initialize_model() resolves strings to its native AnthropicModel when
-      ANTHROPIC_API_KEY is set. This avoids custom wrapper classes.
+    - For Anthropic, get_judge_model() returns _AnthropicJudge (DeepEvalBaseLLM)
+      backed by the anthropic SDK directly. This avoids DeepEval's initialize_model()
+      string resolution, which may fall through to GPTModel in newer DeepEval versions.
     - For Ollama, get_judge_model() returns an _OllamaJudge (DeepEvalBaseLLM)
       that uses ollama.Client (sync, no LangChain) to avoid AsyncLibraryNotFoundError
       when called from within pytest-asyncio + nest_asyncio contexts.
@@ -49,23 +49,22 @@ def judge_available() -> bool:
     return False
 
 
-def get_judge_model() -> DeepEvalBaseLLM | str | None:
+def get_judge_model() -> DeepEvalBaseLLM | None:
     """Return the configured judge model.
 
     Returns:
-        - str: model name for Anthropic (DeepEval resolves it natively)
-        - DeepEvalBaseLLM: _OllamaJudge instance for Ollama
+        - DeepEvalBaseLLM: _AnthropicJudge or _OllamaJudge instance
         - None: when JUDGE_PROVIDER is not configured
     """
     provider = os.getenv("JUDGE_PROVIDER", "").lower()
     model_name = os.getenv("JUDGE_MODEL", "")
 
     if provider == "anthropic":
-        return model_name or "claude-haiku-4-5-20251001"
+        return _AnthropicJudge(model_name or "claude-haiku-4-5-20251001")
 
     if provider == "ollama":
         base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        return _OllamaJudge(model_name or "llama3.1:8b", base_url)
+        return _OllamaJudge(model_name or "qwen2.5:7b", base_url)
 
     return None
 
@@ -119,6 +118,62 @@ class _OllamaJudge(DeepEvalBaseLLM):
             messages=[{"role": "user", "content": prompt}],
         )
         return response.message.content or ""
+
+    async def a_generate(self, prompt: str, schema=None) -> object:
+        import asyncio  # noqa: PLC0415
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, lambda: self.generate(prompt, schema))
+
+
+class _AnthropicJudge(DeepEvalBaseLLM):
+    """Judge backed by Anthropic via the anthropic SDK directly.
+
+    Returns a concrete DeepEvalBaseLLM instance so DeepEval never needs to
+    resolve a model string — avoiding the GPTModel fallback in initialize_model().
+    a_generate() runs the sync call in a thread-pool executor (same pattern as
+    _OllamaJudge) to avoid async context conflicts in pytest-asyncio.
+    """
+
+    def __init__(self, model: str) -> None:
+        self._model_name = model
+
+    def get_model_name(self) -> str:
+        return self._model_name
+
+    def load_model(self) -> None:
+        return None
+
+    def generate(self, prompt: str, schema=None) -> object:
+        import anthropic  # noqa: PLC0415
+
+        client = anthropic.Anthropic()
+        if schema is not None:
+            tool_schema = (
+                schema.model_json_schema()
+                if hasattr(schema, "model_json_schema")
+                else schema
+            )
+            response = client.messages.create(
+                model=self._model_name,
+                max_tokens=1024,
+                tools=[{"name": "output", "input_schema": tool_schema}],
+                tool_choice={"type": "tool", "name": "output"},
+                messages=[{"role": "user", "content": prompt}],
+            )
+            for block in response.content:
+                if block.type == "tool_use":
+                    data = block.input
+                    if hasattr(schema, "model_validate"):
+                        return schema.model_validate(data)
+                    return data
+            return {}
+        response = client.messages.create(
+            model=self._model_name,
+            max_tokens=1024,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text if response.content else ""
 
     async def a_generate(self, prompt: str, schema=None) -> object:
         import asyncio  # noqa: PLC0415

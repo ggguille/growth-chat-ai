@@ -37,11 +37,18 @@ class ChatSession:
         self._api_key = api_key
 
     async def send(self, message: str) -> ChatResponse:
-        try:
-            return await self._send_once(message)
-        except httpx.RemoteProtocolError:
-            await asyncio.sleep(1.0)
-            return await self._send_once(message)
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                return await self._send_once(message)
+            except httpx.RemoteProtocolError as exc:
+                last_exc = exc
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code < 500:
+                    raise
+                last_exc = exc
+            await asyncio.sleep(2.0 ** attempt)
+        raise last_exc  # type: ignore[misc]
 
     async def _send_once(self, message: str) -> ChatResponse:
         tokens: list[str] = []

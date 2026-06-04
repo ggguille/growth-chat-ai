@@ -36,6 +36,44 @@ jobs:
       - name: Install workspace dependencies
         run: uv sync
 
+      - name: Warm up backend
+        run: |
+          uv run python - <<'EOF'
+          import httpx, sys, time, os
+
+          url = os.environ["EVAL_API_URL"].rstrip("/")
+          api_key = os.environ.get("ZGC_API_KEY", "dev-key")
+
+          for attempt in range(30):
+              try:
+                  r = httpx.get(f"{url}/ready", timeout=5.0)
+                  if r.status_code == 200:
+                      print(f"Backend ready (attempt {attempt + 1})")
+                      break
+              except Exception as exc:
+                  print(f"attempt {attempt + 1}/30: {exc}")
+              time.sleep(2.0)
+          else:
+              print("ERROR: backend did not become ready in 60 s")
+              sys.exit(1)
+
+          with httpx.stream(
+              "POST", f"{url}/chat",
+              json={"message": "hello"},
+              headers={"ZGC-Session-ID": "ci-warmup", "ZGC-API-KEY": api_key,
+                       "Accept": "text/event-stream"},
+              timeout=httpx.Timeout(10.0, read=60.0),
+          ) as resp:
+              resp.raise_for_status()
+              for line in resp.iter_lines():
+                  if '"type": "done"' in line:
+                      break
+          print("Warm-up complete")
+          EOF
+        env:
+          EVAL_API_URL: ${{ vars.EVAL_API_URL }}
+          ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
+
       - name: Run Phase 2 behaviour tests
         # TODO(Phase 5): remove -m phase2 to run all 60 tests as the hard gate
         run: uv run --package evaluation pytest evaluation/behaviour -m phase2 -v

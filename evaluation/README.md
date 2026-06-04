@@ -124,44 +124,47 @@ Copy the example file:
 cp evaluation/.env.example evaluation/.env
 ```
 
-The `.env.example` ships with the **Ollama (dev) block active** by default. Uncomment
-the Anthropic block for CI runs. Only one provider should be active at a time —
-`OPENAI_API_KEY` takes precedence if set alongside the others.
+Set `JUDGE_PROVIDER` to `ollama` (dev) or `anthropic` (CI). Only one provider should
+be active at a time. Omitting `JUDGE_PROVIDER` skips all LLM-as-judge tests (they
+become `SKIPPED`, not `FAILED`).
 
 #### 2a — Dev: local Ollama (no API key required)
 
 Ollama is the default judge for local development, as per ADR-001.
 
 1. Install and start Ollama: <https://ollama.com>
-2. Pull a capable model: `ollama pull llama3.1:8b`
-3. Keep the Ollama block active in `evaluation/.env` (it is the default).
+2. Pull a capable model: `ollama pull qwen2.5:7b`
+3. In `evaluation/.env` set:
 
-`LOCAL_MODEL_API_KEY`, `LOCAL_MODEL_NAME`, and `OLLAMA_BASE_URL` are the only
-required vars. All DeepEval `GEval` metrics — custom and inline — auto-route to
-Ollama through DeepEval's env-var detection. No test file changes needed.
+   ```text
+   JUDGE_PROVIDER=ollama
+   JUDGE_MODEL=qwen2.5:7b        # optional, this is the default
+   OLLAMA_BASE_URL=http://localhost:11434  # optional
+   ```
+
+GEval metrics route through `_OllamaJudge` in `judge.py`, which calls `ollama.Client`
+directly — no DeepEval env-var detection involved.
 
 > **Note:** Smaller local models may score differently from Claude on subjective
 > criteria. Tests with `threshold=1.0` require a model with strong instruction
-> following (≥ 8B parameters recommended).
+> following (≥ 7B parameters recommended).
 
-#### 2b — CI/production: Claude Haiku 4.5 via Anthropic API
+#### 2b — CI/production: Claude Haiku via Anthropic API
 
-DeepEval ≥ 4.0.4 ships a native `AnthropicModel` class. No custom wrappers or extra
-packages beyond `anthropic` are needed.
+GEval metrics route through `_AnthropicJudge` in `judge.py`, which calls the
+`anthropic` SDK directly. This avoids DeepEval's internal string-based model
+resolution, which can fall through to `GPTModel` in newer DeepEval versions.
 
 In `evaluation/.env` (or as CI environment secrets):
 
-1. Comment out the `LOCAL_MODEL_API_KEY` / `LOCAL_MODEL_NAME` / `OLLAMA_BASE_URL` lines.
-2. Uncomment and set:
+```text
+JUDGE_PROVIDER=anthropic
+ANTHROPIC_API_KEY=<your-key>
+JUDGE_MODEL=claude-haiku-4-5-20251001   # optional, this is the default
+```
 
-   ```text
-   USE_ANTHROPIC_MODEL=true
-   ANTHROPIC_API_KEY=<your-key>
-   ANTHROPIC_MODEL_NAME=claude-haiku-4-5-20251001
-   ```
-
-All `GEval` instances (custom and inline) auto-route to Claude Haiku when
-`USE_ANTHROPIC_MODEL=true`.
+All `GEval` instances (custom and inline) route to Claude when
+`JUDGE_PROVIDER=anthropic` and `ANTHROPIC_API_KEY` is set.
 
 #### Environment variable reference
 
@@ -169,16 +172,14 @@ All `GEval` instances (custom and inline) auto-route to Claude Haiku when
 | --- | --- | --- | --- | --- |
 | `EVAL_API_URL` | both | No | `http://localhost:8000` | Backend URL the tests call |
 | `ZGC_API_KEY` | both | No | `dev-key` | API key sent in `ZGC-API-KEY` header |
-| `LOCAL_MODEL_API_KEY` | dev | Yes (dev) | — | Set to `ollama` to use Ollama |
-| `LOCAL_MODEL_NAME` | dev | Yes (dev) | — | Ollama model tag, e.g. `llama3.1:8b` |
+| `JUDGE_PROVIDER` | both | No | — | `ollama` (dev) or `anthropic` (CI) — omit to skip LLM-as-judge tests |
+| `JUDGE_MODEL` | both | No | `qwen2.5:7b` / `claude-haiku-4-5-20251001` | Model tag for the configured provider |
 | `OLLAMA_BASE_URL` | dev | No | `http://localhost:11434` | Ollama endpoint |
-| `USE_ANTHROPIC_MODEL` | CI | Yes (CI) | — | Set to `true` to use Claude |
 | `ANTHROPIC_API_KEY` | CI | Yes (CI) | — | Anthropic API key |
-| `ANTHROPIC_MODEL_NAME` | CI | No | `claude-haiku-4-5-20251001` | Claude model for CI judge |
 | `LANGFUSE_PUBLIC_KEY` | both | No | — | Enables eval score logging to Langfuse |
 | `LANGFUSE_SECRET_KEY` | both | No | — | Langfuse secret (pair with public key) |
 | `LANGFUSE_HOST` | both | No | `https://eu.cloud.langfuse.com` | Langfuse instance URL |
-| `PROMPTFOO_GRADING_PROVIDER` | redteam | Yes (redteam) | — | LLM judge for `llm-rubric` assertions: `ollama:chat:llama3.1:8b` (dev) or `anthropic:messages:claude-haiku-4-5-20251001` (CI) |
+| `PROMPTFOO_GRADING_PROVIDER` | redteam | Yes (redteam) | — | LLM judge for `llm-rubric` assertions: `ollama:chat:qwen2.5:7b` (dev) or `anthropic:messages:claude-haiku-4-5-20251001` (CI) |
 
 ### 3. Start the backend
 
