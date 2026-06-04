@@ -112,6 +112,14 @@ _COMMITMENT_MARKERS = [
     "business morning", "first thing",
 ]
 
+# Forward-path phrases required when retrieval returns no results (PB-01, Layer 5 Rule 2).
+# Mirrors _FORWARD_PATH_RE in evaluation/behaviour/metrics/honest_limit_acknowledgement.py.
+_NO_RESULTS_FORWARD_PATH_RE = re.compile(
+    r"\b(?:connect you|one of our engineers?|reach out|get in touch|"
+    r"technical team|have someone|follow up|set up a call|introduction)\b",
+    re.IGNORECASE,
+)
+
 # Email address pattern for rule-based extraction when LLM misses it.
 _EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 
@@ -546,6 +554,15 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
             except Exception as exc:
                 logger.error("llm_generation_failure (pass 2): %s", exc)
                 full_text = "I'm having trouble responding right now — can I connect you with the team directly?"
+
+            # Guarantee forward path when retrieval returned no results (PB-01, Layer 5 Rule 2).
+            if not (retrieval.status == "ok" and retrieval.chunks):
+                if not _NO_RESULTS_FORWARD_PATH_RE.search(full_text):
+                    full_text = (
+                        full_text.rstrip(" .")
+                        + " I can connect you with one of our engineers"
+                          " who can speak to this from direct experience."
+                    )
         else:
             # No tool use — full_text buffered; dispatch happens after post-processing below
             full_text = response.content
