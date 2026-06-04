@@ -1,19 +1,13 @@
-"""System prompt builder for the Growth Chat conversation orchestrator.
+"""Static prompt layers 1–6.
 
-Implements the 9-layer structure from CDD §8.3. Layers 1–6 are stable across
-turns. Layer 7 is dynamic (qualification state injected per turn). Layers 8–9
-are handled via the messages array (RAG tool results + conversation history).
+Content is stable across turns and shared by both generate_response and
+propose_handoff. Layer 7 (session state) is dynamic; Layers 8–9 are
+handled via the messages array.
 
-Source documents: CDD, TRD §3.1, ADR-001.
+Source documents: CDD §8.3, TRD §3.1, ADR-001.
 """
-from __future__ import annotations
 
-import json
-
-from backend.handoff.business_hours import is_business_hours
-from backend.qualification.models import QualificationState
-
-_STATIC_LAYERS = """
+STATIC_LAYERS = """
 ## CRITICAL RULES
 
 Follow these five rules unconditionally in every response:
@@ -194,132 +188,3 @@ When the system determines a Stage 3 proposal is warranted, you will be called v
 
 Never make a same-day commitment for conversations starting after 4pm CET. The only safe outside-hours commitment is next-business-morning before 10am CET.
 """
-
-
-def _format_qualification_state(state: dict) -> str:
-    qual: QualificationState | None = state.get("qualification")
-    if qual is None:
-        qual = QualificationState()
-
-    return json.dumps(
-        {
-            "qualification": {
-                "problem_fit": qual.problem_fit,
-                "authority_fit": qual.authority_fit,
-                "company_fit": qual.company_fit,
-                "timing_fit": qual.timing_fit,
-                "is_negative_persona": qual.is_negative_persona,
-                "is_no_fit": qual.is_no_fit,
-            },
-            "lead_level": state.get("lead_level", "cold"),
-            "turn_counter": state.get("turn_counter", 0),
-            "stage3_proposals_issued": state.get("stage3_proposals_issued", 0),
-            "visitor_email": state.get("visitor_email") or None,
-            "followup_commitment_sentence": (
-                "One of our engineers will be in touch within a few hours."
-                if is_business_hours(same_day_followup=True)
-                else "They will reach out first thing next business morning before 10am CET/CEST."
-            ),
-            "is_consultant": state.get("is_consultant", False),
-            "referral_mentioned": state.get("referral_mentioned", False),
-            "explicit_human_request": state.get("explicit_human_request", False),
-        },
-        indent=2,
-    )
-
-
-def build_system_prompt(state: dict) -> str:
-    """Assemble layers 1–7 for generate_response node.
-
-    Layers 8 (RAG chunks) and 9 (conversation history) are handled via
-    the messages array passed to the LLM.
-    """
-    layer_7 = f"\n\n## LAYER 7 — CURRENT SESSION STATE\n\n```json\n{_format_qualification_state(state)}\n```\n"
-    return _STATIC_LAYERS + layer_7
-
-
-def build_proposal_prompt(state: dict, reason: str, in_hours: bool) -> str:
-    """System prompt for propose_handoff node.
-
-    Layers 1–6 (behaviour) + layer 7 (state) + Stage 3 instruction for this
-    specific reason × business hours combination.
-    """
-    base = build_system_prompt(state)
-
-    reason_instructions = {
-        ("hot_lead", True): (
-            "## STAGE 3 INSTRUCTION\n\n"
-            "The qualification threshold has been reached (hot lead). The team is available now.\n"
-            "Generate a Stage 3 call proposal:\n"
-            "- Acknowledge briefly and specifically what the visitor has described (one technical detail)\n"
-            "- State — do NOT ask — that a 20-minute call with one of our engineers is the most efficient "
-            "next step: in that call the engineer can tell them directly whether their timeline is feasible\n"
-            "- Ask ONE question only: their email address. Example: 'What email address should I send "
-            "the introduction to?'\n"
-            "- IMPORTANT: Do NOT also ask 'Would you be open to a call?' or 'Is that of interest?' — "
-            "the call is the stated offer, not a question. The email is the only ask.\n"
-            "- Do NOT ask any qualifying question about the visitor's problems, pain points, technical "
-            "details, company situation, or timeline. Those signals are already captured. "
-            "The email address is the only ask.\n"
-            "- Be direct. Do not pad. Do not manufacture urgency."
-        ),
-        ("hot_lead", False): (
-            "## STAGE 3 INSTRUCTION\n\n"
-            "The qualification threshold has been reached (hot lead). Generate a Stage 3 outside-hours proposal.\n\n"
-            "FORBIDDEN WORDS — do NOT use any of these or you violate PB-24: "
-            "'unfortunately', 'I'm sorry', 'I'm afraid', 'the team is offline', 'unavailable', 'apologies'.\n\n"
-            "REQUIRED structure — lead with the ACTION, not the limitation:\n"
-            "- Open with when they will hear back — e.g. 'Our engineers are based in Europe (CET) — "
-            "they'll have this with you before 10am CET tomorrow morning.'\n"
-            "- Frame CET timezone as a feature: strong EU-timezone overlap, useful for EU clients.\n"
-            "- State — do NOT ask — that they will receive a reply next business morning before 10am CET.\n"
-            "- Ask ONE question only: their email address.\n"
-            "- IMPORTANT: Do NOT ask 'Would you like us to follow up?' — the follow-up is stated, not a question.\n"
-            "- Do NOT say 'as soon as possible'. Only commit to next-business-morning before 10am CET.\n"
-            "- Be direct. Do not pad."
-        ),
-        ("explicit_request", True): (
-            "## STAGE 3 INSTRUCTION\n\n"
-            "The visitor has explicitly requested to speak with a human. The team is available now.\n"
-            "Generate an explicit-request handoff:\n"
-            "- Acknowledge the request immediately and without friction\n"
-            "- State that you will make the introduction — do NOT ask if they want that\n"
-            "- State they will be contacted within a few hours\n"
-            "- Ask ONE question only: their email address\n"
-            "- Keep it short and human. No follow-up questions about context."
-        ),
-        ("explicit_request", False): (
-            "## STAGE 3 INSTRUCTION\n\n"
-            "The visitor has explicitly requested to speak with a human. "
-            "Generate an explicit-request outside-hours handoff.\n\n"
-            "FORBIDDEN WORDS — do NOT use: 'unfortunately', 'I'm sorry', 'I'm afraid', "
-            "'unavailable', 'offline'. Using them violates PB-24.\n\n"
-            "REQUIRED structure:\n"
-            "- Lead with the commitment: state they will hear back first thing next business morning before 10am CET.\n"
-            "- Frame the CET timezone as a feature, not an obstacle.\n"
-            "- Ask ONE question only: their email address."
-        ),
-        ("stall", True): (
-            "## STAGE 3 INSTRUCTION\n\n"
-            "The conversation has run for 6+ exchanges without reaching a proposal. "
-            "Generate a low-friction stall offer:\n"
-            "- Acknowledge the ground covered\n"
-            "- Offer something concrete: a relevant case study or resource, or an invitation to return "
-            "when the timing is right\n"
-            "- Email is optional — do NOT present it as a gate\n"
-            "- Keep pressure low. Leave a positive impression even if no email is captured."
-        ),
-        ("stall", False): (
-            "## STAGE 3 INSTRUCTION\n\n"
-            "The conversation has run for 6+ exchanges without reaching a proposal. Team is offline.\n"
-            "Generate a low-friction stall offer (outside hours):\n"
-            "- Same as in-hours stall but acknowledge the team is offline if contact is offered\n"
-            "- Email is optional."
-        ),
-    }
-
-    instruction = reason_instructions.get(
-        (reason, in_hours),
-        reason_instructions[("hot_lead", in_hours)],
-    )
-    return base + f"\n\n{instruction}\n"
