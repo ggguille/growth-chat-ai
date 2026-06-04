@@ -93,26 +93,51 @@ async def _stream(body: ChatRequest, session_id: str, graph) -> AsyncGenerator[s
     }
 
     final_output: dict = {}
+    queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+    async def _heartbeat() -> None:
+        # Keeps the Fly.io proxy from treating the upstream connection as idle while
+        # the LLM pipeline (two sequential Anthropic calls + optional RAG) runs before
+        # the first token is emitted. SSE comment lines are ignored by clients.
+        while True:
+            await asyncio.sleep(15)
+            queue.put_nowait(": heartbeat\n\n")
+
+    async def _run_graph() -> None:
+        nonlocal final_output
+        try:
+            async for event in graph.astream_events(input_state, config=config, version="v2"):
+                kind = event.get("event", "")
+                if kind == "on_custom_event" and event.get("name") == "token":
+                    content = event.get("data", {}).get("content", "")
+                    if content:
+                        queue.put_nowait(_sse(SSETokenEvent(content=content).model_dump()))
+                elif kind == "on_chain_end" and event.get("name") == "LangGraph":
+                    output = event.get("data", {}).get("output")
+                    if isinstance(output, dict):
+                        final_output = output
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            _log.exception("stream error for session %s", session_id)
+        finally:
+            queue.put_nowait(None)  # sentinel — always unblocks the consumer
+
+    hb_task = asyncio.create_task(_heartbeat())
+    graph_task = asyncio.create_task(_run_graph())
 
     try:
-        async for event in graph.astream_events(input_state, config=config, version="v2"):
-            kind = event.get("event", "")
-
-            if kind == "on_custom_event" and event.get("name") == "token":
-                content = event.get("data", {}).get("content", "")
-                if content:
-                    yield _sse(SSETokenEvent(content=content).model_dump())
-
-            elif kind == "on_chain_end" and event.get("name") == "LangGraph":
-                output = event.get("data", {}).get("output")
-                if isinstance(output, dict):
-                    final_output = output
-
+        while True:
+            item = await queue.get()
+            if item is None:
+                break
+            yield item
     except asyncio.CancelledError:
         _log.warning("stream cancelled for session %s", session_id)
-        return  # client disconnected; let the generator exhaust cleanly without a done event
-    except Exception:
-        _log.exception("stream error for session %s", session_id)
+        return  # client disconnected; no done event
+    finally:
+        hb_task.cancel()
+        graph_task.cancel()
 
     done = SSEDoneEvent(
         session_id=session_id,
