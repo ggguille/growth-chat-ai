@@ -38,7 +38,7 @@ jobs:
 
       - name: Warm up backend
         run: |
-          uv run python - <<'EOF'
+          uv run --package evaluation python - <<'EOF'
           import httpx, sys, time, os
 
           url = os.environ["EVAL_API_URL"].rstrip("/")
