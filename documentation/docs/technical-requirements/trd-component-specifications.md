@@ -179,6 +179,33 @@ is_hot_lead(state) → bool:
 | Retrieved chunks | RAG results from `retrieve_knowledge` tool call, if triggered | No — injected per turn |
 | Conversation history | Sliding window of last `CONTEXT_WINDOW_TURNS` exchanges (see EC-13) | No — injected per turn |
 
+**Layer 7 — Qualification state JSON schema:**
+
+The qualification state is injected as a Markdown code block labelled `## LAYER 7 — CURRENT SESSION STATE`. The JSON object includes the full `QualificationState` plus additional session fields the LLM needs to adapt its behaviour:
+
+```json
+{
+  "qualification": {
+    "problem_fit":         "not_detected | partially_confirmed | confirmed",
+    "authority_fit":       "not_detected | partially_confirmed | confirmed",
+    "company_fit":         "not_detected | partially_confirmed | confirmed",
+    "timing_fit":          "not_detected | partially_confirmed | confirmed",
+    "is_negative_persona": "bool",
+    "is_no_fit":           "bool"
+  },
+  "lead_level":                 "cold | warm | hot",
+  "turn_counter":               "int  — turns elapsed since last Stage 3 proposal (or session start)",
+  "stage3_proposals_issued":    "int  — total Stage 3 proposals issued this session",
+  "visitor_email":              "string | null — captured email address, or null if not yet collected",
+  "followup_commitment_sentence": "string — pre-computed sentence the LLM must use verbatim in Clean Close (Critical Rule 5); depends on is_business_hours(same_day_followup=True) at injection time",
+  "is_consultant":              "bool — true when visitor is evaluating on behalf of a client",
+  "referral_mentioned":         "bool — true when a referral was mentioned in the conversation",
+  "explicit_human_request":     "bool — true when update_state detected an explicit request to speak with a human"
+}
+```
+
+`signals_observed` is intentionally excluded from the Layer 7 injection: the raw signal log is available in `SessionState` for analytics and the Context Packet Generator, but the LLM does not need it — the derived confidence levels (`problem_fit`, `authority_fit`, etc.) carry all the information required for response generation. Including the full signal list would unnecessarily inflate the context window on long sessions.
+
 **Tool available to the LLM:**
 
 ```json
