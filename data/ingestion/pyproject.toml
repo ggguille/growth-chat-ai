@@ -12,6 +12,11 @@ dependencies = [
     "knowledge-base",
 ]
 
+[dependency-groups]
+dev = [
+    "knowledge-base[huggingface]",
+]
+
 [tool.uv.sources]
 knowledge-base = { workspace = true }
 

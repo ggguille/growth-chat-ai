@@ -15,7 +15,9 @@ load_dotenv(_PACKAGE_DIR / ".env", override=False)
 from ingestion.chunker import Chunk, chunk_document
 from ingestion.embedder import get_embeddings
 
-_TABLE = "knowledge_chunks_dev"
+_TABLE = os.environ.get("KNOWLEDGE_TABLE_NAME") or (
+    "knowledge_chunks" if os.environ.get("OPENAI_API_KEY") else "knowledge_chunks_dev"
+)
 _FM = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
 
@@ -57,7 +59,8 @@ async def run_pipeline(source_dir: str, db_url: str) -> None:
         print("No chunks produced — check that source_dir contains .md files.")
         return
 
-    print(f"\nEmbedding {len(all_chunks)} chunks with all-MiniLM-L6-v2 ...")
+    model_hint = "text-embedding-3-small" if os.environ.get("OPENAI_API_KEY") else "all-MiniLM-L6-v2"
+    print(f"\nEmbedding {len(all_chunks)} chunks with {model_hint} ...")
     embedder = get_embeddings()
     vectors = embedder.embed_documents([c.content for c in all_chunks])
 
@@ -103,7 +106,7 @@ if __name__ == "__main__":
     import argparse
     import asyncio
 
-    parser = argparse.ArgumentParser(description="Knowledge base ingestion pipeline (dev mode).")
+    parser = argparse.ArgumentParser(description="Knowledge base ingestion pipeline.")
     parser.add_argument("--source", required=True, help="Directory containing .md knowledge base files.")
     args = parser.parse_args()
 
