@@ -216,6 +216,7 @@ dependencies = [
 dev = [
     { name = "asgi-lifespan" },
     { name = "httpx" },
+    { name = "knowledge-base", extra = ["huggingface"] },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
@@ -241,6 +242,7 @@ requires-dist = [
 dev = [
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "knowledge-base", extras = ["huggingface"], editable = "shared/knowledge_base" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
 ]
@@ -864,6 +866,11 @@ dependencies = [
     { name = "python-dotenv" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "knowledge-base", extra = ["huggingface"] },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "knowledge-base", editable = "shared/knowledge_base" },
@@ -874,6 +881,9 @@ requires-dist = [
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2.0" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "knowledge-base", extras = ["huggingface"], editable = "shared/knowledge_base" }]
 
 [[package]]
 name = "iniconfig"
@@ -987,18 +997,23 @@ version = "0.1.0"
 source = { editable = "shared/knowledge_base" }
 dependencies = [
     { name = "langchain-core" },
-    { name = "langchain-huggingface" },
     { name = "langchain-openai" },
+]
+
+[package.optional-dependencies]
+huggingface = [
+    { name = "langchain-huggingface" },
     { name = "sentence-transformers" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "langchain-core", specifier = ">=1.4.0" },
-    { name = "langchain-huggingface", specifier = ">=1.2.2" },
+    { name = "langchain-huggingface", marker = "extra == 'huggingface'", specifier = ">=1.2.2" },
     { name = "langchain-openai", specifier = ">=1.2.2" },
-    { name = "sentence-transformers", specifier = ">=5.5.1" },
+    { name = "sentence-transformers", marker = "extra == 'huggingface'", specifier = ">=5.5.1" },
 ]
+provides-extras = ["huggingface"]
 
 [[package]]
 name = "langchain"
