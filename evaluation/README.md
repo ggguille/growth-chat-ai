@@ -11,7 +11,7 @@ evaluation/
 │   ├── test_p3_referred.py # P3 Referred Decision-Maker persona (TC-P3-001..010)
 │   ├── test_n1_competitor.py # N1 Competitor persona (TC-N1-001..010)
 │   ├── test_n2_researcher.py # N2 Curious Researcher persona (TC-N2-001..010)
-│   └── test_patterns.py    # Recurring conversation patterns (TC-PAT-001..010)
+│   ├── test_patterns.py    # Recurring conversation patterns (TC-PAT-001..010) + CDD §6 edge cases (TC-EC-01, EC-02, EC-04, EC-06)
 ├── redteam/
 │   ├── promptfooconfig.yaml # promptfoo adversarial test suite (TC-ADV-001..020)
 │   └── plugins/             # Custom redteam plugin definitions (file:// referenced)
@@ -42,6 +42,7 @@ Live end-to-end tests that drive the real backend API over SSE. Each test create
 | `n1` | `test_n1_competitor.py` | Competitor probing for pricing and operational details — public info only, no CRM |
 | `n2` | `test_n2_researcher.py` | Curious researcher or student — helpful open answers, no qualification attempt |
 | `pattern` | `test_patterns.py` | High-risk recurring situations: pricing under pressure, AI disclosure, stall handling |
+| `edge_case` | `test_patterns.py` | CDD §6 edge cases: authority ambiguity (EC-01), contradictory signals (EC-02), authority-without-problem (EC-04), cross-session memory (EC-06) |
 
 **Metrics used:**
 
@@ -319,6 +320,7 @@ If `LANGFUSE_PUBLIC_KEY` is set, the run appears in Langfuse under
 | `n1` | Competitor persona tests |
 | `n2` | Curious researcher tests |
 | `pattern` | Conversation pattern tests |
+| `edge_case` | CDD §6 edge case tests (authority ambiguity, contradictory signals, authority-without-problem, cross-session memory) |
 | `phase2` | Phase 2 first evaluation cycle (subset of the above) |
 
 ---
@@ -337,7 +339,7 @@ Three independent evaluation gates run in GitHub Actions:
 
 | Workflow | File | Scope | Gate type |
 | --- | --- | --- | --- |
-| Behaviour Evaluation | `eval-behaviour.yml` | DeepEval + pytest (60 behaviour tests) | Metric gate |
+| Behaviour Evaluation | `eval-behaviour.yml` | DeepEval + pytest (64 behaviour tests) | Metric gate |
 | Red Team Evaluation | `eval-redteam.yml` | promptfoo (20 baseline adversarial cases) | Red-team gate |
 | RAG Evaluation | `eval-rag.yml` | RAGAS (43 Q/A pairs, 4 metrics) | RAG quality gate |
 
@@ -367,7 +369,7 @@ The workflow job is guarded by `if: false` until the backend conversation agent 
 2. Confirm `EVAL_API_URL` and `ANTHROPIC_API_KEY` are set in the `evaluation` GitHub environment (see below).
 3. Trigger a manual run via `workflow_dispatch` to verify the 8 Phase 2 tests pass.
 
-**To promote to the full 60-test gate in Phase 5:**
+**To promote to the full 64-test gate in Phase 5:**
 
 Remove the `-m phase2` filter from the `pytest` command in the workflow. The `TODO(Phase 5)` comment marks the exact line.
 
