@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   ingest:
-    name: Run ingestion pipeline (dev embeddings → knowledge_chunks_dev)
+    name: Run ingestion pipeline (OpenAI embeddings → knowledge_chunks)
     runs-on: ubuntu-latest
     environment: production
     env:
@@ -27,13 +27,8 @@ jobs:
         with:
           version: "latest"
 
-      - name: Restore HuggingFace model cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface/
-          key: huggingface-all-MiniLM-L6-v2
-
       - name: Run ingestion pipeline
-        run: uv run --package ingestion python -m ingestion.pipeline --source data/knowledge-base
+        run: uv run --package ingestion --no-dev python -m ingestion.pipeline --source data/knowledge-base
         env:
           CHECKPOINT_DB_URL: ${{ secrets.CHECKPOINT_DB_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
