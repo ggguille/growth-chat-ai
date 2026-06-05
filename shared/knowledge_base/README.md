@@ -39,9 +39,11 @@ Returns a LangChain `Embeddings` instance. The choice of provider is made once p
 
 ## Dependencies
 
-| Package | Purpose |
-| --- | --- |
-| `langchain-core>=1.4.0` | `Embeddings` base class and async fallback via `run_in_executor` |
-| `langchain-huggingface>=1.2.2` | Dev provider (`HuggingFaceEmbeddings`) |
-| `langchain-openai>=1.2.2` | Production provider (`OpenAIEmbeddings`) |
-| `sentence-transformers>=5.5.1` | Runtime backend for HuggingFace embeddings (lazy import; ~90 MB model download on first use, cached to `~/.cache/huggingface/`) |
+| Package | Extra | Purpose |
+| --- | --- | --- |
+| `langchain-core>=1.4.0` | _(core)_ | `Embeddings` base class and async fallback via `run_in_executor` |
+| `langchain-openai>=1.2.2` | _(core)_ | Production provider (`OpenAIEmbeddings`) |
+| `langchain-huggingface>=1.2.2` | `huggingface` | Dev provider (`HuggingFaceEmbeddings`) |
+| `sentence-transformers>=5.5.1` | `huggingface` | Runtime backend for HuggingFace embeddings (~90 MB model download on first use, cached to `~/.cache/huggingface/`) |
+
+The `huggingface` extra is installed by `data/ingestion` for local dev but is **not** installed in the production Docker image (`backend` depends on plain `knowledge-base`). To install manually: `pip install "knowledge-base[huggingface]"`.
