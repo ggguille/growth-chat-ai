@@ -13,7 +13,10 @@ import re
 _COMMITMENT_MARKERS = [
     "within a few hours", "few hours",
     "10am cet", "10am cest",
-    "business morning", "first thing",
+    "next business morning",   # specific enough to satisfy _FOLLOWUP_COMMITMENT_RE
+    "business morning before", # "business morning before 10am"
+    "first thing tomorrow",    # "first thing tomorrow morning"
+    "first thing next",        # "first thing next morning/business morning"
 ]
 
 # Forward-path phrases required when retrieval returns no results (PB-01, Layer 5 Rule 2).
