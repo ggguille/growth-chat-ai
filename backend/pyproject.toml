@@ -28,6 +28,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "httpx>=0.28.1",
     "asgi-lifespan>=2.1.0",
+    "knowledge-base[huggingface]",
 ]
 
 [tool.pytest.ini_options]
