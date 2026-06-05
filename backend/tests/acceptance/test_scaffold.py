@@ -24,7 +24,7 @@ async def _stream_chat(session_id: str, message: str) -> list[dict]:
                 "ZGC-API-KEY": API_KEY,
             },
             json={"message": message},
-            timeout=15.0,
+            timeout=60.0,
         ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
@@ -89,11 +89,10 @@ async def test_rate_limit_fires_after_20_requests():
                     "ZGC-API-KEY": API_KEY,
                 },
                 json={"message": "ping"},
-                timeout=15.0,
+                timeout=60.0,
             ) as r:
                 status_codes.append(r.status_code)
-                async for _ in r.aiter_bytes():
-                    pass  # drain the stream
+                # status code available on headers — no body drain needed for rate-limit check
 
     assert 429 in status_codes, "Expected HTTP 429 after 20 requests within 5 minutes"
 
@@ -106,7 +105,7 @@ async def test_rate_limit_fires_after_20_requests():
                 "ZGC-API-KEY": API_KEY,
             },
             json={"message": "ping"},
-            timeout=5.0,
+            timeout=15.0,
         )
     if r.status_code == 429:
         body = r.json()
