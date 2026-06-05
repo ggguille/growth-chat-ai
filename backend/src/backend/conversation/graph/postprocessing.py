@@ -101,17 +101,17 @@ def _enforce_single_question_email_priority(text: str) -> str:
     question_sents = [(i, s) for i, s in enumerate(sentences) if "?" in s]
 
     email_q_idx = None
-    other_q_idx = None
+    non_email_q_indices: set[int] = set()
     for sent_idx, sent in question_sents:
         if _EMAIL_QUESTION_RE.search(sent):
             email_q_idx = sent_idx
         else:
-            other_q_idx = sent_idx
+            non_email_q_indices.add(sent_idx)
 
-    if email_q_idx is not None and other_q_idx is not None:
+    if email_q_idx is not None and non_email_q_indices:
         return " ".join(
             s for i, s in enumerate(sentences)
-            if not ("?" in s and i == other_q_idx)
+            if not ("?" in s and i in non_email_q_indices)
         ).strip()
 
     return _enforce_single_question(text)
