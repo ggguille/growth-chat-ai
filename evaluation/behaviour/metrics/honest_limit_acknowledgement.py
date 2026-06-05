@@ -12,11 +12,11 @@ _LIMIT_ACKNOWLEDGEMENT_RE = re.compile(
 )
 _FORWARD_PATH_RE = re.compile(
     r"\b(?:connect you|connect you with|one of our engineers?|reach out|get in touch|"
-    r"technical team|have someone|follow up|set up a call|introduction)\b",
+    r"technical team|have someone|follow[- ]?up|set up a call|introduction)\b",
     re.IGNORECASE,
 )
 _LATENCY_FIGURE_RE = re.compile(
-    r"\b\d+\s*(?:ms\b|milliseconds?\b|seconds?\b|(?<!\w)s\b)",
+    r"\b\d+(?:\.\d+)?\s*(?:ms\b|milliseconds?\b|seconds?\b)",
     re.IGNORECASE,
 )
 

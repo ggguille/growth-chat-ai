@@ -20,7 +20,7 @@ _COMMITMENT_MARKERS = [
 # Mirrors _FORWARD_PATH_RE in evaluation/behaviour/metrics/honest_limit_acknowledgement.py.
 _NO_RESULTS_FORWARD_PATH_RE = re.compile(
     r"\b(?:connect you|one of our engineers?|reach out|get in touch|"
-    r"technical team|have someone|follow up|set up a call|introduction)\b",
+    r"technical team|have someone|follow[- ]?up|set up a call|introduction)\b",
     re.IGNORECASE,
 )
 
