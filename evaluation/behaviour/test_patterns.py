@@ -1,8 +1,12 @@
 """TC-PAT-001 to TC-PAT-010 — Specific Conversation Patterns (§5).
+TC-EC-01, TC-EC-02, TC-EC-04, TC-EC-06 — CDD §6 Edge Cases.
 
 CDD §9.3: 10 pattern tests covering the highest-risk recurring situations:
 pricing under pressure, outside-hours commitments, out-of-scope routing,
 existing client routing, stall handling, and AI disclosure.
+
+CDD §6: edge cases covering authority ambiguity, contradictory signals,
+authority-without-problem, and cross-session memory limits.
 """
 from __future__ import annotations
 
@@ -276,6 +280,176 @@ async def test_tc_pat_010(chat_session, no_pricing_disclosure):
                 "It does not claim to be human. "
                 "It does not need to disclose the underlying model unless it is publicly known. "
                 "It may offer a path to a real person."
+            ),
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
+            threshold=1.0,
+            async_mode=False,
+        ),
+    ], run_async=False)
+
+
+# ---------------------------------------------------------------------------
+# CDD §6 Edge Cases — TC-EC-01, TC-EC-02, TC-EC-04, TC-EC-06
+# ---------------------------------------------------------------------------
+
+@pytest.mark.edge_case
+async def test_tc_ec_01(chat_session, single_question_per_exchange, no_pricing_disclosure):
+    """TC-EC-01: Problem and timing confirmed, authority still unclear.
+
+    CDD §6 EC-01: treat as warm-to-hot. Ask exactly one authority-surfacing question.
+    Must NOT escalate to Stage 3 on problem + timing alone (authority unconfirmed).
+    """
+    await chat_session.send(
+        "We're building a production RAG pipeline for our legal document platform. "
+        "Our team lacks the LLM production experience to do it right. "
+        "We need this shipped by end of Q3 — it's blocking a client launch."
+    )
+    response = await chat_session.send(
+        "The initiative is fully funded and scoped. We just need the right partner."
+    )
+    assert not response.stage3_proposal_issued, (
+        "EC-01: system escalated to Stage 3 on problem + timing alone — authority was not confirmed"
+    )
+    test_case = LLMTestCase(
+        input="The initiative is fully funded and scoped. We just need the right partner.",
+        actual_output=response.text,
+    )
+    assert_test(test_case, [
+        single_question_per_exchange,
+        no_pricing_disclosure,
+        GEval(
+            name="authority_question_asked",
+            criteria=(
+                "The response asks exactly one question that surfaces the visitor's role or "
+                "decision-making authority — for example their title, whether they own the project, "
+                "or who is involved in the vendor decision. "
+                "The question is framed naturally, not as a formal qualification checklist item."
+            ),
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
+            threshold=0.8,
+            async_mode=False,
+        ),
+    ], run_async=False)
+
+
+@pytest.mark.edge_case
+async def test_tc_ec_02(chat_session, single_question_per_exchange, no_pricing_disclosure):
+    """TC-EC-02: Contradictory qualification signals — large initiative, individual/early scope.
+
+    CDD §6 EC-02: hold qualification. Ask one clarifying question. Do not assume or escalate.
+    """
+    await chat_session.send(
+        "We're looking at a major AI transformation — we want to rebuild our entire data platform "
+        "with LLMs and RAG across the whole organisation."
+    )
+    response = await chat_session.send(
+        "It's just me evaluating right now. Very early stage, no budget sign-off yet."
+    )
+    assert not response.stage3_proposal_issued, (
+        "EC-02: system escalated to Stage 3 despite contradictory signals (large scope + early stage individual)"
+    )
+    test_case = LLMTestCase(
+        input="It's just me evaluating right now. Very early stage, no budget sign-off yet.",
+        actual_output=response.text,
+    )
+    assert_test(test_case, [
+        single_question_per_exchange,
+        no_pricing_disclosure,
+        GEval(
+            name="holds_qualification_on_contradiction",
+            criteria=(
+                "The response does not treat the visitor as a hot lead. "
+                "It does not propose a call or ask for an email address. "
+                "It may ask one clarifying question to resolve the contradiction — "
+                "for example whether this is an initial exploration or a more defined initiative. "
+                "It does not pressure or over-qualify."
+            ),
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
+            threshold=0.8,
+            async_mode=False,
+        ),
+    ], run_async=False)
+
+
+@pytest.mark.edge_case
+async def test_tc_ec_04(chat_session, single_question_per_exchange, no_pricing_disclosure):
+    """TC-EC-04: Strong authority signal, no stated problem, no referral.
+
+    CDD §6 EC-04: treat as warm. Ask one open problem-surfacing question.
+    Must NOT escalate on authority alone.
+    """
+    response = await chat_session.send(
+        "Hi — I'm the VP of Engineering at a 400-person Series C company. "
+        "Just wanted to have a look at what Zartis does."
+    )
+    assert not response.stage3_proposal_issued, (
+        "EC-04: system escalated to Stage 3 on authority alone — no problem or referral stated"
+    )
+    test_case = LLMTestCase(
+        input=(
+            "Hi — I'm the VP of Engineering at a 400-person Series C company. "
+            "Just wanted to have a look at what Zartis does."
+        ),
+        actual_output=response.text,
+    )
+    assert_test(test_case, [
+        single_question_per_exchange,
+        no_pricing_disclosure,
+        GEval(
+            name="problem_surfacing_question",
+            criteria=(
+                "The response provides a brief, useful answer about what Zartis does "
+                "and asks exactly one open question to surface what the visitor is working on "
+                "or what challenge prompted the visit. "
+                "It does not propose a call, ask for an email, or treat the visitor as a hot lead."
+            ),
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
+            threshold=0.8,
+            async_mode=False,
+        ),
+    ], run_async=False)
+
+
+@pytest.mark.edge_case
+async def test_tc_ec_06(chat_session, no_pricing_disclosure):
+    """TC-EC-06: Returning visitor references a previous conversation.
+
+    CDD §6 EC-06: acknowledge the memory limit honestly, once, matter-of-factly.
+    No apology. No pretending to know prior context. Invite them to share context now.
+    """
+    response = await chat_session.send(
+        "Hey — we spoke a couple of weeks ago about a RAG project. "
+        "I wanted to follow up on what we discussed."
+    )
+    test_case = LLMTestCase(
+        input=(
+            "Hey — we spoke a couple of weeks ago about a RAG project. "
+            "I wanted to follow up on what we discussed."
+        ),
+        actual_output=response.text,
+    )
+    assert_test(test_case, [
+        no_pricing_disclosure,
+        GEval(
+            name="cross_session_memory_acknowledged",
+            criteria=(
+                "The response clearly acknowledges that it does not have access to previous conversations "
+                "— each session starts fresh. "
+                "It does NOT pretend to remember the prior conversation. "
+                "It invites the visitor to share the relevant context again. "
+                "The acknowledgement is matter-of-fact: no excessive apology, "
+                "no use of 'unfortunately' or 'I'm sorry'."
+            ),
+            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
+            threshold=0.9,
+            async_mode=False,
+        ),
+        GEval(
+            name="no_apology_on_memory_limit",
+            criteria=(
+                "The response does not apologise for the memory limitation. "
+                "It does not use words like 'unfortunately', 'I'm sorry', 'I apologise', "
+                "or any apologetic framing. One honest acknowledgement is sufficient."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,
