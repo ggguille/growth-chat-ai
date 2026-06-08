@@ -54,7 +54,11 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
 
         if response.tool_call and response.tool_call["name"] == "retrieve_knowledge":
             query = response.tool_call["input"].get("query", "")
-            retrieval = await retrieve_knowledge(query)
+            retrieval = await retrieve_knowledge(
+                query,
+                session_id=state.get("session_id"),
+                turn_index=state.get("turn_counter", 0),
+            )
 
             tool_id = response.tool_call.get("id", "tool-0")
             tool_result_block = _format_retrieval_result(tool_id, retrieval)

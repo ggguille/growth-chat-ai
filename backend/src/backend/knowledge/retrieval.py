@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 from telemetry import get_logger, sanitize_error
 from telemetry import events as tel_events
 
+from backend.analytics.events import AnalyticsEvent, emit_event
 from backend.config import settings
 
 log = get_logger("rag")
@@ -25,7 +27,11 @@ class RetrievalResult:
     proactive_case_study: bool = False
 
 
-async def retrieve_knowledge(query: str) -> RetrievalResult:
+async def retrieve_knowledge(
+    query: str,
+    session_id: str | None = None,
+    turn_index: int | None = None,
+) -> RetrievalResult:
     """Embed query and search pgvector for relevant knowledge chunks.
 
     Uses OpenAI embeddings when OPENAI_API_KEY is set, otherwise falls back
@@ -34,17 +40,24 @@ async def retrieve_knowledge(query: str) -> RetrievalResult:
     try:
         embedding = await _embed_query(query)
     except Exception as exc:
-        log.warn(tel_events.EMBEDDING_API_FAILURE, session_id=None, turn_index=None, error=sanitize_error(str(exc)))
+        log.warn(tel_events.EMBEDDING_API_FAILURE, session_id=session_id, turn_index=turn_index, error=sanitize_error(str(exc)))
         return RetrievalResult(status="error", reason="embedding_failure")
 
     try:
         raw_chunks = await _vector_search(embedding)
     except Exception as exc:
-        log.error(tel_events.VECTOR_SEARCH_FAILURE, session_id=None, turn_index=None, error=str(exc))
+        log.error(tel_events.VECTOR_SEARCH_FAILURE, session_id=session_id, turn_index=turn_index, error=str(exc))
         return RetrievalResult(status="error", reason="search_failure")
 
     above = [c for c in raw_chunks if c.score >= settings.rag_relevance_threshold]
+    now = datetime.now(UTC)
     if not above:
+        await emit_event(AnalyticsEvent(
+            name="rag_no_result",
+            session_id=session_id or "",
+            timestamp=now,
+            payload={"turn_index": turn_index},
+        ))
         return RetrievalResult(status="no_result", reason="below_threshold")
 
     top = above[: settings.rag_top_k]
@@ -53,6 +66,17 @@ async def retrieve_knowledge(query: str) -> RetrievalResult:
         and top[0].source.startswith("case-study-")
         and top[0].score >= settings.rag_relevance_threshold + 0.10
     )
+    await emit_event(AnalyticsEvent(
+        name="rag_retrieved",
+        session_id=session_id or "",
+        timestamp=now,
+        payload={
+            "query_length": len(query),
+            "chunks_returned": len(top),
+            "top_score": top[0].score,
+            "turn_index": turn_index,
+        },
+    ))
     return RetrievalResult(status="ok", chunks=top, proactive_case_study=proactive)
 
 

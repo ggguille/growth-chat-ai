@@ -14,12 +14,12 @@ async def _write_state(state: GraphState) -> dict:
     lead_level = derive_lead_level(qual, state.get("referral_mentioned", False))
     now = datetime.now(UTC)
     event = AnalyticsEvent(
-        name="turn_completed",
+        name="qualification_state_changed",
         session_id=state.get("session_id", ""),
         timestamp=now,
         payload={
             "lead_level": lead_level,
-            "turn_counter": state.get("turn_counter", 0),
+            "turn_index": state.get("turn_counter", 0),
             "stage3_proposals_issued": state.get("stage3_proposals_issued", 0),
         },
     )

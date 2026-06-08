@@ -1,5 +1,8 @@
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+
+os.environ["OTEL_SERVICE_NAME"] = os.environ.get("OTEL_SERVICE_NAME") or "growth-chat-api"
 
 from telemetry import configure_logging
 
@@ -32,6 +35,8 @@ _SERDE = JsonPlusSerializer(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    from backend.analytics.langfuse_client import initialize_langfuse
+    initialize_langfuse()
     llm_client = create_llm_client(settings)
 
     if settings.app_env != "development" and settings.checkpoint_db_url:
@@ -49,6 +54,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         yield
 
     app.state.ready = False
+    if os.getenv("LANGFUSE_PUBLIC_KEY"):
+        try:
+            from langfuse import get_client
+            get_client().flush()
+        except Exception:
+            pass
 
 
 app = FastAPI(

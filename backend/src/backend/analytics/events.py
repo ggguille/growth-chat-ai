@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -11,4 +12,17 @@ class AnalyticsEvent:
 
 
 async def emit_event(event: AnalyticsEvent) -> None:
-    pass  # Phase 3: implement analytics pipeline
+    if not os.getenv("LANGFUSE_PUBLIC_KEY"):
+        return
+    try:
+        from langfuse import get_client
+
+        langfuse = get_client()
+        with langfuse.start_as_current_span(
+            name=event.name,
+            input=event.payload,
+            start_time=event.timestamp,
+        ):
+            langfuse.update_current_trace(session_id=event.session_id)
+    except Exception:
+        pass

@@ -2,13 +2,14 @@ import asyncio
 import json
 import uuid
 
-from telemetry import get_logger
+from telemetry import get_logger, set_session_id
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
+from backend.analytics.langfuse_client import get_callback_handler
 from backend.config import settings
 from backend.conversation.models import (
     ChatRequest,
@@ -78,6 +79,7 @@ async def chat(
             ).model_dump(),
         )
 
+    set_session_id(zgc_session_id)
     graph = request.app.state.graph
     return StreamingResponse(
         _stream(body, zgc_session_id, graph),
@@ -87,7 +89,10 @@ async def chat(
 
 
 async def _stream(body: ChatRequest, session_id: str, graph) -> AsyncGenerator[str, None]:
-    config = {"configurable": {"thread_id": session_id}}
+    handler = get_callback_handler(session_id=session_id)
+    config: dict = {"configurable": {"thread_id": session_id}}
+    if handler:
+        config["callbacks"] = [handler]
     input_state: dict = {
         "session_id": session_id,
         "messages": [{"role": "user", "content": body.message}],

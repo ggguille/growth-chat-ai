@@ -18,7 +18,7 @@ class JSONFormatter(logging.Formatter):
         payload: dict = {
             "timestamp": ts,
             "level": level,
-            "event": record.msg,
+            "event": record.getMessage(),
             "session_id": getattr(record, "session_id", None),
             "component": getattr(record, "component", "unknown"),
         }

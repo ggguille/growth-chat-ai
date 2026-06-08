@@ -1,9 +1,28 @@
+import contextvars
 import logging
 import re
 import sys
 from typing import Any, MutableMapping
 
 from telemetry._formatter import JSONFormatter
+
+_session_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "request_session_id", default=None
+)
+
+
+def set_session_id(session_id: str | None) -> None:
+    _session_id_var.set(session_id)
+
+
+class _RequestContextFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "session_id"):
+            record.session_id = _session_id_var.get()
+        if not hasattr(record, "component"):
+            record.component = record.name
+        return True
+
 
 _EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 _NAME_RE = re.compile(r"(name\s*[=:]\s*[\"']?)([A-Za-z ]{2,40})([\"']?)", re.IGNORECASE)
@@ -60,6 +79,7 @@ def configure_logging() -> None:
     """
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JSONFormatter())
+    handler.addFilter(_RequestContextFilter())
 
     root = logging.getLogger()
     root.handlers.clear()
