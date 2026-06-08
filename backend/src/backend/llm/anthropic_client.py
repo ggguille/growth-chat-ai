@@ -1,12 +1,9 @@
 import json
-import logging
 from collections.abc import Awaitable, Callable
 
 import anthropic
 
 from backend.llm.base import BaseLLMClient, LLMResponse
-
-logger = logging.getLogger(__name__)
 
 
 class AnthropicLLMClient(BaseLLMClient):

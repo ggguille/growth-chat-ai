@@ -1,12 +1,13 @@
 import json
-import logging
 from collections.abc import Awaitable, Callable
 
 import ollama
 
+from telemetry import get_logger
+
 from backend.llm.base import BaseLLMClient, LLMResponse
 
-logger = logging.getLogger(__name__)
+log = get_logger("orchestrator")
 
 
 class OllamaLLMClient(BaseLLMClient):
@@ -68,7 +69,7 @@ class OllamaLLMClient(BaseLLMClient):
         try:
             return json.loads(response.message.content or "{}")
         except json.JSONDecodeError:
-            logger.warning("ollama structured_complete: failed to parse JSON response")
+            log.warn("ollama_json_parse_failure", session_id=None, error="failed to parse JSON response")
             return {}
 
     async def stream(

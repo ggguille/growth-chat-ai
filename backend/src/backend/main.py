@@ -1,6 +1,10 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+from telemetry import configure_logging
+
+configure_logging()
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware

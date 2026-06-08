@@ -1,9 +1,11 @@
-import logging
 from dataclasses import dataclass, field
+
+from telemetry import get_logger, sanitize_error
+from telemetry import events as tel_events
 
 from backend.config import settings
 
-logger = logging.getLogger(__name__)
+log = get_logger("rag")
 
 
 @dataclass
@@ -32,13 +34,13 @@ async def retrieve_knowledge(query: str) -> RetrievalResult:
     try:
         embedding = await _embed_query(query)
     except Exception as exc:
-        logger.error("embedding_api_failure: %s", exc)
+        log.warn(tel_events.EMBEDDING_API_FAILURE, session_id=None, turn_index=None, error=sanitize_error(str(exc)))
         return RetrievalResult(status="error", reason="embedding_failure")
 
     try:
         raw_chunks = await _vector_search(embedding)
     except Exception as exc:
-        logger.error("vector_search_failure: %s", exc)
+        log.error(tel_events.VECTOR_SEARCH_FAILURE, session_id=None, turn_index=None, error=str(exc))
         return RetrievalResult(status="error", reason="search_failure")
 
     above = [c for c in raw_chunks if c.score >= settings.rag_relevance_threshold]

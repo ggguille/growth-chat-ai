@@ -1,10 +1,12 @@
 """update_state node factory — extracts qualification signals from visitor messages."""
 from __future__ import annotations
 
-import logging
 import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+
+from telemetry import get_logger
+from telemetry import events as tel_events
 
 from backend.conversation.models import GraphState
 from backend.qualification.models import (
@@ -19,7 +21,7 @@ from ..routing import _has_explicit_authority
 if TYPE_CHECKING:
     from backend.llm.base import BaseLLMClient
 
-logger = logging.getLogger(__name__)
+log = get_logger("orchestrator")
 
 # ── Extraction schema / system prompt ────────────────────────────────────────
 
@@ -149,7 +151,7 @@ def _make_update_state(llm_client: "BaseLLMClient", context_window: int):
             )
             delta = QualificationDelta.model_validate(raw)
         except Exception as exc:
-            logger.warning("state_extraction_failure: %s", exc)
+            log.warn(tel_events.STATE_EXTRACTION_FAILURE, session_id=state.get("session_id"), turn_index=turn_index, error=str(exc))
             delta = QualificationDelta()
 
         # Rule-based override: explicit authority phrases always yield "confirmed".

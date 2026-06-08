@@ -1,10 +1,12 @@
 """propose_handoff node factory — Stage 3 proposal generation and handoff dispatch."""
 from __future__ import annotations
 
-import logging
 import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
+
+from telemetry import get_logger, sanitize_error
+from telemetry import events as tel_events
 
 from langchain_core.callbacks import adispatch_custom_event
 
@@ -26,7 +28,7 @@ from ..postprocessing import (
 if TYPE_CHECKING:
     from backend.llm.base import BaseLLMClient
 
-logger = logging.getLogger(__name__)
+log = get_logger("orchestrator")
 
 
 def _make_propose_handoff(llm_client: "BaseLLMClient"):
@@ -42,7 +44,7 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
             response = await llm_client.complete(system=system, messages=api_messages)
             full_text = response.content
         except Exception as exc:
-            logger.error("propose_handoff llm_failure: %s", exc)
+            log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
             full_text = "Let me connect you with the team directly. What's the best email to reach you on?"
 
         # Post-process BEFORE dispatching tokens so clients see the corrected text.

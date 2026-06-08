@@ -1,7 +1,8 @@
 import asyncio
 import json
-import logging
 import uuid
+
+from telemetry import get_logger
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
@@ -20,7 +21,7 @@ from backend.conversation.models import (
 )
 from backend.limiter import limiter
 
-_log = logging.getLogger(__name__)
+log = get_logger("api")
 router = APIRouter()
 
 
@@ -118,8 +119,8 @@ async def _stream(body: ChatRequest, session_id: str, graph) -> AsyncGenerator[s
                         final_output = output
         except asyncio.CancelledError:
             raise
-        except Exception:
-            _log.exception("stream error for session %s", session_id)
+        except Exception as exc:
+            log.error("stream_error", session_id=session_id, error=str(exc))
         finally:
             queue.put_nowait(None)  # sentinel — always unblocks the consumer
 
@@ -133,7 +134,7 @@ async def _stream(body: ChatRequest, session_id: str, graph) -> AsyncGenerator[s
                 break
             yield item
     except asyncio.CancelledError:
-        _log.warning("stream cancelled for session %s", session_id)
+        log.warn("stream_cancelled", session_id=session_id)
         return  # client disconnected; no done event
     finally:
         hb_task.cancel()

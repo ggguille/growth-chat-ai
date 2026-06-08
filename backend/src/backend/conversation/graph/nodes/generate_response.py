@@ -1,9 +1,11 @@
 """generate_response node factory — main LLM call with RAG retrieval and post-processing."""
 from __future__ import annotations
 
-import logging
 import re
 from typing import TYPE_CHECKING
+
+from telemetry import get_logger, sanitize_error
+from telemetry import events as tel_events
 
 from langchain_core.callbacks import adispatch_custom_event
 
@@ -25,7 +27,7 @@ from ..postprocessing import (
 if TYPE_CHECKING:
     from backend.llm.base import BaseLLMClient
 
-logger = logging.getLogger(__name__)
+log = get_logger("orchestrator")
 
 
 def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
@@ -42,7 +44,7 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
                 tools=[_RETRIEVE_KNOWLEDGE_TOOL],
             )
         except Exception as exc:
-            logger.error("llm_generation_failure: %s", exc)
+            log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
             fallback = "I'm having trouble responding right now — can I connect you with the team directly?"
             await adispatch_custom_event("token", {"content": fallback}, config=config)
             return {
@@ -71,7 +73,7 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
                     on_token=None,
                 )
             except Exception as exc:
-                logger.error("llm_generation_failure (pass 2): %s", exc)
+                log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
                 full_text = "I'm having trouble responding right now — can I connect you with the team directly?"
 
             # Guarantee forward path when retrieval returned no results (PB-01, Layer 5 Rule 2).
