@@ -17,10 +17,13 @@ COPY data/database/pyproject.toml        data/database/
 COPY data/ingestion/pyproject.toml       data/ingestion/
 COPY shared/knowledge_base/pyproject.toml shared/knowledge_base/
 COPY shared/knowledge_base/README.md      shared/knowledge_base/
+COPY shared/telemetry/pyproject.toml      shared/telemetry/
+COPY shared/telemetry/README.md           shared/telemetry/
 
 # Backend source — required so hatchling editable install registers the .pth file
 COPY backend/src/ backend/src/
 COPY shared/knowledge_base/src/ shared/knowledge_base/src/
+COPY shared/telemetry/src/      shared/telemetry/src/
 
 # Install backend deps into .venv; no dev extras, honour the lock file
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -43,6 +46,7 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy backend source from the build context
 COPY backend/src/ backend/src/
 COPY shared/knowledge_base/src/ shared/knowledge_base/src/
+COPY shared/telemetry/src/      shared/telemetry/src/
 
 # Non-root user
 RUN groupadd --system appgroup \
