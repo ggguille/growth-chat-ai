@@ -15,6 +15,7 @@ members = [
     "growth-chat",
     "ingestion",
     "knowledge-base",
+    "telemetry",
 ]
 
 [[package]]
@@ -208,6 +209,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "slowapi" },
+    { name = "telemetry" },
     { name = "tzdata" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -234,6 +236,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "slowapi", specifier = ">=0.1.9" },
+    { name = "telemetry", editable = "shared/telemetry" },
     { name = "tzdata", specifier = ">=2026.2" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.47.0" },
 ]
@@ -2613,6 +2616,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/ec/fe/802052aecb21e3797
 wheels = [
     { url = "https://files.pythonhosted.org/packages/40/44/4a5f08c96eb108af5cb50b41f76142f0afa346dfa99d5296fe7202a11854/tabulate-0.9.0-py3-none-any.whl", hash = "sha256:024ca478df22e9340661486f85298cff5f6dcdba14f3813e8830015b9ed1948f", size = 35252, upload-time = "2022-10-06T17:21:44.262Z" },
 ]
+
+[[package]]
+name = "telemetry"
+version = "0.1.0"
+source = { editable = "shared/telemetry" }
 
 [[package]]
 name = "tenacity"

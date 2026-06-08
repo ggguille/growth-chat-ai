@@ -11,4 +11,5 @@ members = [
     "data/database",
     "data/ingestion",
     "shared/knowledge_base",
+    "shared/telemetry",
 ]

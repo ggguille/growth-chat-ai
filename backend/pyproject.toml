@@ -17,10 +17,12 @@ dependencies = [
     "ollama>=0.6.2",
     "slowapi>=0.1.9",
     "knowledge-base",
+    "telemetry",
 ]
 
 [tool.uv.sources]
 knowledge-base = { workspace = true }
+telemetry = { workspace = true }
 
 [dependency-groups]
 dev = [
