@@ -10,6 +10,7 @@ from behaviour.metrics.custom_metrics import SingleQuestionPerExchangeMetric
 from judge import get_judge_model, judge_available
 
 load_dotenv()
+os.environ.setdefault("OTEL_SERVICE_NAME", "growth-chat-eval")
 
 _langfuse_key = os.getenv("LANGFUSE_PUBLIC_KEY")
 
@@ -30,18 +31,21 @@ def _make_langfuse_assert_test(original_fn):
         finally:
             if not _langfuse_key:
                 return
-            from langfuse import Langfuse  # noqa: PLC0415
-            lf = Langfuse()
+            from langfuse import get_client  # noqa: PLC0415
+            lf = get_client()
             test_name = getattr(_test_context, "test_name", "unknown")
-            trace_id = lf.create_trace_id()
-            with lf.start_as_current_observation(name=test_name, trace_context={"trace_id": trace_id}):
+            with lf.start_as_current_observation(
+                name=test_name,
+                as_type="evaluator",
+                input={"input": getattr(test_case, "input", None)},
+                output={"actual_output": getattr(test_case, "actual_output", None)},
+            ) as span:
                 for m in metrics:
                     score = getattr(m, "score", None)
                     if score is None:
                         continue
-                    lf.create_score(
-                        trace_id=trace_id,
-                        name=f"{getattr(m, "name", None)} ({type(m).__name__})",
+                    span.score_trace(
+                        name=f"{getattr(m, 'name', None)} ({type(m).__name__})",
                         value=float(score),
                         comment=getattr(m, "reason", None),
                     )

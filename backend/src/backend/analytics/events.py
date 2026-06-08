@@ -2,6 +2,11 @@ import os
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from telemetry import get_logger, sanitize_error
+from telemetry import events as tel_events
+
+log = get_logger("analytics")
+
 
 @dataclass
 class AnalyticsEvent:
@@ -17,12 +22,10 @@ async def emit_event(event: AnalyticsEvent) -> None:
     try:
         from langfuse import get_client
 
-        langfuse = get_client()
-        with langfuse.start_as_current_span(
+        get_client().create_event(
             name=event.name,
             input=event.payload,
-            start_time=event.timestamp,
-        ):
-            langfuse.update_current_trace(session_id=event.session_id)
-    except Exception:
-        pass
+            metadata={"session_id": event.session_id},
+        )
+    except Exception as exc:
+        log.warning(tel_events.ANALYTICS_EMIT_FAILURE, session_id=event.session_id, error=sanitize_error(str(exc)))
