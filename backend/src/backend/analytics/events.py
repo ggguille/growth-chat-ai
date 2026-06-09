@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -16,14 +15,8 @@ class AnalyticsEvent:
 
 
 async def emit_event(event: AnalyticsEvent) -> None:
-    if not os.getenv("LANGFUSE_PUBLIC_KEY"):
-        return
+    from backend.analytics import analytics_provider  # late import avoids circular
     try:
-        from langfuse import get_client
-
-        get_client().create_event(
-            name=event.name,
-            input=event.payload,
-        )
+        analytics_provider.create_event(name=event.name, payload=event.payload)
     except Exception as exc:
         log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
