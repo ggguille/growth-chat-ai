@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     ollama_model: str = "llama3.1:8b"
     ollama_base_url: str = "http://localhost:11434"
 
+    # Analytics (Langfuse) — optional; NullProvider used when unset
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = ""
+
     # RAG — required in all environments, no default (service will not start if unset)
     rag_relevance_threshold: float = 0.0  # validated below
     rag_top_k: int = 5

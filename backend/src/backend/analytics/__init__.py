@@ -1,5 +1,3 @@
-import os
-
 from telemetry import get_logger
 
 from .events import AnalyticsEvent  # re-export
@@ -9,10 +7,15 @@ _log = get_logger("analytics")
 
 
 def _build_provider() -> AnalyticsProvider:
-    if os.getenv("LANGFUSE_PUBLIC_KEY"):
+    from backend.config import settings
+    if settings.langfuse_public_key:
         from .langfuse_provider import LangfuseProvider
         _log.info("analytics_provider_built", provider="LangfuseProvider")
-        return LangfuseProvider()
+        return LangfuseProvider(
+            public_key=settings.langfuse_public_key,
+            secret_key=settings.langfuse_secret_key,
+            host=settings.langfuse_host,
+        )
     _log.info("analytics_provider_built", provider="NullProvider")
     return NullProvider()
 

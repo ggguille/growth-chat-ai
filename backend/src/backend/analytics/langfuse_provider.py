@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import os
 from typing import Any
 
 from telemetry import get_logger, sanitize_error
@@ -10,7 +11,16 @@ log = get_logger("analytics")
 
 
 class LangfuseProvider:
+    def __init__(self, public_key: str, secret_key: str, host: str) -> None:
+        self._public_key = public_key
+        self._secret_key = secret_key
+        self._host = host
+
     def initialize(self) -> None:
+        os.environ.setdefault("LANGFUSE_PUBLIC_KEY", self._public_key)
+        os.environ.setdefault("LANGFUSE_SECRET_KEY", self._secret_key)
+        if self._host:
+            os.environ.setdefault("LANGFUSE_HOST", self._host)
         try:
             from langfuse import get_client
             get_client()
