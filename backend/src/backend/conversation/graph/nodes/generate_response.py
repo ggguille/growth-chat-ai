@@ -9,6 +9,7 @@ from telemetry import events as tel_events
 
 from langchain_core.callbacks import adispatch_custom_event
 
+from backend.analytics.events import generation_span
 from backend.conversation.models import GraphState
 from backend.conversation.prompt import build_system_prompt
 from backend.handoff.business_hours import is_business_hours
@@ -37,22 +38,40 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
         api_messages = _to_api_messages(state.get("messages", []), context_window)
 
         # Pass 1: check whether LLM wants to call retrieve_knowledge
-        try:
-            response = await llm_client.complete(
-                system=system,
-                messages=api_messages,
-                tools=[_RETRIEVE_KNOWLEDGE_TOOL],
-            )
-        except Exception as exc:
-            log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
-            fallback = "I'm having trouble responding right now — can I connect you with the team directly?"
-            await adispatch_custom_event("token", {"content": fallback}, config=config)
-            return {
-                "messages": [{"role": "assistant", "content": fallback}],
-                "handoff_reason": "llm_failure",
-            }
+        with generation_span(
+            name="generate_response_pass1",
+            model=getattr(llm_client, "_model", "unknown"),
+            input_messages=api_messages,
+            metadata={
+                "session_id": state.get("session_id"),
+                "turn_index": state.get("turn_counter", 0),
+            },
+        ) as gen:
+            try:
+                response = await llm_client.complete(
+                    system=system,
+                    messages=api_messages,
+                    tools=[_RETRIEVE_KNOWLEDGE_TOOL],
+                )
+            except Exception as exc:
+                log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
+                fallback = "I'm having trouble responding right now — can I connect you with the team directly?"
+                await adispatch_custom_event("token", {"content": fallback}, config=config)
+                return {
+                    "messages": [{"role": "assistant", "content": fallback}],
+                    "handoff_reason": "llm_failure",
+                }
+            if gen is not None:
+                gen.update(
+                    model=response.model,
+                    output=response.content or (response.tool_call.get("name", "") if response.tool_call else ""),
+                    usage_details={"input": response.usage.input_tokens, "output": response.usage.output_tokens}
+                    if response.usage else {},
+                )
 
-        if response.tool_call and response.tool_call["name"] == "retrieve_knowledge":
+        rag_triggered = bool(response.tool_call and response.tool_call["name"] == "retrieve_knowledge")
+
+        if rag_triggered:
             query = response.tool_call["input"].get("query", "")
             retrieval = await retrieve_knowledge(
                 query,
@@ -70,15 +89,34 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
             ]
 
             # Pass 2: buffer full response without dispatching — post-processing runs first
-            try:
-                full_text = await llm_client.stream(
-                    system=system,
-                    messages=messages_continued,
-                    on_token=None,
-                )
-            except Exception as exc:
-                log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
-                full_text = "I'm having trouble responding right now — can I connect you with the team directly?"
+            with generation_span(
+                name="generate_response_pass2",
+                model=getattr(llm_client, "_model", "unknown"),
+                input_messages=messages_continued,
+                metadata={
+                    "session_id": state.get("session_id"),
+                    "turn_index": state.get("turn_counter", 0),
+                    "rag_query": query,
+                },
+            ) as gen:
+                try:
+                    stream_response = await llm_client.stream(
+                        system=system,
+                        messages=messages_continued,
+                        on_token=None,
+                    )
+                    full_text = stream_response.content
+                except Exception as exc:
+                    log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
+                    full_text = "I'm having trouble responding right now — can I connect you with the team directly?"
+                    stream_response = None
+                if gen is not None and stream_response is not None:
+                    gen.update(
+                        model=stream_response.model,
+                        output=full_text,
+                        usage_details={"input": stream_response.usage.input_tokens, "output": stream_response.usage.output_tokens}
+                        if stream_response.usage else {},
+                    )
 
             # Guarantee forward path when retrieval returned no results (PB-01, Layer 5 Rule 2).
             if not (retrieval.status == "ok" and retrieval.chunks):

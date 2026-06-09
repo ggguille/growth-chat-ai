@@ -8,7 +8,9 @@ from typing import TYPE_CHECKING
 from telemetry import get_logger
 from telemetry import events as tel_events
 
+from backend.analytics.events import generation_span
 from backend.conversation.models import GraphState
+from backend.llm.base import LLMUsage
 from backend.qualification.models import (
     QualificationDelta,
     QualificationState,
@@ -143,16 +145,30 @@ def _make_update_state(llm_client: "BaseLLMClient", context_window: int):
             f"New visitor message:\n{last_user}"
         )
 
-        try:
-            raw = await llm_client.structured_complete(
-                system=_EXTRACTION_SYSTEM,
-                messages=[{"role": "user", "content": user_msg}],
-                schema=_QUALIFICATION_DELTA_SCHEMA,
-            )
-            delta = QualificationDelta.model_validate(raw)
-        except Exception as exc:
-            log.warn(tel_events.STATE_EXTRACTION_FAILURE, session_id=state.get("session_id"), turn_index=turn_index, error=str(exc))
-            delta = QualificationDelta()
+        extraction_input = [{"role": "user", "content": user_msg}]
+        raw: dict = {}
+        usage = LLMUsage()
+        with generation_span(
+            name="qualification_extraction",
+            model=getattr(llm_client, "_model", "unknown"),
+            input_messages=extraction_input,
+            metadata={"session_id": state.get("session_id"), "turn_index": turn_index},
+        ) as gen:
+            try:
+                raw, usage = await llm_client.structured_complete(
+                    system=_EXTRACTION_SYSTEM,
+                    messages=extraction_input,
+                    schema=_QUALIFICATION_DELTA_SCHEMA,
+                )
+                delta = QualificationDelta.model_validate(raw)
+            except Exception as exc:
+                log.warn(tel_events.STATE_EXTRACTION_FAILURE, session_id=state.get("session_id"), turn_index=turn_index, error=str(exc))
+                delta = QualificationDelta()
+            if gen is not None:
+                gen.update(
+                    output=str(raw),
+                    usage_details={"input": usage.input_tokens, "output": usage.output_tokens},
+                )
 
         # Rule-based override: explicit authority phrases always yield "confirmed".
         # Small models sometimes return "partially_confirmed" for "I'm the CTO" — this

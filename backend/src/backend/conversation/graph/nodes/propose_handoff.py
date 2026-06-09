@@ -10,6 +10,7 @@ from telemetry import events as tel_events
 
 from langchain_core.callbacks import adispatch_custom_event
 
+from backend.analytics.events import generation_span
 from backend.conversation.models import GraphState
 from backend.conversation.prompt import build_proposal_prompt
 from backend.handoff.business_hours import is_business_hours
@@ -40,12 +41,30 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
         system = build_proposal_prompt(state, reason, in_hours)
         api_messages = _to_api_messages(state.get("messages", []))
 
-        try:
-            response = await llm_client.complete(system=system, messages=api_messages)
-            full_text = response.content
-        except Exception as exc:
-            log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
-            full_text = "Let me connect you with the team directly. What's the best email to reach you on?"
+        with generation_span(
+            name="propose_handoff",
+            model=getattr(llm_client, "_model", "unknown"),
+            input_messages=api_messages,
+            metadata={
+                "session_id": state.get("session_id"),
+                "turn_index": state.get("turn_counter", 0),
+                "reason": reason,
+            },
+        ) as gen:
+            try:
+                response = await llm_client.complete(system=system, messages=api_messages)
+                full_text = response.content
+            except Exception as exc:
+                log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
+                full_text = "Let me connect you with the team directly. What's the best email to reach you on?"
+                response = None
+            if gen is not None and response is not None:
+                gen.update(
+                    model=response.model,
+                    output=full_text,
+                    usage_details={"input": response.usage.input_tokens, "output": response.usage.output_tokens}
+                    if response.usage else {},
+                )
 
         # Post-process BEFORE dispatching tokens so clients see the corrected text.
         full_text = _strip_apology_openers(full_text)
