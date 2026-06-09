@@ -160,13 +160,15 @@ def test_langfuse_provider_request_context_creates_trace(langfuse_provider):
 # ── _build_provider factory ───────────────────────────────────────────────────
 
 def test_build_provider_returns_null_provider_when_key_absent(monkeypatch):
-    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
+    from backend.config import settings
+    monkeypatch.setattr(settings, "langfuse_public_key", "")
     from backend.analytics import _build_provider
     assert isinstance(_build_provider(), NullProvider)
 
 
 def test_build_provider_returns_langfuse_provider_when_key_present(monkeypatch):
-    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-test-123")
+    from backend.config import settings
+    monkeypatch.setattr(settings, "langfuse_public_key", "pk-test-123")
     from backend.analytics import _build_provider
     from backend.analytics.langfuse_provider import LangfuseProvider
     assert isinstance(_build_provider(), LangfuseProvider)
