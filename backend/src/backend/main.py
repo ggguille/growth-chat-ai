@@ -35,8 +35,8 @@ _SERDE = JsonPlusSerializer(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    from backend.analytics.langfuse_client import initialize_langfuse
-    initialize_langfuse()
+    from backend.analytics import analytics_provider
+    analytics_provider.initialize()
     llm_client = create_llm_client(settings)
 
     if settings.app_env != "development" and settings.checkpoint_db_url:
@@ -54,12 +54,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         yield
 
     app.state.ready = False
-    if os.getenv("LANGFUSE_PUBLIC_KEY"):
-        try:
-            from langfuse import get_client
-            get_client().flush()
-        except Exception:
-            pass
+    analytics_provider.flush()
 
 
 app = FastAPI(
