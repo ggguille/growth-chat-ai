@@ -44,7 +44,7 @@ Source lives in `backend/src/backend/`. Domain structure:
 - `qualification/` — `LeadLevel`, `FitLevel`, `QualificationState`
 - `knowledge/` — `retrieve_knowledge()` stub (RAG interface, wired in Phase 2)
 - `handoff/` — `dispatch_handoff()` stub, `is_business_hours()`, `CRMClient` protocol
-- `analytics/` — `emit_event()` stub
+- `analytics/` — `AnalyticsProvider` protocol + `NullProvider` / `LangfuseProvider` implementations; `emit_event()` delegates to provider; module-level `analytics_provider` singleton auto-selects via `LANGFUSE_PUBLIC_KEY`
 - `limiter.py` — shared slowapi `Limiter` keyed on `ZGC-Session-ID` (20 req / 5 min)
 
 `backend/.env.example` lists all required environment variables. Copy to `backend/.env` before running.

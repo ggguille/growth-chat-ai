@@ -232,7 +232,11 @@ src/backend/
 │   ├── crm.py           # CRMClient protocol + PostgresCRMClient (Phase 3)
 │   └── delivery.py      # dispatch_handoff() — no-op stub (Phase 3: Slack + CRM + email)
 └── analytics/           # Event tracking
-    └── events.py        # AnalyticsEvent, emit_event() — no-op stub (Phase 3)
+    ├── provider.py      # AnalyticsProvider Protocol + NullProvider (no-op default)
+    ├── langfuse_provider.py  # LangfuseProvider — request_context(), get_callback_handler(),
+    │                    #   create_event(); enabled when LANGFUSE_PUBLIC_KEY is set
+    ├── events.py        # AnalyticsEvent dataclass + emit_event() — delegates to provider
+    └── __init__.py      # _build_provider() factory; analytics_provider singleton
 ```
 
 ## Implementation status
@@ -253,4 +257,4 @@ src/backend/
 | LangGraph + AsyncPostgresSaver | ✅ Complete | Staging/prod; `setup()` called at startup |
 | `dispatch_handoff` | ⏳ Phase 3 | No-op stub — Slack + CRM + email fallback |
 | `PostgresCRMClient` | ⏳ Phase 3 | No-op stub — `leads` table insert |
-| `emit_event` | ⏳ Phase 3 | No-op stub — analytics pipeline |
+| `emit_event` / analytics provider | ✅ Complete | `LangfuseProvider` with request context + LangChain callback handler; `NullProvider` fallback when `LANGFUSE_PUBLIC_KEY` is absent |
