@@ -4,7 +4,7 @@ import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
-from backend.llm.base import BaseLLMClient, LLMResponse
+from backend.llm.base import BaseLLMClient, LLMResponse, LLMUsage
 
 
 class FakeLLMClient(BaseLLMClient):
@@ -17,19 +17,19 @@ class FakeLLMClient(BaseLLMClient):
     async def complete(self, system: str, messages: list[dict], tools: list[dict] | None = None) -> LLMResponse:
         return LLMResponse(content=self.response_text, tool_call=self.tool_call)
 
-    async def structured_complete(self, system: str, messages: list[dict], schema: dict) -> dict:
-        return {}
+    async def structured_complete(self, system: str, messages: list[dict], schema: dict) -> tuple[dict, LLMUsage]:
+        return {}, LLMUsage()
 
     async def stream(
         self,
         system: str,
         messages: list[dict],
         on_token: Callable[[str], Awaitable[None]] | None = None,
-    ) -> str:
+    ) -> LLMResponse:
         if on_token:
             for word in self.response_text.split():
                 await on_token(word + " ")
-        return self.response_text
+        return LLMResponse(content=self.response_text)
 
 
 @pytest.fixture(autouse=True)

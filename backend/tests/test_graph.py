@@ -9,6 +9,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from backend.conversation.graph import build_graph
 from backend.qualification.models import QualificationState
+from backend.llm.base import LLMUsage
 from tests.conftest import FakeLLMClient
 
 
@@ -81,7 +82,7 @@ async def test_score_router_escalates_hot_lead():
     class _StructuredFake(FakeLLMClient):
         async def structured_complete(self, system, messages, schema):
             # Return empty delta — no new signals; hot lead already set
-            return {}
+            return {}, LLMUsage()
 
     graph = _make_graph(_StructuredFake())
     result = await graph.ainvoke(
@@ -107,7 +108,7 @@ async def test_score_router_does_not_escalate_negative_persona():
 
     class _StructuredFake(FakeLLMClient):
         async def structured_complete(self, system, messages, schema):
-            return {}
+            return {}, LLMUsage()
 
     graph = _make_graph(_StructuredFake())
     result = await graph.ainvoke(
@@ -146,7 +147,7 @@ async def test_explicit_human_request_escalates_immediately():
 
     class _ExplicitRequestFake(FakeLLMClient):
         async def structured_complete(self, system, messages, schema):
-            return {"explicit_human_request": True}
+            return {"explicit_human_request": True}, LLMUsage()
 
     graph = _make_graph(_ExplicitRequestFake())
     result = await graph.ainvoke(

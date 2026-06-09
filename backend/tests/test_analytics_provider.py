@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.analytics.events import AnalyticsEvent, emit_event
+from backend.analytics.events import AnalyticsEvent, emit_event, generation_span
 from backend.analytics.provider import NullProvider
 
 
@@ -28,6 +28,15 @@ def test_null_provider_create_event_does_not_raise():
     NullProvider().create_event("test_event", {"key": "value"})
 
 
+def test_null_provider_create_generation_is_context_manager():
+    with NullProvider().create_generation(
+        name="test_gen",
+        model="test-model",
+        input_messages=[{"role": "user", "content": "hi"}],
+    ) as gen:
+        assert gen is None
+
+
 def test_null_provider_request_context_is_valid_context_manager():
     with NullProvider().request_context("session-123"):
         pass
@@ -38,7 +47,7 @@ def test_null_provider_request_context_is_valid_context_manager():
 @pytest.fixture
 def langfuse_provider():
     from backend.analytics.langfuse_provider import LangfuseProvider
-    return LangfuseProvider()
+    return LangfuseProvider(public_key="pk-test", secret_key="sk-test", host="")
 
 
 def test_langfuse_provider_initialize_calls_get_client(langfuse_provider):
@@ -94,6 +103,41 @@ def test_langfuse_provider_create_event_silences_errors(langfuse_provider):
         langfuse_provider.create_event("event", {})  # must not raise
 
 
+def test_langfuse_provider_create_generation_enters_observation(langfuse_provider):
+    mock_client = MagicMock()
+    mock_gen = MagicMock()
+    mock_obs_ctx = MagicMock()
+    mock_obs_ctx.__enter__ = MagicMock(return_value=mock_gen)
+    mock_obs_ctx.__exit__ = MagicMock(return_value=False)
+    mock_client.start_as_current_observation.return_value = mock_obs_ctx
+    input_msgs = [{"role": "user", "content": "hello"}]
+    with patch("langfuse.get_client", return_value=mock_client):
+        with langfuse_provider.create_generation(
+            name="test_gen",
+            model="claude-3-5-haiku",
+            input_messages=input_msgs,
+            metadata={"session_id": "abc"},
+        ) as gen:
+            assert gen is mock_gen
+            gen.update(output="world", usage_details={"input": 20, "output": 10})
+    mock_client.start_as_current_observation.assert_called_once_with(
+        as_type="generation",
+        name="test_gen",
+        model="claude-3-5-haiku",
+        input=input_msgs,
+        metadata={"session_id": "abc"},
+    )
+    mock_obs_ctx.__exit__.assert_called_once_with(None, None, None)
+
+
+def test_langfuse_provider_create_generation_silences_errors(langfuse_provider):
+    with patch("langfuse.get_client", side_effect=RuntimeError("sdk unavailable")):
+        with langfuse_provider.create_generation(
+            name="g", model="m", input_messages=[],
+        ) as gen:
+            assert gen is None  # must not raise; yields None on setup failure
+
+
 def test_langfuse_provider_request_context_creates_trace(langfuse_provider):
     mock_client = MagicMock()
     mock_pa_ctx = MagicMock()
@@ -147,3 +191,17 @@ async def test_emit_event_silences_provider_exceptions(monkeypatch):
 
     event = AnalyticsEvent(name="test_event", timestamp=datetime.now(UTC), payload={})
     await emit_event(event)  # must not raise
+
+
+# ── generation_span bridge ────────────────────────────────────────────────────
+
+def test_generation_span_delegates_to_provider(monkeypatch):
+    from backend.analytics import analytics_provider
+    mock_gen = MagicMock()
+    mock_cm = MagicMock()
+    mock_cm.__enter__ = MagicMock(return_value=mock_gen)
+    mock_cm.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr(analytics_provider, "create_generation", MagicMock(return_value=mock_cm))
+
+    with generation_span(name="test_gen", model="m", input_messages=[{"role": "user", "content": "hi"}]) as gen:
+        assert gen is mock_gen
