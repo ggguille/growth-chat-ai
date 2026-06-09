@@ -54,7 +54,6 @@ async def retrieve_knowledge(
     if not above:
         await emit_event(AnalyticsEvent(
             name="rag_no_result",
-            session_id=session_id or "",
             timestamp=now,
             payload={"turn_index": turn_index},
         ))
@@ -68,7 +67,6 @@ async def retrieve_knowledge(
     )
     await emit_event(AnalyticsEvent(
         name="rag_retrieved",
-        session_id=session_id or "",
         timestamp=now,
         payload={
             "query_length": len(query),

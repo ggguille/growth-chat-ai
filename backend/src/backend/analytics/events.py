@@ -11,7 +11,6 @@ log = get_logger("analytics")
 @dataclass
 class AnalyticsEvent:
     name: str
-    session_id: str
     timestamp: datetime
     payload: dict = field(default_factory=dict)
 
@@ -25,7 +24,6 @@ async def emit_event(event: AnalyticsEvent) -> None:
         get_client().create_event(
             name=event.name,
             input=event.payload,
-            metadata={"session_id": event.session_id},
         )
     except Exception as exc:
-        log.warning(tel_events.ANALYTICS_EMIT_FAILURE, session_id=event.session_id, error=sanitize_error(str(exc)))
+        log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))

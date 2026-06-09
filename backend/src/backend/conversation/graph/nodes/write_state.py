@@ -15,7 +15,6 @@ async def _write_state(state: GraphState) -> dict:
     now = datetime.now(UTC)
     event = AnalyticsEvent(
         name="qualification_state_changed",
-        session_id=state.get("session_id", ""),
         timestamp=now,
         payload={
             "lead_level": lead_level,
