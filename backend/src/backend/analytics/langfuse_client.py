@@ -23,15 +23,15 @@ def initialize_langfuse() -> None:
         log.warning(tel_events.LANGFUSE_CLIENT_FAILURE, error=str(exc))
 
 
-def get_callback_handler(session_id: str | None = None):
+def get_callback_handler():
     """Return a LangGraph-compatible Langfuse CallbackHandler, or None if not configured."""
     if not _is_configured():
         return None
     try:
         from langfuse.langchain import CallbackHandler
-        return CallbackHandler(session_id=session_id)
+        return CallbackHandler()
     except Exception as exc:
-        log.warning(tel_events.LANGFUSE_CLIENT_FAILURE, session_id=session_id, error=str(exc))
+        log.warning(tel_events.LANGFUSE_CLIENT_FAILURE, error=str(exc))
         return None
 
 
