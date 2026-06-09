@@ -1,3 +1,4 @@
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -20,3 +21,20 @@ async def emit_event(event: AnalyticsEvent) -> None:
         analytics_provider.create_event(name=event.name, payload=event.payload)
     except Exception as exc:
         log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
+
+
+@contextlib.contextmanager
+def generation_span(
+    name: str,
+    model: str = "unknown",
+    input_messages: list[dict] | None = None,
+    metadata: dict | None = None,
+):
+    from backend.analytics import analytics_provider  # late import avoids circular
+    with analytics_provider.create_generation(
+        name=name,
+        model=model,
+        input_messages=input_messages or [],
+        metadata=metadata,
+    ) as gen:
+        yield gen

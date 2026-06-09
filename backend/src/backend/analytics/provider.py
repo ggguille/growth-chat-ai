@@ -10,6 +10,13 @@ class AnalyticsProvider(Protocol):
     def request_context(self, session_id: str) -> contextlib.AbstractContextManager[None]: ...
     def get_callback_handler(self) -> Any | None: ...
     def create_event(self, name: str, payload: dict) -> None: ...
+    def create_generation(
+        self,
+        name: str,
+        model: str,
+        input_messages: list[dict],
+        metadata: dict | None = None,
+    ) -> contextlib.AbstractContextManager[Any]: ...
 
 
 class NullProvider:
@@ -27,3 +34,12 @@ class NullProvider:
 
     def create_event(self, name: str, payload: dict) -> None:
         pass
+
+    def create_generation(
+        self,
+        name: str,
+        model: str,
+        input_messages: list[dict],
+        metadata: dict | None = None,
+    ) -> contextlib.AbstractContextManager[Any]:
+        return contextlib.nullcontext(None)

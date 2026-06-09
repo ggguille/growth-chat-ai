@@ -61,3 +61,37 @@ class LangfuseProvider:
             get_client().create_event(name=name, input=payload)
         except Exception as exc:
             log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
+
+    @contextlib.contextmanager
+    def create_generation(
+        self,
+        name: str,
+        model: str,
+        input_messages: list[dict],
+        metadata: dict | None = None,
+    ):
+        setup_ok = False
+        lf_ctx = None
+        gen = None
+        try:
+            from langfuse import get_client
+            lf_ctx = get_client().start_as_current_observation(
+                as_type="generation",
+                name=name,
+                model=model,
+                input=input_messages,
+                metadata=metadata or {},
+            )
+            gen = lf_ctx.__enter__()
+            setup_ok = True
+        except Exception as exc:
+            log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
+
+        try:
+            yield gen
+        finally:
+            if setup_ok:
+                try:
+                    lf_ctx.__exit__(None, None, None)
+                except Exception as exc:
+                    log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
