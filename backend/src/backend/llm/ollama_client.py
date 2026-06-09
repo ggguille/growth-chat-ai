@@ -5,7 +5,7 @@ import ollama
 
 from telemetry import get_logger
 
-from backend.llm.base import BaseLLMClient, LLMResponse
+from backend.llm.base import BaseLLMClient, LLMResponse, LLMUsage
 
 log = get_logger("orchestrator")
 
@@ -52,34 +52,44 @@ class OllamaLLMClient(BaseLLMClient):
                 "id": "ollama-tool-0",
             }
 
-        return LLMResponse(content=msg.content or "", tool_call=tool_call)
+        usage = LLMUsage(
+            input_tokens=response.prompt_eval_count or 0,
+            output_tokens=response.eval_count or 0,
+        )
+        return LLMResponse(content=msg.content or "", tool_call=tool_call, usage=usage, model=self._model)
 
     async def structured_complete(
         self,
         system: str,
         messages: list[dict],
         schema: dict,
-    ) -> dict:
+    ) -> tuple[dict, LLMUsage]:
         full_messages = self._prepend_system(system, messages)
         response = await self._client.chat(
             model=self._model,
             messages=full_messages,
             format=schema,
         )
+        usage = LLMUsage(
+            input_tokens=response.prompt_eval_count or 0,
+            output_tokens=response.eval_count or 0,
+        )
         try:
-            return json.loads(response.message.content or "{}")
+            return json.loads(response.message.content or "{}"), usage
         except json.JSONDecodeError:
             log.warn("ollama_json_parse_failure", session_id=None, error="failed to parse JSON response")
-            return {}
+            return {}, usage
 
     async def stream(
         self,
         system: str,
         messages: list[dict],
         on_token: Callable[[str], Awaitable[None]] | None = None,
-    ) -> str:
+    ) -> LLMResponse:
         full_messages = self._prepend_system(system, messages)
         full_text = ""
+        input_tokens = 0
+        output_tokens = 0
         async for chunk in await self._client.chat(
             model=self._model,
             messages=full_messages,
@@ -89,4 +99,8 @@ class OllamaLLMClient(BaseLLMClient):
             full_text += token
             if on_token and token:
                 await on_token(token)
-        return full_text
+            if chunk.done:
+                input_tokens = chunk.prompt_eval_count or 0
+                output_tokens = chunk.eval_count or 0
+        usage = LLMUsage(input_tokens=input_tokens, output_tokens=output_tokens)
+        return LLMResponse(content=full_text, usage=usage, model=self._model)
