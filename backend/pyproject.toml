@@ -17,6 +17,7 @@ dependencies = [
     "ollama>=0.6.2",
     "slowapi>=0.1.9",
     "langfuse>=4.0",
+    "langchain>=0.3.0",
     "knowledge-base",
     "telemetry",
 ]
