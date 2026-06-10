@@ -295,3 +295,76 @@ async def test_deliver_channel_exhausts_retries_returns_not_ok():
     outcome = await _deliver_channel("test", always_fail, backoff_seconds=[0, 0], session_id="s1")
     assert outcome.ok is False
     assert outcome.attempts == 3  # len(backoff_seconds) + 1
+
+
+# ── Slack fails, CRM succeeds → partial_failure ──────────────────────────────
+
+async def test_slack_fails_outcome_partial_failure(monkeypatch):
+    _patch_db_url(monkeypatch)
+    monkeypatch.setattr("backend.config.settings.handoff_retry_backoff_seconds", "0")
+    crm_result = LeadCreationResult(crm_record_id="7", crm_record_url="")
+
+    with (
+        _patch_slack(_mock_notifier(raises=SlackDeliveryError(500, "Slack error"))),
+        _patch_persist() as mock_persist,
+        _patch_fallback() as mock_fallback,
+        _patch_emit(),
+        patch("backend.handoff.delivery.PostgresCRMClient.create_lead", new_callable=AsyncMock, return_value=crm_result),
+    ):
+        await dispatch_handoff(_make_request())
+
+    record = mock_persist.call_args[0][0]
+    assert record.outcome == "partial_failure"
+    assert record.slack_status == "failed"
+    assert record.crm_status == "ok"
+    mock_fallback.assert_called_once()
+
+
+async def test_slack_fails_emits_partial_failure_event(monkeypatch):
+    _patch_db_url(monkeypatch)
+    monkeypatch.setattr("backend.config.settings.handoff_retry_backoff_seconds", "0")
+    crm_result = LeadCreationResult(crm_record_id="8", crm_record_url="")
+    emitted = []
+
+    async def capture_event(event):
+        emitted.append(event)
+
+    with (
+        _patch_slack(_mock_notifier(raises=SlackDeliveryError(500, "Slack error"))),
+        _patch_persist(),
+        _patch_fallback(),
+        patch("backend.handoff.delivery.emit_event", side_effect=capture_event),
+        patch("backend.handoff.delivery.PostgresCRMClient.create_lead", new_callable=AsyncMock, return_value=crm_result),
+    ):
+        await dispatch_handoff(_make_request())
+
+    event_names = [e.name for e in emitted]
+    assert "handoff_partial_failure" in event_names
+    partial_event = next(e for e in emitted if e.name == "handoff_partial_failure")
+    assert partial_event.payload["failed_channel"] == "slack"
+
+
+# ── Outside-hours request dispatches correctly ────────────────────────────────
+
+async def test_outside_hours_request_dispatches_normally(monkeypatch):
+    _patch_db_url(monkeypatch)
+    crm_result = LeadCreationResult(crm_record_id="9", crm_record_url="")
+    emitted = []
+
+    async def capture_event(event):
+        emitted.append(event)
+
+    with (
+        _patch_slack(),
+        _patch_persist() as mock_persist,
+        _patch_fallback(),
+        patch("backend.handoff.delivery.emit_event", side_effect=capture_event),
+        patch("backend.handoff.delivery.PostgresCRMClient.create_lead", new_callable=AsyncMock, return_value=crm_result),
+    ):
+        await dispatch_handoff(_make_request(business_hours=False))
+
+    dispatched = next((e for e in emitted if e.name == "handoff_dispatched"), None)
+    assert dispatched is not None
+    assert dispatched.payload["business_hours"] is False
+    record = mock_persist.call_args[0][0]
+    assert record.outcome == "complete"
