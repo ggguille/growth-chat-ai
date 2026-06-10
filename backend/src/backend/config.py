@@ -60,6 +60,8 @@ class Settings(BaseSettings):
                 raise ValueError("RAG_RELEVANCE_THRESHOLD must be set (non-zero) in non-development environments")
             if not self.business_hours_timezone:
                 raise ValueError("BUSINESS_HOURS_TIMEZONE must be set in non-development environments")
+            if not self.checkpoint_db_url:
+                raise ValueError("CHECKPOINT_DB_URL must be set in non-development environments")
             # TODO: re-enable once an SMTP server is provisioned
             # if not self.fallback_email_address:
             #     raise ValueError("FALLBACK_EMAIL_ADDRESS must be set in non-development environments")
