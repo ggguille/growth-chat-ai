@@ -45,7 +45,14 @@ class Settings(BaseSettings):
     # Business hours — required, no default (service will not start if unset)
     business_hours_timezone: str = ""  # validated below
 
+    # Handoff retry — comma-separated backoff delays in seconds between attempts
+    handoff_retry_backoff_seconds: str = "1,3,9"
+
     model_config = {"env_file": str(_env_file), "env_file_encoding": "utf-8", "extra": "ignore"}
+
+    @property
+    def handoff_retry_backoff(self) -> list[float]:
+        return [float(x.strip()) for x in self.handoff_retry_backoff_seconds.split(",") if x.strip()]
 
     def model_post_init(self, __context) -> None:
         if self.app_env != "development":
@@ -53,6 +60,15 @@ class Settings(BaseSettings):
                 raise ValueError("RAG_RELEVANCE_THRESHOLD must be set (non-zero) in non-development environments")
             if not self.business_hours_timezone:
                 raise ValueError("BUSINESS_HOURS_TIMEZONE must be set in non-development environments")
+            # TODO: re-enable once an SMTP server is provisioned
+            # if not self.fallback_email_address:
+            #     raise ValueError("FALLBACK_EMAIL_ADDRESS must be set in non-development environments")
+            # if not self.smtp_host:
+            #     raise ValueError("SMTP_HOST must be set in non-development environments")
+            # if not self.smtp_username:
+            #     raise ValueError("SMTP_USERNAME must be set in non-development environments")
+            # if not self.smtp_password:
+            #     raise ValueError("SMTP_PASSWORD must be set in non-development environments")
 
 
 settings = Settings()
