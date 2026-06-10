@@ -1,6 +1,6 @@
-"""Tests for PostgresCRMClient — mocks the psycopg async connection."""
+"""Tests for PostgresCRMClient — mocks the synchronous psycopg connection."""
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -30,27 +30,25 @@ def _make_payload(**kwargs) -> CRMLeadPayload:
 
 
 def _mock_psycopg_connection(row_id: int = 42):
-    """Return a context manager mock that yields a connection with a cursor returning row_id."""
-    cur = AsyncMock()
-    cur.execute = AsyncMock()
-    cur.fetchone = AsyncMock(return_value=(row_id,))
-    cur.__aenter__ = AsyncMock(return_value=cur)
-    cur.__aexit__ = AsyncMock(return_value=False)
+    """Return a synchronous context-manager mock that yields a connection with a cursor returning row_id."""
+    cur = MagicMock()
+    cur.fetchone = MagicMock(return_value=(row_id,))
+    cur.__enter__ = MagicMock(return_value=cur)
+    cur.__exit__ = MagicMock(return_value=False)
 
-    conn = AsyncMock()
+    conn = MagicMock()
     conn.cursor = MagicMock(return_value=cur)
-    conn.__aenter__ = AsyncMock(return_value=conn)
-    conn.__aexit__ = AsyncMock(return_value=False)
+    conn.__enter__ = MagicMock(return_value=conn)
+    conn.__exit__ = MagicMock(return_value=False)
 
-    connect_coro = AsyncMock(return_value=conn)
-    return connect_coro, cur
+    return MagicMock(return_value=conn), cur
 
 
 async def test_create_lead_returns_record_id(monkeypatch):
-    connect_coro, _ = _mock_psycopg_connection(row_id=99)
+    connect_mock, _ = _mock_psycopg_connection(row_id=99)
     monkeypatch.setattr("backend.config.settings.checkpoint_db_url", "postgresql://fake")
 
-    with patch("psycopg.AsyncConnection.connect", connect_coro):
+    with patch("psycopg.connect", connect_mock):
         client = PostgresCRMClient()
         result = await client.create_lead(_make_payload())
 
@@ -58,10 +56,10 @@ async def test_create_lead_returns_record_id(monkeypatch):
 
 
 async def test_create_lead_crm_record_url_is_empty_in_v1(monkeypatch):
-    connect_coro, _ = _mock_psycopg_connection(row_id=1)
+    connect_mock, _ = _mock_psycopg_connection(row_id=1)
     monkeypatch.setattr("backend.config.settings.checkpoint_db_url", "postgresql://fake")
 
-    with patch("psycopg.AsyncConnection.connect", connect_coro):
+    with patch("psycopg.connect", connect_mock):
         client = PostgresCRMClient()
         result = await client.create_lead(_make_payload())
 
@@ -71,10 +69,10 @@ async def test_create_lead_crm_record_url_is_empty_in_v1(monkeypatch):
 async def test_create_lead_raises_crm_delivery_error_on_db_failure(monkeypatch):
     monkeypatch.setattr("backend.config.settings.checkpoint_db_url", "postgresql://fake")
 
-    async def boom(*args, **kwargs):
+    def boom(*args, **kwargs):
         raise RuntimeError("connection refused")
 
-    with patch("psycopg.AsyncConnection.connect", boom):
+    with patch("psycopg.connect", boom):
         client = PostgresCRMClient()
         with pytest.raises(CRMDeliveryError) as exc_info:
             await client.create_lead(_make_payload())
