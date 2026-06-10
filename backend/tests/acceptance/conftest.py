@@ -1,7 +1,12 @@
 import os
+from pathlib import Path
 
 import httpx
 import pytest
+from dotenv import load_dotenv
+
+# Load backend/.env for local development — no-op if the file is absent (CI injects secrets directly).
+load_dotenv(Path(__file__).parents[2] / ".env")
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
