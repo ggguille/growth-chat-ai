@@ -6,7 +6,7 @@ from telemetry import get_logger, set_session_id
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend.analytics import analytics_provider
@@ -20,7 +20,7 @@ from backend.conversation.models import (
     SSEDoneEvent,
     SSETokenEvent,
 )
-from backend.limiter import limiter
+from backend.limiter import check_rate_limit
 
 log = get_logger("api")
 router = APIRouter()
@@ -39,13 +39,13 @@ def _is_uuid4(value: str) -> bool:
 
 
 @router.post("/chat")
-@limiter.limit("20/5 minutes")
 async def chat(
     request: Request,
     body: ChatRequest,
     zgc_session_id: Annotated[str, Header(alias="ZGC-Session-ID")],
     zgc_api_key: Annotated[str, Header(alias="ZGC-API-KEY")],
     accept: Annotated[str | None, Header()] = None,
+    _rate_limit: None = Depends(check_rate_limit),
 ) -> StreamingResponse:
     if accept != "text/event-stream":
         raise HTTPException(

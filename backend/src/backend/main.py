@@ -14,14 +14,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 
 from backend.config import settings
 from backend.conversation.graph import build_graph
 from backend.conversation.models import ErrorCode, ErrorDetail, HTTPErrorResponse
 from backend.conversation.router import router as conversation_router
-from backend.limiter import limiter
 from backend.llm.factory import create_llm_client
 
 
@@ -63,8 +60,6 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url=None if settings.app_env == "production" else "/redoc",
 )
-app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.allowed_origin],
@@ -87,26 +82,11 @@ async def ready(request: Request) -> JSONResponse:
     return JSONResponse({"status": "not_ready"}, status_code=503)
 
 
-@app.exception_handler(RateLimitExceeded)
-async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
-    return JSONResponse(
-        status_code=429,
-        content=HTTPErrorResponse(
-            error=ErrorDetail(
-                code=ErrorCode.RATE_LIMITED,
-                message="Rate limit exceeded. Try again in 5 minutes.",
-                retry_after_seconds=300,
-            )
-        ).model_dump(),
-        headers={"Retry-After": "300"},
-    )
-
-
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
     if isinstance(exc.detail, dict):
-        return JSONResponse(status_code=exc.status_code, content=exc.detail)
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+        return JSONResponse(status_code=exc.status_code, content=exc.detail, headers=exc.headers)
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail}, headers=exc.headers)
 
 
 @app.exception_handler(RequestValidationError)
