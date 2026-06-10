@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Growth Chat is an AI engineering learning project structured as a monorepo with four modules:
 
 - `documentation/` — DocMD static site (implemented)
-- `backend/` — FastAPI backend with SSE streaming and domain-driven structure (scaffolded)
+- `backend/` — FastAPI backend with SSE streaming and domain-driven structure (implemented)
 - `frontend/` — React + TypeScript + Vite chat widget (scaffolded)
 - `data/database/` — SQL migration runner (implemented)
 - `data/ingestion/` — knowledge ingestion pipeline (implemented, dev mode)
@@ -43,7 +43,7 @@ Source lives in `backend/src/backend/`. Domain structure:
 - `conversation/` — `POST /chat` SSE route, `SessionState`, `graph.py` (LangGraph `StateGraph` + `build_graph` factory); `graph.py` buffers LLM output before dispatching SSE tokens so post-processing (single-question enforcement, clean-close, turn-0 contact stripping, Rule-2 technical depth, apology stripping) is applied before the client sees any text; `prompt.py` (`build_system_prompt` + `build_proposal_prompt`) implements all 28 prohibited behaviours
 - `qualification/` — `LeadLevel`, `FitLevel`, `QualificationState`
 - `knowledge/` — `retrieve_knowledge()` stub (RAG interface, wired in Phase 2)
-- `handoff/` — `dispatch_handoff()` stub, `is_business_hours()`, `CRMClient` protocol
+- `handoff/` — `dispatch_handoff()` (parallel Slack + CRM delivery with retry and fallback), `context_packet.py` (deterministic `ContextPacket` generation), `slack.py` (`NullSlackNotifier` / `WebhookSlackNotifier` + `build_slack_notifier` factory), `email_fallback.py` (SMTP fallback via `asyncio.to_thread`), `record.py` (`HandoffRecord` Pydantic model + `persist_handoff_record()`), `crm.py` (`PostgresCRMClient`), `is_business_hours()`
 - `analytics/` — `AnalyticsProvider` protocol + `NullProvider` / `LangfuseProvider` implementations; `emit_event()` delegates to provider; module-level `analytics_provider` singleton auto-selects via `LANGFUSE_PUBLIC_KEY`
 - `limiter.py` — shared slowapi `Limiter` keyed on `ZGC-Session-ID` (20 req / 5 min)
 
@@ -140,7 +140,7 @@ Required build-time env vars: `VITE_API_URL`, `VITE_FALLBACK_URL`, `VITE_API_KEY
 
 ## Architecture Notes
 
-- The uv workspace root is `pyproject.toml`. Members: `backend`, `data/database`, `data/ingestion`, `evaluation`, `shared/knowledge_base`.
+- The uv workspace root is `pyproject.toml`. Members: `backend`, `data/database`, `data/ingestion`, `evaluation`, `shared/knowledge_base`, `shared/telemetry`.
 - Code is organised by business domain, not technical layer (conversation, qualification, knowledge, handoff, analytics).
 - Each module is independent; there is no root-level build system.
 - The `backend/` package uses src layout (`src/backend/`). Import as `from backend.x import y`.

@@ -36,7 +36,7 @@ npx docmd build
 Local development uses a Postgres container with the pgvector extension. Start it, then apply migrations before running the backend.
 
 ```bash
-# Configure and start local Postgres (pgvector/pgvector:pg16)
+# Configure and start local Postgres (pgvector/pgvector:pg17)
 cp data/database/.env.example data/database/.env
 docker compose up -d
 
