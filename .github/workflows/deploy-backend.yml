@@ -115,4 +115,4 @@ jobs:
         run: uv run --package backend pytest backend/tests/acceptance/ -v
         env:
           CHECKPOINT_DB_URL: ${{ secrets.CHECKPOINT_DB_URL }}
-          ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
+          ZGC_API_KEY: ${{ secrets.VITE_API_KEY }}
