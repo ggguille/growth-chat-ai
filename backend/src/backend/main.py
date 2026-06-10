@@ -42,7 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if settings.app_env != "development" and settings.checkpoint_db_url:
         from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
-        async with await AsyncPostgresSaver.from_conn_string(settings.checkpoint_db_url, serde=_SERDE) as cp:
+        async with AsyncPostgresSaver.from_conn_string(settings.checkpoint_db_url, serde=_SERDE) as cp:
             await cp.setup()
             app.state.graph = build_graph(cp, llm_client)
             app.state.ready = True
