@@ -1,6 +1,7 @@
 """HandoffRecord — audit trail for handoff delivery attempts."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Literal
 
@@ -37,12 +38,15 @@ async def persist_handoff_record(record: HandoffRecord, db_url: str) -> None:
     if not db_url:
         log.error(tel_events.HANDOFF_RECORD_WRITE_FAILURE, session_id=record.session_id, error="CHECKPOINT_DB_URL not configured")
         return
-    try:
+
+    # Use synchronous psycopg via asyncio.to_thread — avoids ProactorEventLoop
+    # incompatibility with psycopg async on Windows (same pattern as email_fallback.py).
+    def _insert() -> None:
         import psycopg
 
-        async with await psycopg.AsyncConnection.connect(db_url, autocommit=True) as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(
+        with psycopg.connect(db_url, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
                     """
                     INSERT INTO handoff_records (
                         session_id, triggered_at, lead_level, handoff_reason, visitor_email,
@@ -69,6 +73,9 @@ async def persist_handoff_record(record: HandoffRecord, db_url: str) -> None:
                         record.completed_at,
                     ),
                 )
+
+    try:
+        await asyncio.to_thread(_insert)
     except Exception as exc:
         log.error(
             tel_events.HANDOFF_RECORD_WRITE_FAILURE,

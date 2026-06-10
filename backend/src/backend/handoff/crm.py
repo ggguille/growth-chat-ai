@@ -1,3 +1,5 @@
+import asyncio
+import json
 from typing import Protocol
 
 from backend.handoff.models import CRMDeliveryError, CRMLeadPayload, LeadCreationResult
@@ -15,14 +17,14 @@ class PostgresCRMClient:
         if not db_url:
             raise CRMDeliveryError(http_status=None, message="CHECKPOINT_DB_URL not configured")
 
-        try:
-            import json
-
+        # Use synchronous psycopg via asyncio.to_thread — avoids ProactorEventLoop
+        # incompatibility with psycopg async on Windows (same pattern as email_fallback.py).
+        def _insert() -> str:
             import psycopg
 
-            async with await psycopg.AsyncConnection.connect(db_url, autocommit=True) as conn:
-                async with conn.cursor() as cur:
-                    await cur.execute(
+            with psycopg.connect(db_url, autocommit=True) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
                         """
                         INSERT INTO leads (
                             session_id, lead_level, handoff_reason,
@@ -56,8 +58,12 @@ class PostgresCRMClient:
                             payload.summary,
                         ),
                     )
-                    row = await cur.fetchone()
-            return LeadCreationResult(crm_record_id=str(row[0]), crm_record_url="")
+                    row = cur.fetchone()
+            return str(row[0])
+
+        try:
+            crm_record_id = await asyncio.to_thread(_insert)
+            return LeadCreationResult(crm_record_id=crm_record_id, crm_record_url="")
         except CRMDeliveryError:
             raise
         except Exception as exc:
