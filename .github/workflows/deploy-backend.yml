@@ -94,3 +94,25 @@ jobs:
         run: |
           curl --fail --retry 6 --retry-delay 10 --retry-all-errors \
             https://growth-chat-api.fly.dev/ready
+
+  acceptance-test:
+    name: Run acceptance tests
+    runs-on: ubuntu-latest
+    environment: production
+    needs: build-and-deploy
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      BACKEND_URL: https://growth-chat-api.fly.dev
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Run acceptance tests
+        run: uv run --package backend pytest backend/tests/acceptance/ -v
+        env:
+          CHECKPOINT_DB_URL: ${{ secrets.CHECKPOINT_DB_URL }}
+          ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
