@@ -33,6 +33,7 @@ cp backend/.env.example backend/.env   # then fill in the values
 | `LLM_STREAM_TIMEOUT_MS` | No | `10000` | Max milliseconds to wait for the first LLM token. |
 | `RAG_RELEVANCE_THRESHOLD` | Prod/staging | — | Minimum cosine similarity score for a knowledge chunk to be included in results. Set to `0.70` provisionally in dev; tune in Phase 4. Service will not start in non-development environments if unset. |
 | `RAG_TOP_K` | No | `5` | Maximum number of knowledge chunks returned per retrieval. |
+| `RAG_PROACTIVE_THRESHOLD` | No | `RAG_RELEVANCE_THRESHOLD + 0.10` | Minimum cosine similarity score for a case study chunk to be surfaced proactively (explicit "We have a case study on this…" intro). Defaults to `RAG_RELEVANCE_THRESHOLD + 0.10` when unset. |
 | `KNOWLEDGE_TABLE_NAME` | No | `knowledge_chunks` | pgvector table name. Use `knowledge_chunks_dev` locally (384-dim HuggingFace embeddings). |
 | `OPENAI_API_KEY` | Prod/staging | — | OpenAI API key for `text-embedding-3-small` query embeddings. When empty, HuggingFace `all-MiniLM-L6-v2` is used locally. |
 | `STALL_TURN_THRESHOLD` | No | `6` | Number of turns without a Stage 3 proposal before the stall path fires. |

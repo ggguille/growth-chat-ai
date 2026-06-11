@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     rag_top_k: int = 5
     knowledge_table_name: str = "knowledge_chunks"
     openai_api_key: str = ""
+    # RAG proactive threshold — optional; defaults to rag_relevance_threshold + 0.10
+    rag_proactive_threshold: float = 0.0  # computed in post_init when left at default
 
     # Conversation orchestrator
     stall_turn_threshold: int = 6
@@ -55,6 +57,9 @@ class Settings(BaseSettings):
         return [float(x.strip()) for x in self.handoff_retry_backoff_seconds.split(",") if x.strip()]
 
     def model_post_init(self, __context) -> None:
+        # Default proactive threshold to relevance threshold + 0.10 when not explicitly set
+        if not self.rag_proactive_threshold:
+            object.__setattr__(self, "rag_proactive_threshold", self.rag_relevance_threshold + 0.10)
         if self.app_env != "development":
             if not self.rag_relevance_threshold:
                 raise ValueError("RAG_RELEVANCE_THRESHOLD must be set (non-zero) in non-development environments")
