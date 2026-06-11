@@ -18,17 +18,17 @@ dependencies = [
     "langchain-core>=1.4.0",        # shared base for LangChain judge wrappers
     "langchain-anthropic>=1.4.3",   # JUDGE_PROVIDER=anthropic (DeepEval AnthropicModel)
     "langchain-ollama>=1.1.0",      # JUDGE_PROVIDER=ollama (local dev)
+    # ── RAG retrieval infrastructure (always needed by retriever.py) ──────────
+    "sentence-transformers>=5.5.1", # dev embeddings: all-MiniLM-L6-v2 (384-dim)
+    "psycopg[binary]>=3.3.4",       # direct pgvector access
 ]
 
 [project.optional-dependencies]
-# RAGAS requires scikit-network which has no Python 3.14 wheel for Windows.
+# ragas>=0.4.x may still pull scikit-network on some platforms.
+# If install fails on Windows with Python 3.14, run on Linux/WSL or use CI.
 # Install with: uv sync --package evaluation --extra ragas
-# CI (Linux) installs this extra automatically (no source-build issue there).
 ragas = [
     "ragas>=0.4.3",
-    "langchain-anthropic>=1.4.3",   # RAGAS judge LLM (Claude Haiku)
-    "sentence-transformers>=5.5.1", # dev embeddings: all-MiniLM-L6-v2 (384-dim)
-    "psycopg[binary]>=3.3.4",       # direct pgvector access
 ]
 
 [tool.pytest.ini_options]

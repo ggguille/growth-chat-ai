@@ -536,18 +536,17 @@ dependencies = [
     { name = "langchain-ollama" },
     { name = "langfuse" },
     { name = "ollama" },
+    { name = "psycopg", extra = ["binary"] },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-html" },
     { name = "python-dotenv" },
+    { name = "sentence-transformers" },
 ]
 
 [package.optional-dependencies]
 ragas = [
-    { name = "langchain-anthropic" },
-    { name = "psycopg", extra = ["binary"] },
     { name = "ragas" },
-    { name = "sentence-transformers" },
 ]
 
 [package.metadata]
@@ -556,18 +555,17 @@ requires-dist = [
     { name = "deepeval", specifier = ">=4.0.5" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "langchain-anthropic", specifier = ">=1.4.3" },
-    { name = "langchain-anthropic", marker = "extra == 'ragas'", specifier = ">=1.4.3" },
     { name = "langchain-core", specifier = ">=1.4.0" },
     { name = "langchain-ollama", specifier = ">=1.1.0" },
     { name = "langfuse", specifier = ">=4.7.1" },
     { name = "ollama", specifier = ">=0.6.2" },
-    { name = "psycopg", extras = ["binary"], marker = "extra == 'ragas'", specifier = ">=3.3.4" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=1.4.0" },
     { name = "pytest-html", specifier = ">=4.2.0" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "ragas", marker = "extra == 'ragas'", specifier = ">=0.4.3" },
-    { name = "sentence-transformers", marker = "extra == 'ragas'", specifier = ">=5.5.1" },
+    { name = "sentence-transformers", specifier = ">=5.5.1" },
 ]
 provides-extras = ["ragas"]
 
