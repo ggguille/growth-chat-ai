@@ -38,8 +38,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     if settings.app_env != "development" and settings.checkpoint_db_url:
         from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+        from psycopg.rows import dict_row
+        from psycopg_pool import AsyncConnectionPool
 
-        async with AsyncPostgresSaver.from_conn_string(settings.checkpoint_db_url, serde=_SERDE) as cp:
+        async with AsyncConnectionPool(
+            conninfo=settings.checkpoint_db_url,
+            min_size=1,
+            max_size=5,
+            kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+            check=AsyncConnectionPool.check_connection,
+        ) as pool:
+            cp = AsyncPostgresSaver(pool, serde=_SERDE)
             await cp.setup()
             app.state.graph = build_graph(cp, llm_client)
             app.state.ready = True
