@@ -82,7 +82,17 @@ async def test_proactive_flag_not_set_for_non_case_study_source(mock_search, mon
 
 async def test_proactive_flag_not_set_when_score_below_proactive_threshold(mock_search, monkeypatch):
     monkeypatch.setattr("backend.knowledge.retrieval.settings.rag_relevance_threshold", 0.5)
-    mock_search([_chunk(score=0.55, source="case-study-fintech")])  # above filter but below 0.5+0.10=0.60
+    monkeypatch.setattr("backend.knowledge.retrieval.settings.rag_proactive_threshold", 0.60)
+    mock_search([_chunk(score=0.55, source="case-study-fintech")])  # above relevance but below proactive 0.60
+    result = await retrieve_knowledge("client story")
+    assert result.proactive_case_study is False
+
+
+async def test_proactive_flag_uses_custom_proactive_threshold(mock_search, monkeypatch):
+    monkeypatch.setattr("backend.knowledge.retrieval.settings.rag_relevance_threshold", 0.5)
+    monkeypatch.setattr("backend.knowledge.retrieval.settings.rag_proactive_threshold", 0.80)
+    # score 0.75: above relevance (0.5) but below custom proactive threshold (0.80)
+    mock_search([_chunk(score=0.75, source="case-study-fintech")])
     result = await retrieve_knowledge("client story")
     assert result.proactive_case_study is False
 

@@ -63,7 +63,7 @@ async def retrieve_knowledge(
     proactive = bool(
         top
         and top[0].source.startswith("case-study-")
-        and top[0].score >= settings.rag_relevance_threshold + 0.10
+        and top[0].score >= settings.rag_proactive_threshold
     )
     await emit_event(AnalyticsEvent(
         name="rag_retrieved",
