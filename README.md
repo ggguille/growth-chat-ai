@@ -117,6 +117,44 @@ npm test
 
 See [`frontend/README.md`](./frontend/README.md) for all attributes, custom events, and demo instructions.
 
+## Evaluation
+
+Three evaluation layers live in `./evaluation/`. All `uv run` commands run from the **project root**.
+
+### Calibrate RAG threshold (run once after ingestion)
+
+```bash
+uv run --package evaluation python evaluation/calibrate_rag.py
+```
+
+Prints score distributions for 15 relevant and 10 irrelevant queries and suggests `RAG_RELEVANCE_THRESHOLD`. Set the suggested value in `backend/.env` before running the RAGAS suite.
+
+### RAGAS evaluation (RAG quality gate)
+
+```bash
+# Requires RAGAS extras and a populated pgvector DB (see Ingestion above)
+uv sync --package evaluation --extra ragas
+uv run --package evaluation python -m evaluation.rag.runner
+```
+
+Reports faithfulness, context\_precision, context\_recall, and answer\_relevancy against the 43-item ground-truth dataset. When `LANGFUSE_PUBLIC_KEY` is set, results are logged as a per-item Dataset experiment in Langfuse.
+
+### Behaviour tests (live end-to-end)
+
+```bash
+# Requires a running backend
+uv run --package evaluation pytest evaluation/behaviour
+```
+
+### Red team (adversarial)
+
+```bash
+cd evaluation/redteam
+promptfoo eval
+```
+
+See [`evaluation/README.md`](./evaluation/README.md) for full setup, environment variables, and CI gates.
+
 ## CI/CD
 
 Three automated pipelines deploy each module on push to `main`. All support manual runs via `workflow_dispatch`. See `.github/workflows/` for full details.

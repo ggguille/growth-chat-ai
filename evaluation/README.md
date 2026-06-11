@@ -115,7 +115,16 @@ From the **project root**:
 uv sync
 ```
 
-This installs the full workspace, including the `evaluation` package and its dependencies (`deepeval`, `pytest`, `pytest-asyncio`, `langfuse`, `httpx`, `python-dotenv`).
+This installs the full workspace, including the `evaluation` package and its dependencies (`deepeval`, `pytest`, `pytest-asyncio`, `langfuse`, `httpx`, `python-dotenv`, `psycopg`, `sentence-transformers`).
+
+To run the full RAGAS metrics pipeline, also install the optional ragas extra:
+
+```bash
+uv sync --package evaluation --extra ragas
+```
+
+> **Windows + Python 3.14 note:** if this fails due to a missing `scikit-network` wheel,
+> run the RAG evaluation on Linux/WSL or via the `eval-rag.yml` CI workflow instead.
 
 ### 2. Configure environment
 
@@ -254,11 +263,44 @@ Results open in the promptfoo browser UI by default. To output JSON:
 promptfoo eval --output results.json
 ```
 
+### Calibrate the RAG threshold
+
+Before running the RAGAS evaluation, determine the optimal `RAG_RELEVANCE_THRESHOLD` by inspecting the score distributions of the real KB. Run 15 relevant queries and 10 irrelevant queries against pgvector and print where the natural gap falls:
+
+```bash
+uv run --package evaluation python -m evaluation.calibrate_rag
+```
+
+With explicit options:
+
+```bash
+# Show pass/fail against an existing threshold
+uv run --package evaluation python -m evaluation.calibrate_rag --threshold 0.70
+
+# Use production embeddings (OpenAI)
+uv run --package evaluation python -m evaluation.calibrate_rag --mode prod
+
+# Retrieve more chunks per query
+uv run --package evaluation python -m evaluation.calibrate_rag --top-k 5
+```
+
+The script prints a distribution table and suggests a threshold (midpoint between the highest irrelevant score and the lowest relevant score). Set `RAG_RELEVANCE_THRESHOLD` to the suggested value in `backend/.env`, then document it in the TRD.
+
+---
+
 ### Run the RAGAS evaluation
 
 > **Requires Phase 2+:** the KB must be ingested and `RAGAS_DB_URL` must point to
 > a pgvector database with the `knowledge_chunks_dev` (dev) or `knowledge_chunks`
 > (prod) table populated.
+
+**Prerequisite:** install the `ragas` extra before running (see §1 Install dependencies):
+
+```bash
+uv sync --package evaluation --extra ragas
+```
+
+Then run:
 
 ```bash
 uv run --package evaluation python -m evaluation.rag.runner
@@ -290,7 +332,7 @@ uv run --package evaluation python -m evaluation.rag.runner \
 
 Expected output:
 
-```
+```text
 [ragas] Loaded 43 evaluation items (mode: dev)
 [ragas] Running faithfulness, context_precision, context_recall, answer_relevancy…
 [ragas] Results:
@@ -305,8 +347,12 @@ Expected output:
 [ragas] All thresholds passed. ✓
 ```
 
-If `LANGFUSE_PUBLIC_KEY` is set, the run appears in Langfuse under
-**Datasets → rag_eval** as a named experiment (e.g. `ragas-20260601-140000`).
+If `LANGFUSE_PUBLIC_KEY` is set, the run is logged to Langfuse as a full Dataset experiment:
+
+- One dataset item per eval question under **Datasets → rag_eval**
+- One trace per item, with per-metric scores attached via `score()`
+- All items linked to the run via `create_dataset_run_item()`, so the experiment appears under **Datasets → rag_eval → Experiments** (e.g. `ragas-20260601-140000`) with per-question drill-down
+- A local JSON report is also written to `evaluation/.evaluation-reports/<run_name>.json`
 
 ---
 
@@ -414,10 +460,17 @@ The workflow job is guarded by `if: false` until the real KB is ingested and the
 
 **To enable in Phase 4:**
 
-1. Remove the `if: false` line from the `ragas` job in `.github/workflows/eval-rag.yml`.
-2. Confirm `RAGAS_DB_URL`, `OPENAI_API_KEY`, and `ANTHROPIC_API_KEY` are set in the `evaluation` GitHub environment.
-3. Trigger a manual run via `workflow_dispatch` to verify all 4 metrics meet their thresholds.
-4. A RAGAS failure is currently `continue-on-error: true` — it documents a regression but does not block the deploy. Remove that flag to make it a hard gate in Phase 5.
+1. Ingest the KB locally and run the calibration script to determine `RAG_RELEVANCE_THRESHOLD`:
+
+   ```bash
+   uv run --package evaluation python -m evaluation.calibrate_rag
+   ```
+
+2. Set the chosen threshold as the `RAG_RELEVANCE_THRESHOLD` Fly secret and document it in the TRD.
+3. Remove the `if: false` line from the `ragas` job in `.github/workflows/eval-rag.yml`.
+4. Confirm `RAGAS_DB_URL`, `OPENAI_API_KEY`, and `ANTHROPIC_API_KEY` are set in the `evaluation` GitHub environment.
+5. Trigger a manual run via `workflow_dispatch` to verify all 4 metrics meet their thresholds.
+6. A RAGAS failure is currently `continue-on-error: true` — it documents a regression but does not block the deploy. Remove that flag to make it a hard gate in Phase 5.
 
 ### GitHub environment: `evaluation`
 

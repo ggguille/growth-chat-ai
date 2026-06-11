@@ -12,7 +12,8 @@ Growth Chat is an AI engineering learning project structured as a monorepo with 
 - `data/database/` — SQL migration runner (implemented)
 - `data/ingestion/` — knowledge ingestion pipeline (implemented, dev mode)
 - `data/knowledge-base/` — source Markdown documents for ingestion (15 docs: services, team, case studies, engagement, FAQ)
-- `evaluation/`, `shared/` — Python uv workspace members (stubs)
+- `evaluation/` — three evaluation layers: DeepEval behaviour tests (64 cases), promptfoo red team (20 adversarial cases), RAGAS RAG pipeline (43-item dataset + `calibrate_rag.py` threshold calibration script)
+- `shared/` — Python uv workspace member (stub)
 
 Node version: v24.15.0 (see `.nvmrc`; use `nvm use` before working in `documentation/`).
 
@@ -114,6 +115,26 @@ Environment variables (copy `data/ingestion/.env.example` to `data/ingestion/.en
 | `CHUNK_OVERLAP` | No | `64` | Token overlap between adjacent chunks |
 
 Source documents live in `data/knowledge-base/` as Markdown files with YAML frontmatter (`source`, `category`, `title`, `description`, `proactive_eligible`). 15 synthetic documents covering services, team, case studies, engagement models, and FAQ.
+
+## Evaluation Module
+
+Managed as a uv workspace member (`evaluation`). Three layers: DeepEval behaviour tests, promptfoo red team, RAGAS RAG pipeline. All commands run from the project root.
+
+```bash
+# Behaviour tests (DeepEval + pytest):
+uv run --package evaluation pytest evaluation/behaviour -v
+
+# RAG threshold calibration (run before the RAGAS pipeline):
+uv run --package evaluation python -m evaluation.calibrate_rag
+
+# RAGAS pipeline (requires --extra ragas and a populated pgvector table):
+uv sync --package evaluation --extra ragas   # Linux/WSL; may fail on Windows Python 3.14
+uv run --package evaluation python -m evaluation.rag.runner
+```
+
+`psycopg` and `sentence-transformers` are in the main `evaluation` dependencies (always installed by `uv sync`). `ragas` itself is an optional extra because it may pull `scikit-network`, which has no Python 3.14 wheel for Windows — use Linux/WSL or CI in that case.
+
+Copy `evaluation/.env.example` to `evaluation/.env` and set `RAGAS_DB_URL` (defaults to `CHECKPOINT_DB_URL`) and `ANTHROPIC_API_KEY` before running the RAGAS pipeline.
 
 ## Frontend Module
 
