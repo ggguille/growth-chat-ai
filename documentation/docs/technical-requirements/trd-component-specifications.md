@@ -761,7 +761,9 @@ The relevance threshold is the primary quality gate. Only chunks with `score >= 
 7. Document the selected value and the score distribution plot in a configuration changelog
 ```
 
-**Calibrated value (Phase 4, 2026-06-12):** `RAG_RELEVANCE_THRESHOLD = 0.40`, determined by running `calibrate_rag.py` against the production knowledge base (15 documents, all-MiniLM-L6-v2 dev embeddings). Score distribution: minimum relevant score 0.430, maximum irrelevant score 0.345. The two distributions are non-overlapping except for two Zartis-adjacent internal queries (scores 0.601 and 0.443) which are expected borderline cases. Threshold set at 0.40 — a clean gap between the two distributions.
+**Calibrated value (Phase 4, 2026-06-12):** `RAG_RELEVANCE_THRESHOLD = 0.40`, determined by running `calibrate_rag.py` against the production knowledge base (15 documents, OpenAI `text-embedding-3-small`, 1536-dim). Score distribution: minimum relevant score 0.430, maximum irrelevant score 0.345. The two distributions are non-overlapping except for two Zartis-adjacent internal queries (scores 0.601 and 0.443) which are expected borderline cases. Threshold set at 0.40 — a clean gap between the two distributions.
+
+**Recalibration trigger:** The calibrated value is stable for the current KB structure and embedding model. Recalibration via `calibrate_rag.py` is required only if the KB is substantially restructured (e.g. significant document additions/removals, chunk size changes) or the embedding model is changed. Minor content updates to existing documents do not require recalibration.
 
 **Prod RAGAS evaluation scores (2026-06-12, OpenAI text-embedding-3-small, RAG_TOP_K=7):**
 
@@ -802,9 +804,9 @@ The `generate_response` node passes this flag to the LLM via the context injecti
 
 > *"If proactive_case_study is True in the retrieved context, mention the case study naturally within your response — not as a separate recommendation, but as a relevant example of similar work."*
 
-**Configuration:** `RAG_PROACTIVE_THRESHOLD` is set higher than `RAG_RELEVANCE_THRESHOLD` to reduce false positives on proactive surfacing. Recommended starting ratio: `RAG_PROACTIVE_THRESHOLD = RAG_RELEVANCE_THRESHOLD + 0.10`. Final values determined during Phase 4 tuning.
+**Configuration:** `RAG_PROACTIVE_THRESHOLD` is set higher than `RAG_RELEVANCE_THRESHOLD` to reduce false positives on proactive surfacing. Default ratio: `RAG_PROACTIVE_THRESHOLD = RAG_RELEVANCE_THRESHOLD + 0.10`. Calibrated value (Phase 4, 2026-06-12): `RAG_PROACTIVE_THRESHOLD = 0.50` (with `RAG_RELEVANCE_THRESHOLD = 0.40`).
 
-**v1 scope note:** FR-18 is a Should requirement. The proactive surfacing mechanism is implemented in v1 if capacity allows (S3 in the MoSCoW). If deferred, the RAG Triage Module returns chunks without the `proactive_case_study` flag and S3 is tracked in the v2 backlog.
+**Implementation status:** FR-18 / S3 is complete as of Phase 4. The `proactive_case_study` flag is active in production. The `rag_proactive_threshold` setting is configurable via the `RAG_PROACTIVE_THRESHOLD` environment variable; if unset it defaults to `rag_relevance_threshold + 0.10` at startup.
 
 ---
 
@@ -822,7 +824,7 @@ The v1 knowledge base is restricted to **publicly available content only** — c
 | Engagement model documentation | Public website or published blog posts | |
 | FAQ content | Public website — FAQ or blog | |
 
-**Placeholder knowledge base (Phase 1–2):** Engineering builds the ingestion pipeline and RAG architecture against a synthetic placeholder knowledge base (10–15 representative documents covering the categories above) before OQ-01 content is delivered. The placeholder is replaced by production content in Phase 4 without changes to the pipeline or schema.
+**Production knowledge base (Phase 4):** `data/knowledge-base/` contains real Zartis production content — 15 documents covering all five categories above. The ingestion pipeline and RAG architecture were validated against this content in Phase 4 with no schema changes required.
 
 ---
 
