@@ -1,9 +1,10 @@
 name: RAG Evaluation (RAGAS)
 
 on:
-  # TODO(Phase 4): add pull_request trigger when real KB is merged
+  # TODO(Phase 5): add pull_request trigger once continue-on-error is removed and
+  #   the job is a required status check.
   #   paths: [backend/**, data/knowledge-base/**, evaluation/datasets/**, evaluation/rag/**]
-  # TODO(Phase 4): add workflow_run trigger (Deploy Backend, completed, branches: [main])
+  # TODO(Phase 5): add workflow_run trigger (Deploy Backend, completed, branches: [main])
   #   — authoritative regression gate; fires after a backend deploy
   workflow_dispatch:
 
@@ -16,16 +17,14 @@ jobs:
     name: RAGAS RAG pipeline evaluation
     runs-on: ubuntu-latest
     environment: evaluation
-    # Disabled — enable in Phase 4 when the real KB is ingested and the RAG
-    # threshold has been calibrated (TRD §EC-05).
-    # Remove `if: false` to enable; confirm RAGAS_DB_URL points to the Neon
-    # staging database with knowledge_chunks populated.
-    if: false
+    # Enabled Phase 4 (2026-06-12). Runs on manual dispatch only.
+    # Automatic triggers (pull_request, workflow_run) deferred to Phase 5
+    # when continue-on-error is removed and this becomes a hard gate.
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       RAGAS_EMBEDDING_MODE: prod   # CI always uses the production OpenAI embeddings
-      RAGAS_TOP_K: "3"
+      RAGAS_TOP_K: "7"             # calibrated Phase 4 — matches RAG_TOP_K in production
       ANTHROPIC_MODEL_NAME: claude-haiku-4-5-20251001
 
     steps:
