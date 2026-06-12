@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     # RAG — required in all environments, no default (service will not start if unset)
     rag_relevance_threshold: float = 0.0  # validated below
-    rag_top_k: int = 5
+    rag_top_k: int = 7
     knowledge_table_name: str = "knowledge_chunks"
     openai_api_key: str = ""
     # RAG proactive threshold — optional; defaults to rag_relevance_threshold + 0.10
