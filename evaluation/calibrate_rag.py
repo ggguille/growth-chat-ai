@@ -33,6 +33,10 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env")
 
+# Windows CP1252 terminals can't encode box-drawing / arrow / tick characters.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 
 # ── Query sets ────────────────────────────────────────────────────────────────
 

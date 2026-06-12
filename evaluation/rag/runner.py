@@ -46,7 +46,39 @@ THRESHOLDS: dict[str, float] = {
 
 # ── RAGAS metric names (RAGAS 0.4.x) ─────────────────────────────────────────
 # Import lazily to give a clean error if ragas is not installed.
+
+def _patch_ragas_vertexai_compat() -> None:
+    """RAGAS 0.4.3 imports ChatVertexAI at module load time but langchain-community
+    0.4+ removed that submodule. Inject a stub so the import does not fail — we
+    never use VertexAI, it only appears in RAGAS's MULTIPLE_COMPLETION_SUPPORTED list.
+    """
+    import sys  # noqa: PLC0415
+    from types import ModuleType  # noqa: PLC0415
+
+    if "langchain_community.chat_models.vertexai" in sys.modules:
+        return
+    try:
+        import langchain_community.chat_models.vertexai  # noqa: PLC0415, F401
+        return
+    except ImportError:
+        pass
+
+    stub = ModuleType("langchain_community.chat_models.vertexai")
+
+    class _ChatVertexAIStub:
+        pass
+
+    stub.ChatVertexAI = _ChatVertexAIStub  # type: ignore[attr-defined]
+    sys.modules["langchain_community.chat_models.vertexai"] = stub
+    try:
+        import langchain_community.chat_models as _cm  # noqa: PLC0415
+        _cm.vertexai = stub  # type: ignore[attr-defined]
+    except ImportError:
+        pass
+
+
 def _load_ragas():  # noqa: ANN202
+    _patch_ragas_vertexai_compat()
     try:
         from ragas import evaluate  # noqa: PLC0415
         from ragas.dataset_schema import EvaluationDataset, SingleTurnSample  # noqa: PLC0415
@@ -58,6 +90,7 @@ def _load_ragas():  # noqa: ANN202
             context_recall,
             faithfulness,
         )
+        from ragas.run_config import RunConfig  # noqa: PLC0415
     except ImportError as exc:
         print(f"[error] RAGAS is not installed: {exc}")
         print("        Run `uv sync --package evaluation --extra ragas` from the project root.")
@@ -74,6 +107,7 @@ def _load_ragas():  # noqa: ANN202
         answer_relevancy,
         context_precision,
         context_recall,
+        RunConfig,
     )
 
 
@@ -84,7 +118,7 @@ def _make_evaluator_llm(LangchainLLMWrapper):  # noqa: ANN001, ANN202, N803
     from langchain_anthropic import ChatAnthropic  # noqa: PLC0415
 
     model = os.environ.get("ANTHROPIC_MODEL_NAME", "claude-haiku-4-5-20251001")
-    return LangchainLLMWrapper(ChatAnthropic(model=model))
+    return LangchainLLMWrapper(ChatAnthropic(model=model, max_retries=6))
 
 
 def _make_evaluator_embeddings(LangchainEmbeddingsWrapper, mode: str):  # noqa: ANN001, ANN202, N803
@@ -110,6 +144,21 @@ def _make_evaluator_embeddings(LangchainEmbeddingsWrapper, mode: str):  # noqa: 
             return self._model.encode(text, convert_to_numpy=True).tolist()
 
     return LangchainEmbeddingsWrapper(_STEmbeddings())
+
+
+def _make_run_config(RunConfig: Any) -> Any:  # noqa: ANN001, N803
+    """Build a RAGAS RunConfig that respects the Anthropic rate limit.
+
+    Default max_workers=2 keeps concurrent judge calls well within the 50 req/min
+    Haiku tier limit. Increase RAGAS_MAX_WORKERS carefully if you have a higher tier.
+    """
+    max_workers = int(os.environ.get("RAGAS_MAX_WORKERS", "2"))
+    return RunConfig(
+        max_workers=max_workers,
+        max_retries=10,
+        max_wait=60,
+        timeout=300,
+    )
 
 
 # ── Langfuse integration ──────────────────────────────────────────────────────
@@ -352,6 +401,7 @@ def main(dataset_path: str | None, embedding_mode: str) -> int:
         answer_relevancy,
         context_precision,
         context_recall,
+        RunConfig,
     ) = _load_ragas()
 
     # ── Load dataset ──────────────────────────────────────────────────────────
@@ -411,6 +461,7 @@ def main(dataset_path: str | None, embedding_mode: str) -> int:
     # ── Configure RAGAS judge ─────────────────────────────────────────────────
     evaluator_llm = _make_evaluator_llm(LangchainLLMWrapper)
     evaluator_embeddings = _make_evaluator_embeddings(LangchainEmbeddingsWrapper, embedding_mode)
+    run_config = _make_run_config(RunConfig)
 
     aggregated: dict[str, list[float]] = {m: [] for m in THRESHOLDS}
     df = None
@@ -425,6 +476,7 @@ def main(dataset_path: str | None, embedding_mode: str) -> int:
             metrics=[faithfulness, context_precision, context_recall, answer_relevancy],
             llm=evaluator_llm,
             embeddings=evaluator_embeddings,
+            run_config=run_config,
         )
         df = result.to_pandas()
         for metric in ("faithfulness", "context_precision", "context_recall", "answer_relevancy"):
@@ -440,6 +492,7 @@ def main(dataset_path: str | None, embedding_mode: str) -> int:
             metrics=[faithfulness, answer_relevancy],
             llm=evaluator_llm,
             embeddings=evaluator_embeddings,
+            run_config=run_config,
         )
         df_nc = result_nc.to_pandas()
         for metric in ("faithfulness", "answer_relevancy"):

@@ -134,7 +134,7 @@ uv run --package evaluation python -m evaluation.rag.runner
 
 `psycopg` and `sentence-transformers` are in the main `evaluation` dependencies (always installed by `uv sync`). `ragas` itself is an optional extra because it may pull `scikit-network`, which has no Python 3.14 wheel for Windows — use Linux/WSL or CI in that case.
 
-Copy `evaluation/.env.example` to `evaluation/.env` and set `RAGAS_DB_URL` (defaults to `CHECKPOINT_DB_URL`) and `ANTHROPIC_API_KEY` before running the RAGAS pipeline.
+Copy `evaluation/.env.example` to `evaluation/.env` and set `RAGAS_DB_URL` (defaults to `CHECKPOINT_DB_URL`) and `ANTHROPIC_API_KEY` before running the RAGAS pipeline. `RAGAS_MAX_WORKERS` controls concurrent judge calls (default: 2, within the 50 req/min Haiku tier limit — raise carefully if on a higher tier).
 
 ## Frontend Module
 

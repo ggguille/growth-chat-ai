@@ -29,6 +29,7 @@ dependencies = [
 # Install with: uv sync --package evaluation --extra ragas
 ragas = [
     "ragas>=0.4.3",
+    "langchain-community>=0.3",  # ragas 0.4.x imports ChatVertexAI at module load time
 ]
 
 [tool.pytest.ini_options]
