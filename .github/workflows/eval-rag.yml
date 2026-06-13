@@ -1,12 +1,18 @@
 name: RAG Evaluation (RAGAS)
 
 on:
-  # TODO(Phase 5): add pull_request trigger once continue-on-error is removed and
-  #   the job is a required status check.
-  #   paths: [backend/**, data/knowledge-base/**, evaluation/datasets/**, evaluation/rag/**]
-  # TODO(Phase 5): add workflow_run trigger (Deploy Backend, completed, branches: [main])
-  #   — authoritative regression gate; fires after a backend deploy
+  # Primary trigger: fires automatically after a successful KB ingestion.
+  # This is the correct causal chain — retrieval quality only changes when
+  # the vector store content changes, which happens on ingestion.
+  workflow_run:
+    workflows: ["Ingest Knowledge Base"]
+    types: [completed]
+    branches: [main]
+  # Manual trigger: for ad-hoc runs (e.g. after threshold recalibration).
   workflow_dispatch:
+  # TODO(Phase 5): add pull_request trigger once continue-on-error is removed
+  #   and the job is a required status check.
+  #   paths: [data/knowledge-base/**, data/ingestion/src/**, evaluation/datasets/**, evaluation/rag/**]
 
 concurrency:
   group: eval-rag-${{ github.ref }}
@@ -17,9 +23,10 @@ jobs:
     name: RAGAS RAG pipeline evaluation
     runs-on: ubuntu-latest
     environment: evaluation
-    # Enabled Phase 4 (2026-06-12). Runs on manual dispatch only.
-    # Automatic triggers (pull_request, workflow_run) deferred to Phase 5
-    # when continue-on-error is removed and this becomes a hard gate.
+    # Skip if triggered by a failed ingestion run — no point evaluating a broken vector store.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # Enabled Phase 4 (2026-06-13). Auto-triggers after Ingest Knowledge Base on main.
+    # continue-on-error remains until Phase 5 sign-off (not yet a hard gate).
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
