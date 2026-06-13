@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: evaluation
     # Skip if triggered by a failed ingestion run — no point evaluating a broken vector store.
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     # Enabled Phase 4 (2026-06-13). Auto-triggers after Ingest Knowledge Base on main.
     # continue-on-error remains until Phase 5 sign-off (not yet a hard gate).
 
