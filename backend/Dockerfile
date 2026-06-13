@@ -60,4 +60,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080", "--timeout-keep-alive", "75"]
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080", "--timeout-keep-alive", "75", "--workers", "1"]
