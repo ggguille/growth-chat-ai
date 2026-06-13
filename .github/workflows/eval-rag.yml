@@ -45,7 +45,7 @@ jobs:
         # The ragas extra installs scikit-network which requires a C compiler.
         # Linux CI has gcc/g++ available so the source build succeeds here.
         # On Windows, install VS Build Tools first or run RAGAS in CI only.
-        run: uv sync --extra ragas
+        run: uv sync --package evaluation --extra ragas
 
       - name: Run RAGAS evaluation
         # Exit code 1 if any metric falls below its threshold — see runner.py THRESHOLDS.
