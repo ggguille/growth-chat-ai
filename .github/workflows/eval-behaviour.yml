@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   behaviour:
-    name: DeepEval behaviour suite (phase2)
+    name: DeepEval behaviour suite (60 tests)
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: evaluation
@@ -74,9 +74,10 @@ jobs:
           EVAL_API_URL: ${{ vars.EVAL_API_URL }}
           ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
 
-      - name: Run Phase 2 behaviour tests
-        # TODO(Phase 5): remove -m phase2 to run all 60 tests as the hard gate
-        run: uv run --package evaluation pytest evaluation/behaviour -m phase2 -v
+      - name: Run behaviour evaluation (60 tests)
+        # Phase 5: full suite — 50 persona flows + 10 pattern tests + 4 edge cases.
+        # Excludes test_adversarial.py (Layer 2, promptfoo gate).
+        run: uv run --package evaluation pytest evaluation/behaviour -m "not adversarial" -v
         env:
           EVAL_API_URL: ${{ vars.EVAL_API_URL }}
           ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
