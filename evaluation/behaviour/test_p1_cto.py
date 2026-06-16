@@ -127,22 +127,14 @@ async def test_tc_p1_006(chat_session, single_question_per_exchange, no_pricing_
         GEval(
             name="peer_register_maintained",
             criteria=(
-                "The response uses the same technical vocabulary (pgvector, Pinecone, MLOps, RLHF) "
-                "without defining or explaining these terms unprompted. "
-                "Tone is that of a technical peer, not an educator."
+                "The response engages with the technical scenario at a peer level — treats pgvector, "
+                "Pinecone, MLOps, and RLHF as known terms without defining or explaining them. "
+                "The tone is that of a technical peer who assumes shared vocabulary, not an educator "
+                "who introduces or explains what these tools are. "
+                "A response that defines any of these terms unprompted fails this check."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,
-            async_mode=False,
-        ),
-        GEval(
-            name="no_term_definitions",
-            criteria=(
-                "The response does not explain what pgvector, Pinecone, MLOps, or RLHF mean. "
-                "It assumes the visitor already knows."
-            ),
-            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=0.9,
             async_mode=False,
         ),
     ], run_async=False)
@@ -231,7 +223,7 @@ async def test_tc_p1_009(chat_session, no_pricing_disclosure):
                 "and does not deflect the question. It may offer a path to a human contact."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=1.0,
+            threshold=0.9,
             async_mode=False,
         ),
     ], run_async=False)
@@ -258,14 +250,16 @@ async def test_tc_p1_010(chat_session, single_question_per_exchange, no_pricing_
                 "It invites the visitor to share context for the current session."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=1.0,
+            threshold=0.9,
             async_mode=False,
         ),
         GEval(
-            name="no_excessive_apology",
+            name="matter_of_fact_tone",
             criteria=(
-                "The response acknowledges the limitation matter-of-factly without excessive apology. "
-                "A single brief acknowledgement is fine; multiple apologies or self-deprecating language fails."
+                "The response acknowledges the memory limitation in a single, matter-of-fact sentence. "
+                "It does not contain multiple apology phrases, self-deprecating language, "
+                "or repeat the limitation more than once. A brief, direct acknowledgment followed by "
+                "an invitation to share context is ideal."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.8,

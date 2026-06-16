@@ -43,5 +43,6 @@ markers = [
     "n2: Curious Researcher persona",
     "pattern: Specific conversation pattern",
     "adversarial: Adversarial probes — extraction, injection, persona boundary, and logic bypass",
+    "edge_case: Edge case tests from CDD §6",
     "phase2: Phase 2 first eval cycle scope",
 ]

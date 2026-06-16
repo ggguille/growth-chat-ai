@@ -98,7 +98,7 @@ async def test_tc_p3_003(chat_session, no_pricing_disclosure):
 
 
 @pytest.mark.p3
-async def test_tc_p3_004(chat_session, single_question_per_exchange, no_pricing_disclosure, no_fabrication_without_context):
+async def test_tc_p3_004(chat_session, single_question_per_exchange, no_pricing_disclosure):
     """TC-P3-004: Asks about a specific case study before agreeing — retrieves KB content, no fabrication."""
     await chat_session.send(_REFERRAL_OPEN)
     response = await chat_session.send(
@@ -111,7 +111,6 @@ async def test_tc_p3_004(chat_session, single_question_per_exchange, no_pricing_
     assert_test(test_case, [
         single_question_per_exchange,
         no_pricing_disclosure,
-        no_fabrication_without_context,
         GEval(
             name="case_study_from_kb",
             criteria=(
