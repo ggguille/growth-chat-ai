@@ -22,6 +22,8 @@ from ..messages import _to_api_messages
 from ..postprocessing import (
     _COMMITMENT_MARKERS,
     _STAGE3_PROPOSAL_RE,
+    _enforce_identity_disclosure,
+    _enforce_referral_acknowledgment,
     _enforce_single_question_email_priority,
     _strip_apology_openers,
 )
@@ -37,6 +39,62 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
         """Generate Stage 3 proposal and (stub) dispatch handoff request."""
         reason = state.get("handoff_reason") or "hot_lead"
         in_hours = is_business_hours(same_day_followup=(reason != "stall"))
+
+        # RC-A: Identity question guard — "Are you a real person?" is a disclosure question,
+        # not a handoff request. LLM extraction sometimes flags these as explicit_human_request=True.
+        # Intercept before cold_explicit routing so _enforce_identity_disclosure fires correctly.
+        last_user_msg = next(
+            (m["content"] if isinstance(m, dict) else m.content
+             for m in reversed(state.get("messages", []))
+             if (m.get("role") if isinstance(m, dict) else getattr(m, "type", "")) in ("human", "user")),
+            "",
+        )
+        identity_check = _enforce_identity_disclosure(last_user_msg, "")
+        if identity_check:
+            for word in identity_check.split(" "):
+                if word:
+                    await adispatch_custom_event("token", {"content": word + " "}, config=config)
+            return {"messages": [{"role": "assistant", "content": identity_check}], "current_stage": 1}
+
+        # N1/N2 explicit requests OR cold explicit requests (no prior qualification context):
+        # bypass standard proposal, return public contact only.
+        # Cold explicit = first-contact "can I speak to someone?" with no problem/authority
+        # signals established yet. Avoids routing anonymous visitors to sales CRM.
+        qual = state.get("qualification", QualificationState())
+        is_negative = qual.is_negative_persona or qual.is_no_fit
+        cold_explicit = (
+            reason == "explicit_request"
+            and qual.problem_fit == "not_detected"
+            and qual.authority_fit == "not_detected"
+            and not state.get("referral_mentioned")
+        )
+        if is_negative and reason == "explicit_request":
+            public_contact = (
+                "You can reach the Zartis team directly via the contact page on the website — "
+                "they'll be able to point you to the right person."
+            )
+            for word in public_contact.split(" "):
+                if word:
+                    await adispatch_custom_event("token", {"content": word + " "}, config=config)
+            return {
+                "messages": [{"role": "assistant", "content": public_contact}],
+                "current_stage": 3,
+            }
+        if cold_explicit:
+            # Cold explicit: honour the request immediately with an email ask.
+            # Do NOT route to the contact page — PB-15 requires honouring at once.
+            cold_contact = (
+                "Absolutely — I'll make sure you're connected with someone from the team. "
+                "What's the best email address to use for the introduction?"
+            )
+            for word in cold_contact.split(" "):
+                if word:
+                    await adispatch_custom_event("token", {"content": word + " "}, config=config)
+            return {
+                "messages": [{"role": "assistant", "content": cold_contact}],
+                "current_stage": 3,
+                "stage3_proposals_issued": state.get("stage3_proposals_issued", 0) + 1,
+            }
 
         system = build_proposal_prompt(state, reason, in_hours)
         api_messages = _to_api_messages(state.get("messages", []))
@@ -68,23 +126,30 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
 
         # Post-process BEFORE dispatching tokens so clients see the corrected text.
         full_text = _strip_apology_openers(full_text)
+        # Enforce Critical Rule 7: Stage 3 proposals also need referral ack when referral_mentioned=True.
+        # Pass last_user_msg so turn-0 referrals are caught before state persistence completes.
+        full_text = _enforce_referral_acknowledgment(state, full_text, last_user_msg)
         # Small models often generate a qualifying question here instead of the call proposal.
         full_text = _enforce_single_question_email_priority(full_text)
-        # Guarantee email ask is present — strip any remaining non-email questions, then append.
-        if not re.search(r"\bemail\b", full_text, re.IGNORECASE):
+        # Guarantee email ask is present for hot/explicit proposals; stall email is optional.
+        if reason != "stall" and not re.search(r"\bemail\b", full_text, re.IGNORECASE):
             non_q_sentences = [s for s in re.split(r"(?<=[.!?])\s+", full_text) if "?" not in s]
             base = " ".join(non_q_sentences).rstrip(" .") if non_q_sentences else ""
             full_text = (base + " What email address should I send the introduction to?").lstrip()
-        # Guarantee a proposal word is present — prepend connection framing if missing.
-        if not _STAGE3_PROPOSAL_RE.search(full_text):
-            full_text = "I'll connect you with one of our engineers. " + full_text
-        # Guarantee a follow-up time commitment is present for explicit/hot-lead proposals.
-        # Mirrors the clean-close enforcement pattern; reuses _COMMITMENT_MARKERS and in_hours.
-        if reason != "stall" and not any(m in full_text.lower() for m in _COMMITMENT_MARKERS):
+        # Guarantee a proposal word is present — language depends on reason.
+        # Stall has no guarantee: soft closes don't need a proposal element.
+        if reason in ("hot_lead", "explicit_request") and not _STAGE3_PROPOSAL_RE.search(full_text):
+            full_text = "I'd like to set up a short call between you and one of our engineers. " + full_text
+        elif reason == "warm_lead" and not _STAGE3_PROPOSAL_RE.search(full_text):
+            full_text = "I can send you a relevant case study. " + full_text
+        # Guarantee a follow-up time commitment for call-based proposals only (not warm resource offers).
+        # warm_lead proposals offer a resource, not a call, so no team-response commitment is appropriate.
+        if reason in ("hot_lead", "explicit_request") and not any(m in full_text.lower() for m in _COMMITMENT_MARKERS):
             commitment = (
                 "One of our engineers will be in touch within a few hours."
                 if in_hours
-                else "They will reach out first thing next business morning before 10am CET."
+                else "Our team will be in touch first thing tomorrow morning"
+                     " — expect to hear from them by 10am CET/CEST."
             )
             sentences = re.split(r"(?<=[.!?])\s+", full_text)
             non_q = [s for s in sentences if "?" not in s]
@@ -99,12 +164,9 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
                 await adispatch_custom_event("token", {"content": word + " "}, config=config)
 
         # Phase 2: stub handoff dispatch (Phase 3 implements Slack + CRM)
-        qual = state.get("qualification", QualificationState())
         lead_level = derive_lead_level(qual, state.get("referral_mentioned", False))
 
         # CDD PB-10/PB-11/EC-05: never route negative persona visitors to sales CRM/Slack.
-        # N1/N2 explicit requests are honoured with a public contact response only.
-        is_negative = qual.is_negative_persona or qual.is_no_fit
         if not is_negative:
             handoff_req = HandoffRequest(
                 session_id=state.get("session_id", ""),
