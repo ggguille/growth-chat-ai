@@ -46,6 +46,7 @@ class GraphState(TypedDict, total=False):
     visitor_role: str | None
     is_consultant: bool
     referral_mentioned: bool
+    stage3_declined: bool
 
     # Session outcome
     handoff_triggered: bool

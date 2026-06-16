@@ -69,13 +69,22 @@ def _score_router(state: GraphState) -> dict:
     if state.get("explicit_human_request"):
         return {"handoff_reason": "explicit_request"}
     if _is_hot_lead(state):
+        qual = state.get("qualification", QualificationState())
+        # Downgrade to warm_lead when no timing signal and no referral urgency.
+        # Prevents premature call proposals for leads with authority + problem confirmed
+        # but no committed budget/deadline (e.g. "board knows but we haven't committed budget").
+        if qual.timing_fit == "not_detected" and not state.get("referral_mentioned"):
+            return {"handoff_reason": "warm_lead"}
         return {"handoff_reason": "hot_lead"}
     return {}
 
 
 def _route_after_score_router(state: GraphState) -> str:
     reason = state.get("handoff_reason")
-    if reason in ("explicit_request", "hot_lead"):
+    if reason in ("explicit_request", "hot_lead", "warm_lead"):
+        # Visitor declined a Stage 3 proposal → return to conversation, do not re-propose.
+        if state.get("stage3_declined"):
+            return "generate_response"
         # Email already captured after a Stage 3 proposal → clean close, not re-proposal
         if state.get("stage3_proposals_issued", 0) > 0 and state.get("visitor_email"):
             return "generate_response"

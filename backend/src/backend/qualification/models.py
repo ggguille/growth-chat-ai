@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 LeadLevel = Literal["hot", "warm", "cold"]
 ConversationStage = Literal[1, 2, 3]
 FitLevel = Literal["not_detected", "partially_confirmed", "confirmed"]
-HandoffReason = Literal["hot_lead", "explicit_request", "stall", "llm_failure"]
+HandoffReason = Literal["hot_lead", "warm_lead", "explicit_request", "stall", "llm_failure"]
 
 _LEVEL_ORDER: dict[FitLevel, int] = {
     "not_detected": 0,

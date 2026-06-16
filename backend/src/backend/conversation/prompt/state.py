@@ -38,6 +38,7 @@ def format_qualification_state(state: dict) -> str:
             "is_consultant": state.get("is_consultant", False),
             "referral_mentioned": state.get("referral_mentioned", False),
             "explicit_human_request": state.get("explicit_human_request", False),
+            "stage3_declined": state.get("stage3_declined", False),
         },
         indent=2,
     )
