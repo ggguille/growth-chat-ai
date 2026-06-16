@@ -18,6 +18,7 @@ from backend.qualification.models import (
 )
 
 from ..messages import _to_api_messages
+from ..postprocessing import _REFERRAL_RE
 from ..routing import _has_explicit_authority
 
 if TYPE_CHECKING:
@@ -55,7 +56,8 @@ Also detect:
   no real initiative), researcher, student, or journalist
 - is_no_fit: true if visitor is clearly outside ICP (individual contractor scope,
   academic purpose, wrong geography/regulatory context)
-- explicit_human_request: true if visitor explicitly asks to speak with a human / book a call
+- explicit_human_request: true if visitor explicitly asks to speak with a human, a real person, someone on the team, or to book a call. Examples: "can I speak directly with someone", "I'd like to speak with a person", "can I talk to someone from your team", "book a call", "set up a meeting".
+  IMPORTANT: Do NOT set explicit_human_request=true for identity questions. The following are identity questions, NOT human requests: "Are you a real person?", "Are you a bot?", "Are you an AI?", "Are you ChatGPT?", "Who am I talking to?", "Is this a human?", "Am I talking to a real person?" — these ask about AI identity, not requests to connect with a human. Leave explicit_human_request unset for these.
 - visitor_email: extract if visible in the message
 - visitor_name: extract if visible in the message
 - visitor_company: extract company name if mentioned
@@ -76,21 +78,82 @@ _VALID_DIMENSIONS = frozenset(("problem_fit", "authority_fit", "company_fit", "t
 # Rule-based qualification signal patterns — supplement LLM extraction when
 # structured_complete returns empty deltas (common with small models like Llama 3.1 8B).
 _PROBLEM_CONFIRMED_RE = re.compile(
-    r"(?:building|developing|implementing|creating|deploying)\s+(?:a\s+)?(?:RAG|LLM|AI|ML)",
+    r"(?:building|developing|implementing|creating|deploying|adding)\s+(?:a\s+)?"
+    r"(?:RAG|LLM|AI|ML|recommendation\s+(?:system|engine|layer|pipeline)|"
+    r"NLP\s+pipeline|data\s+(?:pipeline|platform)|machine\s+learning\s+(?:system|model|pipeline))",
     re.IGNORECASE,
 )
 _PROBLEM_PARTIAL_RE = re.compile(
-    r"\b(?:RAG|LLM|embedding\s+model|language\s+model|AI\s+(?:system|feature|initiative))\b",
+    r"\b(?:RAG|LLM|embedding\s+model|language\s+model|AI\s+(?:system|feature|initiative)|"
+    r"recommendation\s+(?:system|engine|layer)|NLP|vector\s+(?:search|store|database))\b",
     re.IGNORECASE,
 )
 _COMPANY_FIT_RE = re.compile(
-    r"(?:\b\d{2,}\s+(?:people|employees|engineers?|team\s+members?)\b"
+    r"(?:\b\d{2,}[- ](?:person|people|employee|engineer|strong)\b"   # "400-person", "120-strong"
+    r"|\b\d{2,}\s+(?:people|persons?|employees?|engineers?|team\s+members?)\b"
     r"|\bSeries\s+[A-D]\b)",
     re.IGNORECASE,
 )
 _TIMING_FIT_RE = re.compile(
     r"\b(?:Q[1-4]|by\s+Q[1-4]|end\s+of\s+(?:the\s+)?(?:year|quarter)"
     r"|this\s+(?:year|quarter))\b",
+    re.IGNORECASE,
+)
+# Rule-based negative persona detection — common N1/N2 opening patterns the LLM extraction misses.
+_N1_MARKET_RE = re.compile(
+    r"\b(?:market\s+research|competitive\s+(?:analysis|intelligence|research)"
+    r"|researching\s+(?:vendors?|companies|providers?|options?)"
+    r"|writing\s+(?:a|an)\s+(?:\w+\s+)?report"
+    r"|industry\s+(?:research|report|survey|benchmarking)"
+    r"|benchmarking|comparing\s+(?:providers?|vendors?|companies)"
+    r"|how\s+(?:\w+\s+)?(?:vendors?|companies|providers?)\s+(?:structure|handle|price|approach)"
+    r"|general(?:ly)?\s+(?:understanding|curious|interest(?:ed)?)"
+    r"|(?:no\s+)?(?:specific|real|actual)\s+(?:project|initiative|need|requirement)(?:\s+(?:yet|in\s+mind))?"
+    r"|just\s+(?:trying\s+to\s+understand|curious|researching|exploring)"
+    r"|say\s+(?:a\s+)?(?:company|team|startup|client)\s+needed"
+    r"|hypothetically\s+(?:speaking|if)"
+    r"|what\s+would\s+(?:it|that)\s+(?:typically\s+)?cost"
+    r"|what\s+does\s+(?:it\s+)?typically\s+cost)\b",
+    re.IGNORECASE,
+)
+_N2_CANDIDATE_RE = re.compile(
+    r"(?:are\s+you\s+(?:hiring|recruiting)"
+    r"|(?:job|career|employment)\s+openings?"
+    r"|open\s+roles?\s+at"
+    r"|interested\s+in\s+(?:applying|working\s+(?:at|for)\s+zartis)"
+    r"|looking\s+for\s+(?:a?\s*(?:job|role|position|opportunity))"
+    r"|career\s+(?:change|in\s+ai|in\s+tech|advice|path|transition)"
+    r"|considering\s+a\s+career"
+    r"|studying\s+(?:ai|machine\s+learning|computer\s+science)"
+    r"|\b(?:journalist|freelance\s+writer|PhD\s+(?:student|candidate)|"
+    r"university\s+(?:student|researcher)|academic\s+research))\b",
+    re.IGNORECASE,
+)
+# _REFERRAL_RE is imported from postprocessing (shared with _enforce_referral_acknowledgment).
+
+# Rule-based Stage 3 decline detection — visitor pushes back on a call/email proposal.
+# Only meaningful when stage3_proposals_issued > 0.
+_STAGE3_DECLINE_RE = re.compile(
+    r"(?:not\s+ready\s+(?:to|for)\s+(?:a\s+)?(?:call|meeting|that)"
+    r"|I\s+have\s+(?:a\s+few\s+)?more\s+questions"
+    r"|(?:maybe\s+)?later\b|not\s+(?:now|yet)\b"
+    r"|not\s+interested\s+in\s+a\s+call"
+    r"|let'?s?\s+(?:come\s+back\s+to\s+that|skip\s+that)"
+    r"|I'?d?\s+(?:like|prefer)\s+(?:to\s+)?(?:continue|keep\s+(?:going|chatting|talking)))",
+    re.IGNORECASE,
+)
+
+# Rule-based explicit human request detection — supplements LLM extraction.
+# LLM extraction sometimes misses "can someone call me" and similar phrasings.
+_EXPLICIT_HUMAN_RE = re.compile(
+    r"(?:speak\s+(?:directly\s+)?(?:with\s+)?(?:to\s+)?(?:someone|a\s+person|a\s+human|your\s+team)"
+    r"|talk\s+to\s+(?:someone|a\s+person|a\s+human|someone\s+from)"
+    r"|connect\s+me\s+with\s+(?:a\s+person|someone|a\s+human|the\s+team)"
+    r"|I'?d?\s+(?:like|prefer|rather)\s+(?:just\s+)?(?:to\s+)?(?:speak|talk)\s+to\s+(?:someone|a\s+person)"
+    r"|book\s+a\s+(?:call|meeting)"
+    r"|set\s+up\s+a\s+(?:call|meeting)"
+    r"|can\s+someone(?:\s+from\s+your\s+team)?\s+(?:call|contact|reach)\s+me"
+    r"|have\s+someone\s+(?:call|contact|reach)\s+me)",
     re.IGNORECASE,
 )
 
@@ -192,6 +255,28 @@ def _make_update_state(llm_client: "BaseLLMClient", context_window: int):
             if _TIMING_FIT_RE.search(last_user):
                 delta.timing_fit = "confirmed"
 
+        # Rule-based negative persona detection — covers common N1/N2 patterns the LLM misses.
+        if not qual.is_negative_persona and not delta.is_negative_persona:
+            if _N1_MARKET_RE.search(last_user) or _N2_CANDIDATE_RE.search(last_user):
+                delta.is_negative_persona = True
+
+        # Rule-based referral detection — supplements LLM extraction for P3 referral signals.
+        if not state.get("referral_mentioned") and not delta.referral_mentioned:
+            if _REFERRAL_RE.search(last_user):
+                delta.referral_mentioned = True
+
+        # Rule-based Stage 3 decline detection — only meaningful after at least one proposal.
+        stage3_declined_now = (
+            not state.get("stage3_declined")
+            and state.get("stage3_proposals_issued", 0) > 0
+            and _STAGE3_DECLINE_RE.search(last_user)
+        )
+
+        # Rule-based explicit human request detection — supplements LLM extraction.
+        if not state.get("explicit_human_request") and not delta.explicit_human_request:
+            if _EXPLICIT_HUMAN_RE.search(last_user):
+                delta.explicit_human_request = True
+
         # Rule-based email extraction — regex finds addresses the LLM extraction misses
         if not delta.visitor_email and not state.get("visitor_email"):
             email_match = _EMAIL_RE.search(last_user)
@@ -221,6 +306,8 @@ def _make_update_state(llm_client: "BaseLLMClient", context_window: int):
         # merge_qualification is the reducer — we just return the partial update
         update["qualification"] = new_qual
 
+        if stage3_declined_now:
+            update["stage3_declined"] = True
         if delta.explicit_human_request:
             update["explicit_human_request"] = True
         if delta.visitor_email:
