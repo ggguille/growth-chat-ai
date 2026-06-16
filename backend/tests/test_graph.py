@@ -71,17 +71,43 @@ async def test_score_router_does_not_escalate_cold_lead():
     assert result.get("stage3_proposals_issued", 0) == 0
 
 
-async def test_score_router_escalates_hot_lead():
-    """When qualification state is already hot, score_router should route to propose_handoff."""
-    hot_qual = QualificationState(
+async def test_score_router_escalates_warm_lead():
+    """Problem + authority + company confirmed but no timing → warm_lead, still routes to propose_handoff."""
+    warm_qual = QualificationState(
         problem_fit="confirmed",
         authority_fit="confirmed",
         company_fit="partially_confirmed",
+        # timing_fit defaults to "not_detected" — this produces warm_lead, not hot_lead
     )
 
     class _StructuredFake(FakeLLMClient):
         async def structured_complete(self, system, messages, schema):
-            # Return empty delta — no new signals; hot lead already set
+            return {}, LLMUsage()
+
+    graph = _make_graph(_StructuredFake())
+    result = await graph.ainvoke(
+        {
+            "session_id": "warm",
+            "messages": [{"role": "user", "content": "I'm ready to move forward"}],
+            "qualification": warm_qual,
+        },
+        config={"configurable": {"thread_id": "warm"}},
+    )
+    assert result.get("stage3_proposals_issued", 0) >= 1
+    assert result.get("handoff_reason") == "warm_lead"
+
+
+async def test_score_router_escalates_hot_lead():
+    """Problem + authority + company + timing all confirmed → hot_lead, routes to propose_handoff."""
+    hot_qual = QualificationState(
+        problem_fit="confirmed",
+        authority_fit="confirmed",
+        company_fit="partially_confirmed",
+        timing_fit="confirmed",
+    )
+
+    class _StructuredFake(FakeLLMClient):
+        async def structured_complete(self, system, messages, schema):
             return {}, LLMUsage()
 
     graph = _make_graph(_StructuredFake())
@@ -143,7 +169,11 @@ async def test_stall_triggers_at_threshold():
 
 
 async def test_explicit_human_request_escalates_immediately():
-    """explicit_human_request=True must route to propose_handoff regardless of qualification."""
+    """explicit_human_request=True routes to propose_handoff regardless of qualification.
+
+    Cold explicit requests (no prior problem/authority signals) immediately honour the request
+    by asking for email — PB-15 requires honouring explicit requests without qualifying first.
+    """
 
     class _ExplicitRequestFake(FakeLLMClient):
         async def structured_complete(self, system, messages, schema):
@@ -158,4 +188,12 @@ async def test_explicit_human_request_escalates_immediately():
         config={"configurable": {"thread_id": "explicit"}},
     )
     assert result.get("handoff_reason") == "explicit_request"
-    assert result.get("stage3_proposals_issued", 0) >= 1
+    # Cold explicit request: honours immediately by asking for email (not routing to contact page).
+    messages = result.get("messages", [])
+    last_msg = messages[-1] if messages else {}
+    content = (
+        last_msg.content if hasattr(last_msg, "content")
+        else last_msg.get("content", "") if isinstance(last_msg, dict)
+        else ""
+    )
+    assert "email" in content.lower(), f"Expected email ask in cold explicit response, got: {content!r}"

@@ -117,6 +117,7 @@ async def test_forward_path_appended_when_llm_omits_it(monkeypatch):
         "session_id": "fv-test",
         "messages": [{"role": "user", "content": "What latency do your RAG systems achieve?"}],
         "turn_counter": 1,
+        "current_stage": 2,  # forward path guard only fires in Stage 2+
     }
 
     dispatched: list[str] = []
