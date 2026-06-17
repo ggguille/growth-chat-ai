@@ -60,6 +60,22 @@ _STAGE3_PROPOSAL_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Stricter hot-lead proposal check — used for the guarantee prepend in propose_handoff.
+# "introduction" intentionally excluded: "What email should I send the introduction to?"
+# contains "introduction" and would suppress the "I'd like to set up a short call" prepend.
+_HOT_LEAD_PROPOSAL_RE = re.compile(
+    r"\b(?:call|engineer|20[- ]?min(?:ute)?|short\s+intro(?:duction)?)\b",
+    re.IGNORECASE,
+)
+
+# N1/N2 persona guard: strip any currency-figure patterns from negative-persona responses.
+# The LLM may generate market-rate figures from training memory even when RAG is suppressed.
+_PRICING_FIGURE_RE = re.compile(
+    r"[€$£]\s*\d[\d,\.]*"
+    r"|\d[\d,\.]*\s*(?:EUR|USD|GBP|euro|dollar)\b",
+    re.IGNORECASE,
+)
+
 # Rule 6: identity question patterns that require mandatory AI disclosure sentence.
 _IDENTITY_QUESTION_RE = re.compile(
     r"\b(?:are\s+you\s+(?:a\s+)?(?:real|human|bot|an?\s+ai|chatgpt|gpt|person)"
@@ -118,6 +134,15 @@ _TURN0_CALL_RE = re.compile(
 
 
 # ── Post-processing functions ─────────────────────────────────────────────────
+
+def _strip_pricing_figures_for_negative_persona(response: str) -> str:
+    """Remove currency figures from N1/N2 responses (N1-002).
+
+    The LLM may produce market-rate figures (e.g. €600/day) from training memory
+    even when RAG is suppressed for negative persona visitors.
+    """
+    return _PRICING_FIGURE_RE.sub("", response)
+
 
 def _enforce_single_question(text: str) -> str:
     """Remove the sentence containing the second '?' so the response has at most one question."""
@@ -288,8 +313,8 @@ _IP_QUESTION_RE = re.compile(
     re.IGNORECASE,
 )
 _IP_ROUTING_RESPONSE = (
-    "IP and contract terms are handled by our commercial team — they can give you a definitive answer. "
-    "You can reach them via the contact page on zartis.com."
+    "IP ownership is contract-specific — the terms are agreed as part of the commercial process. "
+    "You can reach the commercial team via the contact page on zartis.com."
 )
 
 

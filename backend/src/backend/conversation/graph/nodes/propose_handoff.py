@@ -21,6 +21,7 @@ from backend.qualification.models import QualificationState, derive_lead_level
 from ..messages import _to_api_messages
 from ..postprocessing import (
     _COMMITMENT_MARKERS,
+    _HOT_LEAD_PROPOSAL_RE,
     _STAGE3_PROPOSAL_RE,
     _enforce_identity_disclosure,
     _enforce_referral_acknowledgment,
@@ -68,7 +69,10 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
             and qual.authority_fit == "not_detected"
             and not state.get("referral_mentioned")
         )
-        if is_negative and reason == "explicit_request":
+        # N1-005: N1/N2 visitors must NEVER be routed to the sales pipeline regardless of reason.
+        # Any handoff reason (explicit_request, stall, warm_lead, hot_lead) for a negative persona
+        # returns the public contact page only — no email capture, no CRM record.
+        if is_negative:
             public_contact = (
                 "You can reach the Zartis team directly via the contact page on the website — "
                 "they'll be able to point you to the right person."
@@ -138,8 +142,10 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
             full_text = (base + " What email address should I send the introduction to?").lstrip()
         # Guarantee a proposal word is present — language depends on reason.
         # Stall has no guarantee: soft closes don't need a proposal element.
-        if reason in ("hot_lead", "explicit_request") and not _STAGE3_PROPOSAL_RE.search(full_text):
-            full_text = "I'd like to set up a short call between you and one of our engineers. " + full_text
+        # Hot-lead uses _HOT_LEAD_PROPOSAL_RE (stricter) to avoid "introduction" in the email
+        # question ("What email should I send the introduction to?") suppressing the guarantee.
+        if reason in ("hot_lead", "explicit_request") and not _HOT_LEAD_PROPOSAL_RE.search(full_text):
+            full_text = "I'd like to set up a short call between you and one of our senior engineers. " + full_text
         elif reason == "warm_lead" and not _STAGE3_PROPOSAL_RE.search(full_text):
             full_text = "I can send you a relevant case study. " + full_text
         # Guarantee a follow-up time commitment for call-based proposals only (not warm resource offers).

@@ -70,10 +70,12 @@ def _score_router(state: GraphState) -> dict:
         return {"handoff_reason": "explicit_request"}
     if _is_hot_lead(state):
         qual = state.get("qualification", QualificationState())
-        # Downgrade to warm_lead when no timing signal and no referral urgency.
-        # Prevents premature call proposals for leads with authority + problem confirmed
-        # but no committed budget/deadline (e.g. "board knows but we haven't committed budget").
-        if qual.timing_fit == "not_detected" and not state.get("referral_mentioned"):
+        # Downgrade to warm_lead when timing is not fully confirmed and no referral urgency.
+        # "not_detected" and "partially_confirmed" both indicate no committed budget/deadline.
+        # LLM extraction can set "partially_confirmed" for weak urgency signals like
+        # "board knows about it but we haven't committed budget" — those should stay warm.
+        # Only "confirmed" timing (explicit Q3 deadline, approved budget) justifies hot_lead.
+        if qual.timing_fit != "confirmed" and not state.get("referral_mentioned"):
             return {"handoff_reason": "warm_lead"}
         return {"handoff_reason": "hot_lead"}
     return {}

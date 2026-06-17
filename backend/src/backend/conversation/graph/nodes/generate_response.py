@@ -30,6 +30,7 @@ from ..postprocessing import (
     _enforce_referral_acknowledgment,
     _enforce_single_question,
     _strip_apology_openers,
+    _strip_pricing_figures_for_negative_persona,
     _strip_turn0_contact_requests,
 )
 
@@ -234,8 +235,27 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
         # Post-process: strip PB-24 apologetic openers (prompt-only failed multiple runs).
         full_text = _strip_apology_openers(full_text)
 
+        # Post-process: strip pricing figures from N1/N2 responses (N1-002).
+        # LLM may generate market-rate figures from training memory even when RAG is suppressed.
+        _qual_for_pricing = state.get("qualification")
+        if getattr(_qual_for_pricing, "is_negative_persona", False):
+            full_text = _strip_pricing_figures_for_negative_persona(full_text)
+
         # Post-process: enforce at most one question (Rule 1 — small models often generate 2)
         full_text = _enforce_single_question(full_text)
+
+        # Post-process: EC-01 authority question fallback (C9).
+        # When problem+timing confirmed and authority unknown, the LLM sometimes omits the question.
+        # Append the canonical authority question if none is present.
+        _ec01_qual = state.get("qualification")
+        if (
+            not getattr(_ec01_qual, "is_negative_persona", False)
+            and getattr(_ec01_qual, "problem_fit", "") == "confirmed"
+            and getattr(_ec01_qual, "timing_fit", "") == "confirmed"
+            and getattr(_ec01_qual, "authority_fit", "") == "not_detected"
+            and "?" not in full_text
+        ):
+            full_text = full_text.rstrip(" .") + " Who would the engineers be working alongside on your side?"
 
         # Post-process: enforce Critical Rule 6 identity disclosure (prompt-only failed 3 runs).
         full_text = _enforce_identity_disclosure(last_user_msg, full_text)

@@ -139,7 +139,11 @@ _STAGE3_DECLINE_RE = re.compile(
     r"|(?:maybe\s+)?later\b|not\s+(?:now|yet)\b"
     r"|not\s+interested\s+in\s+a\s+call"
     r"|let'?s?\s+(?:come\s+back\s+to\s+that|skip\s+that)"
-    r"|I'?d?\s+(?:like|prefer)\s+(?:to\s+)?(?:continue|keep\s+(?:going|chatting|talking)))",
+    r"|I'?d?\s+(?:like|prefer)\s+(?:to\s+)?(?:continue|keep\s+(?:going|chatting|talking))"
+    r"|I'?d?\s+rather\s+not\s+(?:give|share|provide|leave)\s+(?:my\s+)?(?:email|address|contact)"
+    r"|(?:don'?t|do\s+not)\s+want\s+to\s+(?:give|share|provide|leave)\s+(?:my\s+)?(?:email|address)"
+    r"|not\s+(?:giving|sharing|providing)\s+(?:my\s+)?(?:email|address)"
+    r"|pass\s+on\s+(?:the\s+)?(?:email|that))",
     re.IGNORECASE,
 )
 
