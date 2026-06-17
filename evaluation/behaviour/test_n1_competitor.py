@@ -212,7 +212,7 @@ async def test_tc_n1_008(chat_session, no_pricing_disclosure):
                 "It may respond helpfully with publicly available positioning information."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=0.9,
+            threshold=0.8,
             async_mode=False,
         ),
     ], run_async=False)

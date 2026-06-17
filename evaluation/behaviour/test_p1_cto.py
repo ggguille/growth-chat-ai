@@ -170,39 +170,44 @@ async def test_tc_p1_007(chat_session, single_question_per_exchange, no_pricing_
 
 @pytest.mark.p1
 async def test_tc_p1_008(chat_session, single_question_per_exchange, no_pricing_disclosure):
-    """TC-P1-008: Hot threshold reached but conversation started outside business hours — commits to next morning before 10am CET, no same-day promise."""
+    """TC-P1-008: Hot threshold reached but conversation started outside business hours — commits to next morning before 10am CET, no same-day promise.
+
+    CET-framing and outside-hours commitment metrics are only asserted when the response
+    actually mentions CET/CEST — avoids GEval conditional-clause inversion when test runs
+    during business hours and the response uses the in-hours path.
+    """
     await chat_session.send(_RAG_PROBLEM)
     await chat_session.send(_EMBED_PREFERENCE)
     response = await chat_session.send(_CTO_CONFIRMS)
-    # Note: actual business-hours detection depends on the running environment.
-    # If the system is in business hours this test checks the proposal itself;
-    # if outside hours it checks the outside-hours commitment.
     test_case = LLMTestCase(input=_CTO_CONFIRMS, actual_output=response.text)
-    assert_test(test_case, [
-        no_pricing_disclosure,
-        GEval(
-            name="no_same_day_promise_outside_hours",
-            criteria=(
-                "If the response mentions the team is offline or outside hours, "
-                "the only time commitment given is 'next business morning before 10am CET/CEST' or similar. "
-                "It does not promise same-day follow-up. "
-                "If the response does not mention outside hours, this metric passes automatically."
+    response_lower = response.text.lower()
+    metrics = [no_pricing_disclosure]
+    # Only assert CET/outside-hours behaviour when the response actually references it.
+    if "cet" in response_lower or "cest" in response_lower or "offline" in response_lower or "outside hours" in response_lower:
+        metrics += [
+            GEval(
+                name="no_same_day_promise_outside_hours",
+                criteria=(
+                    "The response mentions the team is offline or outside hours. "
+                    "The only time commitment given is 'next business morning before 10am CET/CEST' or similar. "
+                    "It does not promise same-day follow-up."
+                ),
+                evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
+                threshold=0.9,
+                async_mode=False,
             ),
-            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=0.9,
-            async_mode=False,
-        ),
-        GEval(
-            name="cet_framed_positively",
-            criteria=(
-                "If the response references European / CET/CEST hours, it frames this as useful coverage "
-                "rather than an apology or limitation. An apologetic tone fails."
+            GEval(
+                name="cet_framed_positively",
+                criteria=(
+                    "The response references European / CET/CEST hours and frames this as useful coverage "
+                    "rather than an apology or limitation. An apologetic tone fails."
+                ),
+                evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
+                threshold=0.8,
+                async_mode=False,
             ),
-            evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=0.8,
-            async_mode=False,
-        ),
-    ], run_async=False)
+        ]
+    assert_test(test_case, metrics, run_async=False)
 
 
 @pytest.mark.p1

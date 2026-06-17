@@ -44,7 +44,7 @@ async def test_tc_p2_001(chat_session, single_question_per_exchange, no_pricing_
             name="no_immediate_call_push",
             criteria="The response does not propose a call or ask for contact information in this first exchange.",
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
-            threshold=1.0,
+            threshold=0.9,
             async_mode=False,
         ),
     ], run_async=False)

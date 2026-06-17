@@ -1,4 +1,5 @@
 from collections.abc import Awaitable, Callable
+from unittest.mock import AsyncMock
 
 import pytest
 from asgi_lifespan import LifespanManager
@@ -43,6 +44,13 @@ def mock_llm_client(monkeypatch):
     """Patch create_llm_client to return FakeLLMClient so tests run without Ollama."""
     import backend.llm.factory as factory_module
     monkeypatch.setattr(factory_module, "create_llm_client", lambda _: FakeLLMClient())
+
+
+@pytest.fixture(autouse=True)
+def mock_dispatch_handoff(monkeypatch):
+    """Patch dispatch_handoff to a no-op so tests don't hit Slack/CRM/SMTP."""
+    import backend.conversation.graph.nodes.propose_handoff as node
+    monkeypatch.setattr(node, "dispatch_handoff", AsyncMock())
 
 
 @pytest.fixture
