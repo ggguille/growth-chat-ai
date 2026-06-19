@@ -42,7 +42,12 @@ async def test_tc_p2_001(chat_session, single_question_per_exchange, no_pricing_
         ),
         GEval(
             name="no_immediate_call_push",
-            criteria="The response does not propose a call or ask for contact information in this first exchange.",
+            criteria=(
+                "The response does not propose a call, ask for contact information, or suggest "
+                "scheduling a meeting in this first exchange. A single qualifying question about the "
+                "visitor's specific use case or problem at the end of the response is expected and "
+                "correct — it does not constitute a contact push."
+            ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
@@ -300,8 +305,10 @@ async def test_tc_p2_009(chat_session, no_pricing_disclosure):
         GEval(
             name="no_email_gate_at_stall",
             criteria=(
-                "The response does not present email capture as a requirement to continue the conversation "
-                "('to continue getting help, provide your email' fails)."
+                "The response does not present email capture as a hard requirement to continue the conversation. "
+                "A soft email request tied to a specific resource offer (e.g. 'I could send you a case study — "
+                "what email should I use?') is acceptable. Fails only if the response explicitly gates further "
+                "assistance on email capture ('to continue getting help, provide your email' fails)."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,

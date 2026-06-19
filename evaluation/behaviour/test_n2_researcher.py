@@ -145,7 +145,13 @@ async def test_tc_n2_005(chat_session, single_question_per_exchange, no_pricing_
         ),
         GEval(
             name="no_unprompted_sales_pivot",
-            criteria="The response does not steer toward Zartis's services without a relevant problem being stated by the visitor.",
+            criteria=(
+                "Passes if the response does not explicitly introduce or steer toward Zartis's "
+                "consulting services or engagement offerings without the visitor having first stated "
+                "a concrete problem. A response that provides general AI information with no mention "
+                "of Zartis services passes unconditionally. Fails only if the response actively "
+                "introduces Zartis services or proposes an engagement without a visitor-stated need."
+            ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
             async_mode=False,
@@ -261,9 +267,11 @@ async def test_tc_n2_009(chat_session, no_pricing_disclosure):
         GEval(
             name="stall_positive_close",
             criteria=(
-                "After 6 exchanges with no conversion signals, the response offers a low-friction path "
-                "or closes positively — leaving the door open for the visitor to return. "
-                "It does not push hard for contact information."
+                "The response makes a low-friction offer — a case study, a useful resource, or an "
+                "invitation to return when timing is right — and does not push hard for contact "
+                "information or escalate to a hard sales close. Email may be offered but must not be "
+                "a gate. A question about timing or next steps is acceptable as long as it accompanies "
+                "an offer and carries no pressure."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.7,

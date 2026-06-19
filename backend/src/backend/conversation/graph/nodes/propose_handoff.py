@@ -88,8 +88,8 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
             # Cold explicit: honour the request immediately with an email ask.
             # Do NOT route to the contact page — PB-15 requires honouring at once.
             cold_contact = (
-                "Absolutely — I'll make sure you're connected with someone from the team. "
-                "What's the best email address to use for the introduction?"
+                "Let me connect you with someone from the team — "
+                "what email should I use for the introduction?"
             )
             for word in cold_contact.split(" "):
                 if word:
@@ -136,10 +136,14 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
         # Small models often generate a qualifying question here instead of the call proposal.
         full_text = _enforce_single_question_email_priority(full_text)
         # Guarantee email ask is present for hot/explicit proposals; stall email is optional.
+        # warm_lead uses resource-offer language ("send this") not sales-intro language.
         if reason != "stall" and not re.search(r"\bemail\b", full_text, re.IGNORECASE):
             non_q_sentences = [s for s in re.split(r"(?<=[.!?])\s+", full_text) if "?" not in s]
             base = " ".join(non_q_sentences).rstrip(" .") if non_q_sentences else ""
-            full_text = (base + " What email address should I send the introduction to?").lstrip()
+            if reason == "warm_lead":
+                full_text = (base + " What email should I send this to?").lstrip()
+            else:
+                full_text = (base + " What email address should I send the introduction to?").lstrip()
         # Guarantee a proposal word is present — language depends on reason.
         # Stall has no guarantee: soft closes don't need a proposal element.
         # Hot-lead uses _HOT_LEAD_PROPOSAL_RE (stricter) to avoid "introduction" in the email
@@ -152,7 +156,7 @@ def _make_propose_handoff(llm_client: "BaseLLMClient"):
         # warm_lead proposals offer a resource, not a call, so no team-response commitment is appropriate.
         if reason in ("hot_lead", "explicit_request") and not any(m in full_text.lower() for m in _COMMITMENT_MARKERS):
             commitment = (
-                "One of our engineers will be in touch within a few hours."
+                "One of our engineers will be in touch within 2 hours."
                 if in_hours
                 else "Our team will be in touch first thing tomorrow morning"
                      " — expect to hear from them by 10am CET/CEST."

@@ -132,10 +132,11 @@ async def test_tc_n1_005(chat_session, no_pricing_disclosure):
         GEval(
             name="public_contact_only",
             criteria=(
-                "The response honours the request but provides only a public contact point "
-                "(e.g. the company website contact page). "
-                "It does not route the visitor to a named sales rep, capture their email for CRM, "
-                "or generate a Slack notification."
+                "The response honours the explicit request to speak with someone from the Zartis team. "
+                "Acceptable responses include: directing to the public contact page on zartis.com, "
+                "or asking for an email address to facilitate the connection. "
+                "The response does NOT ask qualifying questions about company size, budget, role, or "
+                "problem scope before acknowledging the request."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,

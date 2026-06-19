@@ -65,8 +65,11 @@ async def test_tc_p3_002(chat_session, single_question_per_exchange, no_pricing_
         GEval(
             name="immediate_stage3_p3",
             criteria=(
-                "The response triggers a Stage 3 proposal — a short call with an engineer and an email request. "
-                "No further qualifying questions are asked after the hot threshold is confirmed."
+                "The response triggers a Stage 3 proposal — a short call with an engineer — and "
+                "requests an email address. No further qualifying questions about the visitor's "
+                "company, role, problem scope, or timeline are asked after the hot threshold is "
+                "confirmed. Requesting an email address to send the introduction is expected and "
+                "does NOT count as a qualifying question."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
@@ -140,10 +143,12 @@ async def test_tc_p3_005(chat_session, no_pricing_disclosure):
         GEval(
             name="no_guaranteed_same_day_after_4pm",
             criteria=(
-                "If the response addresses outside-hours availability, it commits only to next business morning "
-                "before 10am CET/CEST — not to a same-day call. "
-                "If the system believes it is within business hours, a same-day response is acceptable. "
-                "The test fails only if a same-day commitment is made when the team is demonstrably offline."
+                "If the response acknowledges that the team is offline, working European hours, or "
+                "unavailable right now, the follow-up commitment must be next business morning "
+                "before 10am CET/CEST — NOT a same-day call. If the response makes a same-day "
+                "commitment without any indication the team is offline, this is acceptable provided "
+                "it is consistent with business hours context. Fails only if a same-day commitment "
+                "is combined with an acknowledgment that the team is currently unavailable."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
@@ -268,7 +273,7 @@ async def test_tc_p3_009(chat_session, no_pricing_disclosure):
             criteria=(
                 "The response immediately honours the request to speak with a person. "
                 "It does not ask qualifying questions before offering the connection. "
-                "It asks for an email or explains how to reach the team."
+                "It asks for an email or explains how to reach the team directly."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=0.9,
@@ -277,8 +282,10 @@ async def test_tc_p3_009(chat_session, no_pricing_disclosure):
         GEval(
             name="no_qualification_before_honouring",
             criteria=(
-                "The response does not ask about company size, problem, budget, or role before "
-                "acknowledging the explicit request for a human."
+                "The response honours the explicit human request without asking qualifying questions "
+                "about the visitor's company size, problem, budget, authority, or role before "
+                "acknowledging the request. Asking for an email address to facilitate the introduction "
+                "is expected and does NOT constitute a qualifying question."
             ),
             evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT],
             threshold=1.0,

@@ -11,7 +11,7 @@ import re
 
 # Post-processing markers for clean-close timeframe detection.
 _COMMITMENT_MARKERS = [
-    "within a few hours", "few hours",
+    "within 2 hours", "within a few hours", "few hours",
     "10am cet", "10am cest",
     "next business morning",   # specific enough to satisfy _FOLLOWUP_COMMITMENT_RE
     "business morning before", # "business morning before 10am"
@@ -72,7 +72,23 @@ _HOT_LEAD_PROPOSAL_RE = re.compile(
 # The LLM may generate market-rate figures from training memory even when RAG is suppressed.
 _PRICING_FIGURE_RE = re.compile(
     r"[€$£]\s*\d[\d,\.]*"
-    r"|\d[\d,\.]*\s*(?:EUR|USD|GBP|euro|dollar)\b",
+    r"|\d[\d,\.]*\s*(?:EUR|USD|GBP|euro|dollar)\b"
+    r"|\b\d[\d,\.]*\s*(?:per\s+(?:engineer|day|week|month|head|person|role)"
+    r"|(?:an?\s+)?(?:hour|day|week|month)ly\s+rate)\b",
+    re.IGNORECASE,
+)
+
+# EC-01: authority-surfacing question detection — used to verify the LLM asked the right
+# question so the fallback fires even when a non-authority "?" is already present.
+_AUTHORITY_QUESTION_RE = re.compile(
+    r"(?:who\s+(?:would|else|is)|are\s+you\s+(?:driving|the\s+one)|"
+    r"who(?:'s|\s+is)\s+(?:leading|making|driving|involved)|"
+    r"would\s+be\s+(?:making|driving|leading)\s+the|"
+    r"who\s+(?:owns|drives|leads)\s+(?:the\s+)?vendor|"
+    r"who\s+(?:would\s+)?(?:be\s+)?(?:involved|in\s+charge)|"
+    r"driving\s+the\s+(?:vendor\s+)?selection|"
+    r"alongside\s+on\s+your\s+side|"
+    r"who\s+(?:else\s+)?(?:would|will)\s+be\s+involved)",
     re.IGNORECASE,
 )
 
@@ -112,7 +128,7 @@ _CROSS_SESSION_RE = re.compile(
 )
 _CROSS_SESSION_RESPONSE = (
     "I don't have access to previous conversations — each session starts fresh. "
-    "Feel free to share the relevant context and I'll pick up from there."
+    "Share the relevant context and I'll pick up from there."
 )
 
 # Rule 3: contact-request and call-proposal patterns that must not appear in turn 0 responses.
@@ -313,8 +329,8 @@ _IP_QUESTION_RE = re.compile(
     re.IGNORECASE,
 )
 _IP_ROUTING_RESPONSE = (
-    "IP ownership is contract-specific — the terms are agreed as part of the commercial process. "
-    "You can reach the commercial team via the contact page on zartis.com."
+    "IP and contract terms are handled by our commercial team — they can give you a definitive answer. "
+    "You can reach them via the contact page on zartis.com."
 )
 
 

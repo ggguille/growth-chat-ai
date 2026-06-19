@@ -17,6 +17,7 @@ from backend.knowledge.retrieval import retrieve_knowledge
 
 from ..messages import _RETRIEVE_KNOWLEDGE_TOOL, _format_retrieval_result, _to_api_messages
 from ..postprocessing import (
+    _AUTHORITY_QUESTION_RE,
     _COMMITMENT_MARKERS,
     _CROSS_SESSION_RE,
     _DEFINITION_CLAUSE_RE,
@@ -245,16 +246,19 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
         full_text = _enforce_single_question(full_text)
 
         # Post-process: EC-01 authority question fallback (C9).
-        # When problem+timing confirmed and authority unknown, the LLM sometimes omits the question.
-        # Append the canonical authority question if none is present.
+        # When problem+timing confirmed and authority unknown, the LLM must ask an authority
+        # question. Fires when no authority-surfacing question is present — even if a different
+        # "?" exists (e.g. a technical question instead of the required authority question).
         _ec01_qual = state.get("qualification")
         if (
             not getattr(_ec01_qual, "is_negative_persona", False)
             and getattr(_ec01_qual, "problem_fit", "") == "confirmed"
             and getattr(_ec01_qual, "timing_fit", "") == "confirmed"
             and getattr(_ec01_qual, "authority_fit", "") == "not_detected"
-            and "?" not in full_text
+            and not _AUTHORITY_QUESTION_RE.search(full_text)
         ):
+            if "?" in full_text:
+                full_text = re.sub(r"[^.!?]*\?[^.!?]*$", "", full_text).rstrip(" .")
             full_text = full_text.rstrip(" .") + " Who would the engineers be working alongside on your side?"
 
         # Post-process: enforce Critical Rule 6 identity disclosure (prompt-only failed 3 runs).
