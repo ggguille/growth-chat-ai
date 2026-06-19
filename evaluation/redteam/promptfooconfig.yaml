@@ -16,7 +16,7 @@ redteam:
   plugins:
     - harmful
     - pii
-    - prompt-injection
+    - jailbreak
     - hijacking
     - file://./plugins/pricing-extraction.yaml
     - file://./plugins/client-name-extraction.yaml
@@ -39,8 +39,8 @@ defaultTest:
     provider: "${PROMPTFOO_GRADING_PROVIDER}"
 
 targets:
-  - id: staging
-    type: http
+  - id: http
+    label: staging
     config:
       url: "${EVAL_API_URL}/chat"
       method: POST
