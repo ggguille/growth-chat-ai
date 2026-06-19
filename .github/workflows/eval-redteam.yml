@@ -1,10 +1,14 @@
 name: Red Team Evaluation
 
 on:
-  # TODO(Phase 5): add pull_request trigger once the conversation agent is deployed to staging
-  #   paths: [backend/**, data/knowledge-base/**, evaluation/redteam/**]
-  # TODO(Phase 5): add workflow_run trigger (Deploy Backend, completed, branches: [main])
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "evaluation/**"
+  workflow_run:
+    workflows: ["Deploy Backend"]
+    types: [completed]
+    branches: [main]
 
 concurrency:
   group: eval-redteam-${{ github.ref }}
@@ -12,13 +16,13 @@ concurrency:
 
 jobs:
   redteam:
-    name: promptfoo red team (baseline 20 cases)
+    name: promptfoo red team (20 baseline + adaptive)
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: evaluation
-    # Disabled — enable in Phase 5 when the conversation agent is deployed to staging.
-    # Remove `if: false` when backend/src/backend/conversation/ has a working LangGraph agent
-    # and it is deployed to staging. Also remove the TODO comments above and add the triggers.
-    if: false
+    # Red team failures require explicit documented review before deploy approval.
+    # The job is continue-on-error so it does not auto-block the deploy.
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v6
@@ -27,15 +31,25 @@ jobs:
         with:
           node-version: "20"
 
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
       - name: Install promptfoo
         run: npm install -g promptfoo
 
+      - name: Install workspace dependencies
+        run: uv sync
+
       - name: Run baseline adversarial tests (TC-ADV-001..020)
-        # TODO(Phase 5): add a second step for adaptive attacks:
-        #   promptfoo redteam run --config evaluation/redteam/promptfooconfig.yaml
-        # Adaptive attacks (GOAT/Crescendo) are expensive — run as a separate manual gate.
-        run: promptfoo eval --config evaluation/redteam/promptfooconfig.yaml --no-cache
+        run: |
+          promptfoo eval \
+            --config evaluation/redteam/promptfooconfig.yaml \
+            --no-cache \
+            --output evaluation/redteam/results-baseline.json \
+            --output evaluation/redteam/results-baseline.html
         env:
+          SESSION_PREFIX: "ci-${{ github.run_id }}-"
           EVAL_API_URL: ${{ vars.EVAL_API_URL }}
           ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
           PROMPTFOO_GRADING_PROVIDER: anthropic:messages:claude-haiku-4-5-20251001
@@ -43,3 +57,58 @@ jobs:
           LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
           LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
           LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
+
+      - name: Run adaptive red team (GOAT/Crescendo — generates attack variations)
+        run: |
+          promptfoo redteam run \
+            --config evaluation/redteam/promptfooconfig.yaml \
+            --no-cache \
+            --output evaluation/redteam/results-adaptive.json \
+            --output evaluation/redteam/results-adaptive.html
+        env:
+          SESSION_PREFIX: "ci-${{ github.run_id }}-adaptive-"
+          EVAL_API_URL: ${{ vars.EVAL_API_URL }}
+          ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
+          PROMPTFOO_GRADING_PROVIDER: anthropic:messages:claude-haiku-4-5-20251001
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
+
+      - name: Export baseline results to Langfuse
+        if: always()
+        run: |
+          uv run --package evaluation python evaluation/redteam/langfuse_exporter.py \
+            --results evaluation/redteam/results-baseline.json \
+            --run-name "ci-${{ github.run_id }}-baseline"
+        env:
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
+
+      - name: Upload red team results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: redteam-results-${{ github.run_id }}
+          path: |
+            evaluation/redteam/results-*.json
+            evaluation/redteam/results-*.html
+          retention-days: 30
+
+      - name: Post job summary
+        if: always()
+        run: |
+          echo "## Red Team Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f evaluation/redteam/results-baseline.json ]; then
+            PASS=$(python3 -c "import json; d=json.load(open('evaluation/redteam/results-baseline.json')); print(d.get('stats',{}).get('successes',0))")
+            FAIL=$(python3 -c "import json; d=json.load(open('evaluation/redteam/results-baseline.json')); print(d.get('stats',{}).get('failures',0))")
+            echo "| Suite | Pass | Fail |" >> $GITHUB_STEP_SUMMARY
+            echo "| --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
+            echo "| Baseline (TC-ADV-001..020) | $PASS | $FAIL |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "Results artifact: \`redteam-results-${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> A red team failure requires **explicit documented review** before deploy approval (action plan §Phase 5)." >> $GITHUB_STEP_SUMMARY

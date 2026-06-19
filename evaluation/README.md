@@ -252,15 +252,29 @@ skip automatically when no provider is configured. Deterministic tests
 
 ### Run the red team suite
 
+Export env vars before running (promptfoo does not auto-load `evaluation/.env`):
+
 ```bash
-cd evaluation/redteam
-promptfoo eval
+export $(grep -v '^#' evaluation/.env | xargs)
 ```
 
-Results open in the promptfoo browser UI by default. To output JSON:
+Run from the **project root** (consistent with CI):
 
 ```bash
-promptfoo eval --output results.json
+# Baseline 20 cases
+promptfoo eval --config evaluation/redteam/promptfooconfig.yaml --no-cache
+
+# Output to JSON
+promptfoo eval --config evaluation/redteam/promptfooconfig.yaml --no-cache --output evaluation/redteam/results-baseline.json
+
+# Adaptive GOAT/Crescendo attacks (expensive — generates new attack variations)
+promptfoo redteam run --config evaluation/redteam/promptfooconfig.yaml --no-cache
+```
+
+Set `SESSION_PREFIX` to distinguish your local run from CI runs and from previous local runs:
+
+```bash
+export SESSION_PREFIX=local-$(date +%s)-
 ```
 
 ### Calibrate the RAG threshold
@@ -373,9 +387,31 @@ If `LANGFUSE_PUBLIC_KEY` is set, the run is logged to Langfuse as a full Dataset
 
 ## Langfuse integration
 
+### Behaviour tests
+
 When `LANGFUSE_PUBLIC_KEY` is set, DeepEval automatically ships eval scores as traces to Langfuse. No code changes are needed — `behaviour/conftest.py` sets the required environment variables at startup.
 
 This lets you correlate eval scores with production traces in the same Langfuse project.
+
+### Red team
+
+When `LANGFUSE_PUBLIC_KEY` is set, the CI workflow runs `evaluation/redteam/langfuse_exporter.py` after the promptfoo eval step. It pushes each test case (TC-ADV-001..020) to Langfuse as a Dataset experiment:
+
+- **Dataset:** `redteam_eval` — one item per test case, keyed by description
+- **Experiments:** visible at **Datasets → redteam_eval → Experiments** (e.g. `ci-12345-baseline`)
+- **Scores per trace:** `pass` (1.0/0.0) + per-assertion scores (`not-contains_0`, `llm-rubric_1`, etc.)
+- **Metadata:** `threat_category` (`information_extraction` | `prompt_injection` | `persona_boundary` | `qualification_bypass`)
+
+To run the exporter locally:
+
+```bash
+export $(grep -v '^#' evaluation/.env | xargs)
+python evaluation/redteam/langfuse_exporter.py \
+    --results evaluation/redteam/results-baseline.json \
+    --run-name local-$(date +%s)
+```
+
+The script is non-fatal: if Langfuse is not configured or upload fails, it prints a warning and exits 0 so CI results are never blocked by observability issues.
 
 ---
 
@@ -389,7 +425,7 @@ Three independent evaluation gates run in GitHub Actions:
 | Red Team Evaluation | `eval-redteam.yml` | promptfoo (20 baseline adversarial cases) | Red-team gate |
 | RAG Evaluation | `eval-rag.yml` | RAGAS (43 Q/A pairs, 4 metrics) | RAG quality gate |
 
-All are currently disabled (`if: false`) and triggered manually only. They are enabled independently: behaviour in Phase 2, RAG in Phase 4, red team in Phase 5.
+Behaviour and RAG are still gated by `if: false` in their workflows; red team is active (Phase 5). They are enabled independently: behaviour in Phase 2, RAG in Phase 4, red team in Phase 5.
 
 ### Behaviour suite (`eval-behaviour.yml`)
 
@@ -429,20 +465,13 @@ The red team workflow (`eval-redteam.yml`) also runs **manually only** (`workflo
 | `pull_request` | Phase 5 | PR opens/updates on `backend/**`, `data/knowledge-base/**`, `evaluation/redteam/**` | Currently deployed staging | Adversarial regression check |
 | `workflow_run` (Deploy Backend) | Phase 5 | After a backend deploy completes on `main` | Freshly deployed staging | **Red-team gate** — independent of the behaviour gate |
 
-### Red team disabled state
+### Red team current state (Phase 5 — active)
 
-The workflow job is guarded by `if: false` until the full agent is deployed to staging in Phase 5.
+The red team workflow is enabled. It runs on `workflow_dispatch`, on PRs touching `backend/**`, `data/knowledge-base/**`, or `evaluation/redteam/**`, and after a successful `Deploy Backend` run on `main`.
 
-**To enable in Phase 5:**
+The job has `continue-on-error: true` — failures do not auto-block deploys. A red team failure requires explicit documented review before approval (action plan §Phase 5).
 
-1. Remove the `if: false` line from the `redteam` job in `.github/workflows/eval-redteam.yml`.
-2. Confirm `ZGC_API_KEY` and `ANTHROPIC_API_KEY` are set in the `evaluation` GitHub environment.
-3. Trigger a manual run via `workflow_dispatch` to verify the 20 baseline cases complete.
-4. A red team failure does **not** block the deploy automatically — it requires explicit documented review before approval (see action plan Phase 5).
-
-**To add adaptive GOAT/Crescendo attacks in Phase 5:**
-
-Add a `promptfoo redteam run` step after `promptfoo eval`. The `TODO(Phase 5)` comment in the workflow marks the exact location.
+Results are uploaded as a GitHub Actions artifact (`redteam-results-{run_id}`) with 30-day retention.
 
 ### RAG evaluation suite (`eval-rag.yml`)
 
