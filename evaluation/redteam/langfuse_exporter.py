@@ -197,8 +197,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     data = json.loads(results_path.read_text())
-    results: list[dict] = data.get("results", [])
-    stats: dict = data.get("stats", {})
+    raw = data.get("results", [])
+    if isinstance(raw, dict):
+        # promptfoo ≥ v0.100 wraps results in a dict with version/stats/table sub-keys
+        results: list[dict] = raw.get("results", [])
+        stats: dict = raw.get("stats", data.get("stats", {}))
+    else:
+        results = raw
+        stats = data.get("stats", {})
 
     _print_summary(results, stats, args.run_name)
 

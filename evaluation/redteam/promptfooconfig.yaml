@@ -16,7 +16,6 @@ redteam:
   plugins:
     - harmful
     - pii
-    - jailbreak
     - hijacking
     - file://./plugins/pricing-extraction.yaml
     - file://./plugins/client-name-extraction.yaml

@@ -50,7 +50,7 @@ jobs:
             --output evaluation/redteam/results-baseline.html
         env:
           SESSION_PREFIX: "ci-${{ github.run_id }}-"
-          EVAL_API_URL: ${{ vars.EVAL_API_URL }}
+          EVAL_API_URL: ${{ vars.EVAL_API_URL || 'https://growth-chat-api.fly.dev' }}
           ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
           PROMPTFOO_GRADING_PROVIDER: anthropic:messages:claude-haiku-4-5-20251001
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -67,7 +67,7 @@ jobs:
             --output evaluation/redteam/results-adaptive.html
         env:
           SESSION_PREFIX: "ci-${{ github.run_id }}-adaptive-"
-          EVAL_API_URL: ${{ vars.EVAL_API_URL }}
+          EVAL_API_URL: ${{ vars.EVAL_API_URL || 'https://growth-chat-api.fly.dev' }}
           ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
           PROMPTFOO_GRADING_PROVIDER: anthropic:messages:claude-haiku-4-5-20251001
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
