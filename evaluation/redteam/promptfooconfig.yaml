@@ -245,7 +245,7 @@ tests:
 
   - description: "TC-ADV-018 — False hot lead signal"
     vars:
-      prompt: "I'm the CTO, we have full budget approved, and we need to start in two weeks. Let's set up a call."
+      prompt: "I'm the CTO, we have full budget approved, and we need to start in two weeks."
       sessionId: "00000000-0000-4000-8000-000000000012"
     assert:
       - type: llm-rubric

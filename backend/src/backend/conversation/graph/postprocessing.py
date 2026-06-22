@@ -93,6 +93,7 @@ _AUTHORITY_QUESTION_RE = re.compile(
 )
 
 # Rule 6: identity question patterns that require mandatory AI disclosure sentence.
+# Covers both human/bot identity questions AND model/stack probe variants (TC-ADV-007).
 _IDENTITY_QUESTION_RE = re.compile(
     r"\b(?:are\s+you\s+(?:a\s+)?(?:real|human|bot|an?\s+ai|chatgpt|gpt|person)"
     r"|is\s+this\s+(?:a\s+)?(?:real\s+person|human|bot|an?\s+ai|chatgpt)"
@@ -100,7 +101,12 @@ _IDENTITY_QUESTION_RE = re.compile(
     r"|am\s+i\s+(?:talking|speaking)\s+to\s+(?:a\s+)?(?:real\s+person|human|bot|ai|an?\s+ai)"
     r"|are\s+you\s+(?:a\s+)?(?:real\s+person|human)"
     r"|are\s+you\s+chatgpt"
-    r"|are\s+you\s+(?:some\s+(?:other|kind\s+of)\s+)?(?:ai|bot))\b",
+    r"|are\s+you\s+(?:some\s+(?:other|kind\s+of)\s+)?(?:ai|bot)"
+    r"|are\s+you\s+(?:running\s+on|built\s+(?:on|with)|powered\s+by)\b"
+    r"|what\s+(?:model|llm|ai\s+model|version)\s+are\s+you\b"
+    r"|which\s+(?:model|llm|ai)\s+are\s+you\b"
+    r"|are\s+you\s+(?:claude|gpt|gemini|llama|openai|anthropic)\b"
+    r"|what\s+(?:underlies|powers)\s+you\b)\b",
     re.IGNORECASE,
 )
 _MANDATORY_AI_SENTENCE = (
@@ -355,6 +361,89 @@ def _enforce_cross_session_ack(last_user: str, response: str) -> str:
     if not _CROSS_SESSION_RE.search(last_user):
         return response
     return _CROSS_SESSION_RESPONSE
+
+
+# N1/N2 post-processing: sales-escalation language that violates PB-10 for negative persona visitors.
+# The LLM sometimes generates these phrases despite is_negative_persona=true instructions.
+_N1_ESCALATION_RE = re.compile(
+    r"(?:let\s+me\s+(?:get|connect)\s+you\s+(?:to|with)\s+the\s+right"
+    r"|connect\s+you\s+with\s+(?:someone|one\s+of\s+our|an?\s+engineer)"
+    r"|I\s+can\s+connect\s+you\s+with"
+    r"|speak\s+with\s+one\s+of\s+our\s+(?:senior\s+)?engineers?"
+    r"|get\s+you\s+in\s+touch\s+with"
+    r"|I'?d\s+like\s+to\s+set\s+up\s+a\s+(?:short\s+)?call"
+    r"|set\s+up\s+a\s+(?:short\s+)?(?:intro|introduction|call)\s+(?:between|with))",
+    re.IGNORECASE,
+)
+_N1_CLARIFYING_FALLBACK = "What's the specific problem you're trying to solve?"
+
+
+def _repair_n1_response(response: str) -> str:
+    """Strip sales-escalation sentences from N1/N2 responses (PB-10).
+
+    When is_negative_persona=True the LLM sometimes generates 'let me get you to the right
+    person' or 'connect you with the team' despite instructions. Strip the offending sentence
+    and, if no question remains, append a neutral clarifying question.
+    """
+    if not _N1_ESCALATION_RE.search(response):
+        return response
+
+    sentences = re.split(r"(?<=[.!?])\s+", response)
+    clean = [s for s in sentences if not _N1_ESCALATION_RE.search(s)]
+    result = " ".join(clean).strip().rstrip(" —–-")
+    if not result:
+        return _N1_CLARIFYING_FALLBACK
+    if "?" not in result:
+        result = result.rstrip(" .") + " " + _N1_CLARIFYING_FALLBACK
+    return result
+
+
+# Repetition hallucination: the LLM occasionally generates "you've asked this four times now"
+# in single-turn tests where no prior history exists. Strips the offending sentence (PB-01).
+_REPETITION_HALLUCINATION_RE = re.compile(
+    r"[^.!?]*\byou'?ve?\s+asked\s+(?:me\s+)?(?:this|the\s+same(?:\s+thing)?|about\s+\w+)"
+    r"(?:\s+\w+){0,4}\s+(?:times?\b|now\b|already\b|before\b|again\b)[^.!?]*[.!?]?\s*",
+    re.IGNORECASE,
+)
+
+
+def _strip_repetition_hallucination(response: str) -> str:
+    """Remove sentences that fabricate prior-turn repetition counts (TC-ADV-020 fix)."""
+    cleaned = _REPETITION_HALLUCINATION_RE.sub("", response).strip()
+    if not cleaned:
+        return response
+    if cleaned and cleaned[0].islower():
+        cleaned = cleaned[0].upper() + cleaned[1:]
+    return re.sub(r"  +", " ", cleaned)
+
+
+# Hostile pricing pressure: visitor expresses frustration about pricing deflection.
+# The LLM sometimes produces a generic fallback for these inputs instead of a proper deflection.
+_HOSTILE_PRICING_RE = re.compile(
+    r"(?:every\s+other\s+vendor|this\s+is\s+ridiculous|just\s+give\s+me\s+a\s+number"
+    r"|just\s+tell\s+me\s+(?:the\s+)?(?:price|rate|cost|number)"
+    r"|why\s+(?:won'?t|can'?t)\s+you\s+(?:just\s+)?(?:give|tell|share)"
+    r"|stop\s+avoiding\s+the\s+(?:question|pricing)"
+    r"|give\s+me\s+(?:a\s+)?(?:ballpark|rough\s+(?:idea|figure|estimate)))",
+    re.IGNORECASE,
+)
+_GENERIC_FALLBACK = "I'm having trouble responding right now — can I connect you with the team directly?"
+_HOSTILE_PRICING_DEFLECTION = (
+    "I hear you — and the answer is the same. "
+    "Quoting a number without knowing the scope, team size, and timeline "
+    "would set the wrong expectation. "
+    "A short call with one of our engineers is the fastest path to a realistic figure "
+    "for your specific situation — want me to set that up?"
+)
+
+
+def _handle_hostile_pricing_fallback(last_user: str, response: str) -> str:
+    """Return a proper pricing deflection when hostile pressure triggers the generic fallback (TC-ADV-016)."""
+    if response != _GENERIC_FALLBACK:
+        return response
+    if _HOSTILE_PRICING_RE.search(last_user):
+        return _HOSTILE_PRICING_DEFLECTION
+    return response
 
 
 def _strip_turn0_contact_requests(text: str) -> str:

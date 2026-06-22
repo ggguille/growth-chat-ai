@@ -103,6 +103,9 @@ _TIMING_FIT_RE = re.compile(
 _N1_MARKET_RE = re.compile(
     r"\b(?:market\s+research|competitive\s+(?:analysis|intelligence|research)"
     r"|researching\s+(?:vendors?|companies|providers?|options?)"
+    r"|researching\s+(?:the\s+)?(?:\w+\s+){0,3}(?:market|space|landscape|sector)"
+    r"|for\s+(?:a|an)\s+(?:\w+\s+)?(?:report|study|analysis|survey)"
+    r"|(?:market|industry|landscape)\s+(?:report|study|overview|survey|analysis)"
     r"|writing\s+(?:a|an)\s+(?:\w+\s+)?report"
     r"|industry\s+(?:research|report|survey|benchmarking)"
     r"|benchmarking|comparing\s+(?:providers?|vendors?|companies)"

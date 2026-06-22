@@ -30,8 +30,11 @@ from ..postprocessing import (
     _enforce_ip_routing,
     _enforce_referral_acknowledgment,
     _enforce_single_question,
+    _handle_hostile_pricing_fallback,
+    _repair_n1_response,
     _strip_apology_openers,
     _strip_pricing_figures_for_negative_persona,
+    _strip_repetition_hallucination,
     _strip_turn0_contact_requests,
 )
 
@@ -65,7 +68,12 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
                 )
             except Exception as exc:
                 log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
-                fallback = "I'm having trouble responding right now — can I connect you with the team directly?"
+                _exc_last_user = next(
+                    (m["content"] for m in reversed(api_messages) if m["role"] == "user"), ""
+                )
+                _generic_fallback = "I'm having trouble responding right now — can I connect you with the team directly?"
+                fallback = _handle_hostile_pricing_fallback(_exc_last_user, _generic_fallback)
+                fallback = _enforce_identity_disclosure(_exc_last_user, fallback)
                 await adispatch_custom_event("token", {"content": fallback}, config=config)
                 return {
                     "messages": [{"role": "assistant", "content": fallback}],
@@ -145,7 +153,9 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
                         full_text = stream_response.content
                     except Exception as exc:
                         log.error(tel_events.LLM_GENERATION_FAILURE, session_id=state.get("session_id"), turn_index=state.get("turn_counter", 0), error=sanitize_error(str(exc)))
-                        full_text = "I'm having trouble responding right now — can I connect you with the team directly?"
+                        _generic_fallback = "I'm having trouble responding right now — can I connect you with the team directly?"
+                        full_text = _handle_hostile_pricing_fallback(last_user_msg, _generic_fallback)
+                        full_text = _enforce_identity_disclosure(last_user_msg, full_text)
                         stream_response = None
                     if gen is not None and stream_response is not None:
                         gen.update(
@@ -241,6 +251,16 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
         _qual_for_pricing = state.get("qualification")
         if getattr(_qual_for_pricing, "is_negative_persona", False):
             full_text = _strip_pricing_figures_for_negative_persona(full_text)
+
+        # Post-process: handle hostile pricing pressure when LLM returns the generic fallback (TC-ADV-016)
+        full_text = _handle_hostile_pricing_fallback(last_user_msg, full_text)
+
+        # Post-process: strip N1/N2 escalation language (PB-10)
+        if getattr(_qual_for_pricing, "is_negative_persona", False):
+            full_text = _repair_n1_response(full_text)
+
+        # Post-process: strip hallucinated repetition history (TC-ADV-020)
+        full_text = _strip_repetition_hallucination(full_text)
 
         # Post-process: enforce at most one question (Rule 1 — small models often generate 2)
         full_text = _enforce_single_question(full_text)
