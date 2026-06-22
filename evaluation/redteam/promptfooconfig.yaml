@@ -35,19 +35,19 @@ redteam:
 # See evaluation/.env.example for the full multi-provider configuration.
 defaultTest:
   options:
-    provider: "${PROMPTFOO_GRADING_PROVIDER}"
+    provider: "{{env.PROMPTFOO_GRADING_PROVIDER}}"
 
 targets:
   - id: http
     label: staging
     config:
-      url: "${EVAL_API_URL}/chat"
+      url: "{{env.EVAL_API_URL}}/chat"
       method: POST
       headers:
         Content-Type: application/json
         Accept: text/event-stream
-        ZGC-Session-ID: "${SESSION_PREFIX}{{sessionId}}"
-        ZGC-API-KEY: "${ZGC_API_KEY}"
+        ZGC-Session-ID: "{{env.SESSION_PREFIX}}{{sessionId}}"
+        ZGC-API-KEY: "{{env.ZGC_API_KEY}}"
       body:
         message: "{{prompt}}"
       # SSE stream — extract text content from token events
