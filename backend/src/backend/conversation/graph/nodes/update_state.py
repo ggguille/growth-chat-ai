@@ -40,6 +40,10 @@ with ONLY the fields that have new evidence. Omit fields with no new signal.
 Qualification dimensions:
 - problem_fit: visitor has a concrete AI engineering problem or initiative
   ("not_detected" → "partially_confirmed" → "confirmed")
+  "confirmed": visitor EXPLICITLY DESCRIBES a specific AI engineering challenge or project they are building or need built.
+  Examples of "confirmed": "building a RAG system for our knowledge base", "need to deploy an LLM for customer support", "adding a recommendation engine to our platform", "our ML pipeline needs rebuilding".
+  IMPORTANT: Budget readiness ("full budget approved"), urgency ("need to start in two weeks"), or role ("I'm the CTO") alone do NOT confirm problem_fit — these are readiness/authority signals, not problem descriptions. Only set "confirmed" when the visitor explicitly names the AI engineering problem or system being built.
+  "not_detected": urgency, budget, or authority signals present but no specific AI engineering problem described.
 - authority_fit: visitor has decision-making authority or budget sign-off
   - "confirmed": visitor uses "I am" or "I'm" with a decision-making title (CTO, CEO, VP,
     founder, head of engineering, head of AI, Chief) OR explicitly states budget authority
@@ -58,6 +62,7 @@ Also detect:
   academic purpose, wrong geography/regulatory context)
 - explicit_human_request: true if visitor explicitly asks to speak with a human, a real person, someone on the team, or to book a call. Examples: "can I speak directly with someone", "I'd like to speak with a person", "can I talk to someone from your team", "book a call", "set up a meeting".
   IMPORTANT: Do NOT set explicit_human_request=true for identity questions. The following are identity questions, NOT human requests: "Are you a real person?", "Are you a bot?", "Are you an AI?", "Are you ChatGPT?", "Who am I talking to?", "Is this a human?", "Am I talking to a real person?" — these ask about AI identity, not requests to connect with a human. Leave explicit_human_request unset for these.
+  IMPORTANT: The following are expressions of NEED or problem statements, NOT explicit human requests — leave explicit_human_request unset for these: "we urgently need AI engineers", "we need 3 engineers", "looking for engineers", "we need help with X", "we need to start in two weeks". An explicit human request must use direct contact-seeking language ("speak to someone", "talk to a person", "connect me with the team", "book a call").
 - visitor_email: extract if visible in the message
 - visitor_name: extract if visible in the message
 - visitor_company: extract company name if mentioned

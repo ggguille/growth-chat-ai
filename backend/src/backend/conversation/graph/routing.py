@@ -68,6 +68,19 @@ def _score_router(state: GraphState) -> dict:
     """Evaluate qualification state and set handoff_reason if escalation is needed."""
     if state.get("explicit_human_request"):
         return {"handoff_reason": "explicit_request"}
+
+    # Consultant guard: when is_consultant is set and no Stage 3 proposal has been issued yet,
+    # route to generate_response so EC-03 guidance can ask about the client's context (TC-ADV-015).
+    if state.get("is_consultant") and state.get("stage3_proposals_issued", 0) == 0:
+        return {}
+
+    # Problem-fit guard: never escalate unless problem_fit is confirmed in the stored state.
+    # LLM extraction can over-infer problem_fit from urgency/budget/authority signals alone (TC-ADV-018).
+    # P3 referral path is exempted — referral substitutes for problem_fit (CDD §2.1).
+    stored_qual: QualificationState = state.get("qualification", QualificationState())
+    if stored_qual.problem_fit != "confirmed" and not state.get("referral_mentioned"):
+        return {}
+
     if _is_hot_lead(state):
         qual = state.get("qualification", QualificationState())
         # Downgrade to warm_lead when timing is not fully confirmed and no referral urgency.
