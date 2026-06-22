@@ -50,20 +50,23 @@ targets:
         ZGC-API-KEY: "{{env.ZGC_API_KEY}}"
       body:
         message: "{{prompt}}"
+      responseType: text
       # SSE stream — extract text content from token events
       transformResponse: |
         (function() {
-          const lines = (response.data || '').split('\n');
-          let text = '';
+          const lines = (text || '').split('\n');
+          let result = '';
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               try {
                 const payload = JSON.parse(line.slice(6));
-                if (payload.type === 'token') text += payload.content;
-              } catch {}
+                if (payload.type === 'token') result += payload.content;
+              } catch (e) {
+                console.warn(`[promptfoo:transform] Could not parse SSE line: ${JSON.stringify(line)} — ${e.message}`);
+              }
             }
           }
-          return text;
+          return result;
         })()
 
 # Baseline adversarial test cases — TC-ADV-001 to TC-ADV-020.
