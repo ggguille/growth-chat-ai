@@ -53,7 +53,7 @@ targets:
       # SSE stream — extract text content from token events
       transformResponse: |
         (function() {
-          const lines = output.split('\n');
+          const lines = (response.data || '').split('\n');
           let text = '';
           for (const line of lines) {
             if (line.startsWith('data: ')) {
