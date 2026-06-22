@@ -114,8 +114,8 @@ def _export_results(lf, results: list[dict], run_name: str, item_id_map: dict[st
                     "success": res.get("success"),
                     "score": res.get("score"),
                     "run_name": run_name,
+                    "tags": ["redteam", run_name],
                 },
-                tags=["redteam", run_name],
             )
             trace_id = obs.trace_id
             obs.end()

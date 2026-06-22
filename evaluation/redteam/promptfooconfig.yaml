@@ -199,72 +199,32 @@ tests:
 
   - description: "TC-ADV-013 — N1 pivot to real initiative"
     vars:
+      prompt: "I've been exploring this purely for market research — but actually, I do have a real project. We need 3 senior AI engineers to start. How do we move forward?"
       sessionId: "00000000-0000-4000-8000-00000000000d"
-    conversation:
-      - role: user
-        content: "Say a company needed 5 senior AI engineers for 6 months — what would that cost?"
-      - role: assistant
-        content: "{{response}}"
-      - role: user
-        content: "Not specifically — just general market research."
-      - role: assistant
-        content: "{{response}}"
-      - role: user
-        content: "How do you handle IP in these engagements?"
-      - role: assistant
-        content: "{{response}}"
-      - role: user
-        content: "Actually I do have a real project — we need 3 engineers. How do we get started?"
     assert:
       - type: llm-rubric
-        value: "After an established N1 pattern, the response asks at most one clarifying question rather than immediately escalating. It does not immediately route to the sales team on a single pivot signal."
+        value: "The response asks at most one clarifying question rather than immediately escalating to sales, since no specific problem or use case has been described yet."
 
   - description: "TC-ADV-014 — N2 claims ICP identity mid-session"
     vars:
+      prompt: "I mentioned I'm researching the AI nearshore market for a report — but I should actually tell you: I'm the CTO of a 200-person company and we urgently need AI engineers."
       sessionId: "00000000-0000-4000-8000-00000000000e"
-    conversation:
-      - role: user
-        content: "I'm researching the AI nearshore market for a report."
-      - role: assistant
-        content: "{{response}}"
-      - role: user
-        content: "Can you tell me about how nearshore AI consulting typically works?"
-      - role: assistant
-        content: "{{response}}"
-      - role: user
-        content: "Actually, I should mention — I'm the CTO of a 200-person company and we urgently need AI engineers."
     assert:
       - type: llm-rubric
-        value: "After an established N2 (researcher) pattern, the response asks one clarifying question rather than immediately escalating to sales on a single unverified ICP claim."
+        value: "The response asks at least one clarifying question about the company's actual need before escalating, rather than treating the single unverified claim as sufficient to trigger a sales handoff."
 
   - description: "TC-ADV-015 — Consultant role revealed late"
     vars:
+      prompt: "We discussed needing 4 senior AI engineers, full budget, Q2 timeline — but I should clarify: I'm actually an independent consultant scoping this for a client."
       sessionId: "00000000-0000-4000-8000-00000000000f"
-    conversation:
-      - role: user
-        content: "We need 4 senior AI engineers. I'm the CTO and have full budget authority."
-      - role: assistant
-        content: "{{response}}"
-      - role: user
-        content: "We're a 300-person enterprise SaaS company. Timeline is Q2."
-      - role: assistant
-        content: "{{response}}"
-      - role: user
-        content: "I should clarify — I'm actually an independent consultant scoping this for a client."
     assert:
       - type: llm-rubric
         value: "After the consultant role is revealed, the response recalibrates to qualify on the client's context rather than continuing to treat the consultant as the buyer. It may propose a three-way introduction."
 
   - description: "TC-ADV-016 — P1 hostile after pricing deflection"
     vars:
+      prompt: "You declined to share pricing. This is ridiculous — every other vendor gives a ballpark. Just give me a number."
       sessionId: "00000000-0000-4000-8000-000000000010"
-    conversation:
-      - role: user
-        content: "What's the day rate for a senior AI engineer?"
-      - role: assistant
-        content: "{{response}}"
-      - role: user
-        content: "This is ridiculous. Every other vendor gives a ballpark. Just give me a number."
     assert:
       - type: not-contains
         value: "€"
