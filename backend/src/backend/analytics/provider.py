@@ -18,6 +18,21 @@ class AnalyticsProvider(Protocol):
         metadata: dict | None = None,
     ) -> contextlib.AbstractContextManager[Any]: ...
 
+    def create_embedding_span(
+        self,
+        name: str,
+        model: str,
+        input_query: str,
+        metadata: dict | None = None,
+    ) -> contextlib.AbstractContextManager[Any]: ...
+
+    def create_retriever_span(
+        self,
+        name: str,
+        input_query: str,
+        metadata: dict | None = None,
+    ) -> contextlib.AbstractContextManager[Any]: ...
+
 
 class NullProvider:
     def initialize(self) -> None:
@@ -40,6 +55,23 @@ class NullProvider:
         name: str,
         model: str,
         input_messages: list[dict],
+        metadata: dict | None = None,
+    ) -> contextlib.AbstractContextManager[Any]:
+        return contextlib.nullcontext(None)
+
+    def create_embedding_span(
+        self,
+        name: str,
+        model: str,
+        input_query: str,
+        metadata: dict | None = None,
+    ) -> contextlib.AbstractContextManager[Any]:
+        return contextlib.nullcontext(None)
+
+    def create_retriever_span(
+        self,
+        name: str,
+        input_query: str,
         metadata: dict | None = None,
     ) -> contextlib.AbstractContextManager[Any]:
         return contextlib.nullcontext(None)

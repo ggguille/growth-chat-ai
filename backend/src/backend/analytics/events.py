@@ -38,3 +38,35 @@ def generation_span(
         metadata=metadata,
     ) as gen:
         yield gen
+
+
+@contextlib.contextmanager
+def embedding_span(
+    name: str,
+    model: str = "unknown",
+    input_query: str = "",
+    metadata: dict | None = None,
+):
+    from backend.analytics import analytics_provider  # late import avoids circular
+    with analytics_provider.create_embedding_span(
+        name=name,
+        model=model,
+        input_query=input_query,
+        metadata=metadata,
+    ) as obs:
+        yield obs
+
+
+@contextlib.contextmanager
+def retriever_span(
+    name: str,
+    input_query: str = "",
+    metadata: dict | None = None,
+):
+    from backend.analytics import analytics_provider  # late import avoids circular
+    with analytics_provider.create_retriever_span(
+        name=name,
+        input_query=input_query,
+        metadata=metadata,
+    ) as obs:
+        yield obs

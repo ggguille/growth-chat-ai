@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from backend.analytics.events import AnalyticsEvent, emit_event, generation_span
+from backend.analytics.events import AnalyticsEvent, emit_event, embedding_span, generation_span, retriever_span
 from backend.analytics.provider import NullProvider
 
 
@@ -207,3 +207,121 @@ def test_generation_span_delegates_to_provider(monkeypatch):
 
     with generation_span(name="test_gen", model="m", input_messages=[{"role": "user", "content": "hi"}]) as gen:
         assert gen is mock_gen
+
+
+# ── NullProvider — new span types ────────────────────────────────────────────
+
+def test_null_provider_create_embedding_span_is_context_manager():
+    with NullProvider().create_embedding_span(
+        name="embed_query",
+        model="text-embedding-3-small",
+        input_query="What is Zartis?",
+    ) as obs:
+        assert obs is None
+
+
+def test_null_provider_create_retriever_span_is_context_manager():
+    with NullProvider().create_retriever_span(
+        name="vector_search",
+        input_query="What is Zartis?",
+    ) as obs:
+        assert obs is None
+
+
+# ── LangfuseProvider — embedding span ────────────────────────────────────────
+
+def test_langfuse_provider_create_embedding_span_enters_generation_observation(langfuse_provider):
+    mock_client = MagicMock()
+    mock_obs = MagicMock()
+    mock_ctx = MagicMock()
+    mock_ctx.__enter__ = MagicMock(return_value=mock_obs)
+    mock_ctx.__exit__ = MagicMock(return_value=False)
+    mock_client.start_as_current_observation.return_value = mock_ctx
+
+    with patch("langfuse.get_client", return_value=mock_client):
+        with langfuse_provider.create_embedding_span(
+            name="embed_query",
+            model="text-embedding-3-small",
+            input_query="What is Zartis?",
+            metadata={"session_id": "s1"},
+        ) as obs:
+            assert obs is mock_obs
+            obs.update(output={"vector_dim": 1536})
+
+    mock_client.start_as_current_observation.assert_called_once_with(
+        as_type="embedding",
+        name="embed_query",
+        model="text-embedding-3-small",
+        input="What is Zartis?",
+        metadata={"session_id": "s1"},
+    )
+    mock_ctx.__exit__.assert_called_once_with(None, None, None)
+
+
+def test_langfuse_provider_create_embedding_span_silences_errors(langfuse_provider):
+    with patch("langfuse.get_client", side_effect=RuntimeError("sdk unavailable")):
+        with langfuse_provider.create_embedding_span(
+            name="e", model="m", input_query="q",
+        ) as obs:
+            assert obs is None
+
+
+# ── LangfuseProvider — retriever span ────────────────────────────────────────
+
+def test_langfuse_provider_create_retriever_span_enters_span_observation(langfuse_provider):
+    mock_client = MagicMock()
+    mock_obs = MagicMock()
+    mock_ctx = MagicMock()
+    mock_ctx.__enter__ = MagicMock(return_value=mock_obs)
+    mock_ctx.__exit__ = MagicMock(return_value=False)
+    mock_client.start_as_current_observation.return_value = mock_ctx
+
+    with patch("langfuse.get_client", return_value=mock_client):
+        with langfuse_provider.create_retriever_span(
+            name="vector_search",
+            input_query="What is Zartis?",
+            metadata={"threshold": 0.7, "top_k": 7},
+        ) as obs:
+            assert obs is mock_obs
+
+    mock_client.start_as_current_observation.assert_called_once_with(
+        as_type="retriever",
+        name="vector_search",
+        input="What is Zartis?",
+        metadata={"threshold": 0.7, "top_k": 7},
+    )
+    mock_ctx.__exit__.assert_called_once_with(None, None, None)
+
+
+def test_langfuse_provider_create_retriever_span_silences_errors(langfuse_provider):
+    with patch("langfuse.get_client", side_effect=RuntimeError("sdk unavailable")):
+        with langfuse_provider.create_retriever_span(
+            name="r", input_query="q",
+        ) as obs:
+            assert obs is None
+
+
+# ── events.py — embedding_span and retriever_span bridges ────────────────────
+
+def test_embedding_span_delegates_to_provider(monkeypatch):
+    from backend.analytics import analytics_provider
+    mock_obs = MagicMock()
+    mock_cm = MagicMock()
+    mock_cm.__enter__ = MagicMock(return_value=mock_obs)
+    mock_cm.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr(analytics_provider, "create_embedding_span", MagicMock(return_value=mock_cm))
+
+    with embedding_span(name="embed_query", model="text-embedding-3-small", input_query="hi") as obs:
+        assert obs is mock_obs
+
+
+def test_retriever_span_delegates_to_provider(monkeypatch):
+    from backend.analytics import analytics_provider
+    mock_obs = MagicMock()
+    mock_cm = MagicMock()
+    mock_cm.__enter__ = MagicMock(return_value=mock_obs)
+    mock_cm.__exit__ = MagicMock(return_value=False)
+    monkeypatch.setattr(analytics_provider, "create_retriever_span", MagicMock(return_value=mock_cm))
+
+    with retriever_span(name="vector_search", input_query="hi", metadata={"top_k": 7}) as obs:
+        assert obs is mock_obs

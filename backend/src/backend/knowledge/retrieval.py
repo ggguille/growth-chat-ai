@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from telemetry import get_logger, sanitize_error
 from telemetry import events as tel_events
 
-from backend.analytics.events import AnalyticsEvent, emit_event
+from backend.analytics.events import AnalyticsEvent, emit_event, embedding_span, retriever_span
 from backend.config import settings
 
 log = get_logger("rag")
@@ -37,14 +37,38 @@ async def retrieve_knowledge(
     Uses OpenAI embeddings when OPENAI_API_KEY is set, otherwise falls back
     to HuggingFace sentence-transformers (dev only, no API key required).
     """
+    embedding_model = "text-embedding-3-small" if settings.openai_api_key else "all-MiniLM-L6-v2"
     try:
-        embedding = await _embed_query(query)
+        with embedding_span(
+            name="embed_query",
+            model=embedding_model,
+            input_query=query,
+            metadata={"session_id": session_id, "turn_index": turn_index},
+        ) as emb_obs:
+            embedding = await _embed_query(query)
+            if emb_obs is not None:
+                emb_obs.update(output={"vector_dim": len(embedding)})
     except Exception as exc:
         log.warn(tel_events.EMBEDDING_API_FAILURE, session_id=session_id, turn_index=turn_index, error=sanitize_error(str(exc)))
         return RetrievalResult(status="error", reason="embedding_failure")
 
     try:
-        raw_chunks = await _vector_search(embedding)
+        with retriever_span(
+            name="vector_search",
+            input_query=query,
+            metadata={
+                "session_id": session_id,
+                "turn_index": turn_index,
+                "threshold": settings.rag_relevance_threshold,
+                "top_k": settings.rag_top_k,
+            },
+        ) as ret_obs:
+            raw_chunks = await _vector_search(embedding)
+            if ret_obs is not None:
+                ret_obs.update(output=[
+                    {"content": c.content, "source": c.source, "score": c.score}
+                    for c in raw_chunks
+                ])
     except Exception as exc:
         log.error(tel_events.VECTOR_SEARCH_FAILURE, session_id=session_id, turn_index=turn_index, error=str(exc))
         return RetrievalResult(status="error", reason="search_failure")

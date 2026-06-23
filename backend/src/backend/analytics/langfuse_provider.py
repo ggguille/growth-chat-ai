@@ -95,3 +95,69 @@ class LangfuseProvider:
                     lf_ctx.__exit__(None, None, None)
                 except Exception as exc:
                     log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
+
+    @contextlib.contextmanager
+    def create_embedding_span(
+        self,
+        name: str,
+        model: str,
+        input_query: str,
+        metadata: dict | None = None,
+    ):
+        setup_ok = False
+        lf_ctx = None
+        obs = None
+        try:
+            from langfuse import get_client
+            lf_ctx = get_client().start_as_current_observation(
+                as_type="embedding",
+                name=name,
+                model=model,
+                input=input_query,
+                metadata=metadata or {},
+            )
+            obs = lf_ctx.__enter__()
+            setup_ok = True
+        except Exception as exc:
+            log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
+
+        try:
+            yield obs
+        finally:
+            if setup_ok:
+                try:
+                    lf_ctx.__exit__(None, None, None)
+                except Exception as exc:
+                    log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
+
+    @contextlib.contextmanager
+    def create_retriever_span(
+        self,
+        name: str,
+        input_query: str,
+        metadata: dict | None = None,
+    ):
+        setup_ok = False
+        lf_ctx = None
+        obs = None
+        try:
+            from langfuse import get_client
+            lf_ctx = get_client().start_as_current_observation(
+                as_type="retriever",
+                name=name,
+                input=input_query,
+                metadata=metadata or {},
+            )
+            obs = lf_ctx.__enter__()
+            setup_ok = True
+        except Exception as exc:
+            log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
+
+        try:
+            yield obs
+        finally:
+            if setup_ok:
+                try:
+                    lf_ctx.__exit__(None, None, None)
+                except Exception as exc:
+                    log.warning(tel_events.ANALYTICS_EMIT_FAILURE, error=sanitize_error(str(exc)))
