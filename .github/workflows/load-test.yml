@@ -29,7 +29,7 @@ jobs:
         # Prevents cold-start latency (~500–700ms) from contaminating TTFT measurements.
         # fly.toml sets min_machines_running = 0 (auto-suspend), so we must warm it first.
         run: |
-          flyctl scale count 1 --app growth-chat-api
+          flyctl scale count 1 --app growth-chat-api --yes
           echo "Waiting 30s for machine to be fully warm..."
           sleep 30
         env:
