@@ -48,12 +48,6 @@ jobs:
         run: uv sync --package evaluation --extra ragas
 
       - name: Run RAGAS evaluation
-        # Exit code 1 if any metric falls below its threshold — see runner.py THRESHOLDS.
-        # A RAGAS failure does NOT block the deploy automatically; it requires explicit
-        # documented review before the next Phase 4 approval (see action plan §Phase 4).
-        # TODO(Phase 5): make this a hard gate by adding `continue-on-error: false`
-        # and wiring it as a required status check on the main branch.
-        continue-on-error: true
         run: >
           uv run --package evaluation python -m evaluation.rag.runner
           --embedding-mode prod

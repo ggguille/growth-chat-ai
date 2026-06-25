@@ -20,9 +20,6 @@ jobs:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment: evaluation
-    # Red team failures require explicit documented review before deploy approval.
-    # The job is continue-on-error so it does not auto-block the deploy.
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v6
