@@ -308,6 +308,15 @@ def _make_update_state(llm_client: "BaseLLMClient", context_window: int):
             if _EXPLICIT_HUMAN_RE.search(last_user):
                 delta.explicit_human_request = True
 
+        # TC-ADV-014 guard: LLM extraction can misclassify need statements ("urgently need
+        # AI engineers") as explicit_human_request for N1/N2 visitors. Cross-validate with
+        # rule-based pattern — if rule-based didn't confirm it, clear the LLM extraction to
+        # prevent misrouting to propose_handoff. Genuine explicit requests ("speak to someone",
+        # "book a call") still match _EXPLICIT_HUMAN_RE and propagate correctly (EC-05).
+        is_negative_now = bool(delta.is_negative_persona) or qual.is_negative_persona
+        if delta.explicit_human_request and is_negative_now and not _EXPLICIT_HUMAN_RE.search(last_user):
+            delta.explicit_human_request = None
+
         # Rule-based email extraction — regex finds addresses the LLM extraction misses
         if not delta.visitor_email and not state.get("visitor_email"):
             email_match = _EMAIL_RE.search(last_user)

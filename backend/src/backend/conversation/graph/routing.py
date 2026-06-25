@@ -69,6 +69,13 @@ def _score_router(state: GraphState) -> dict:
     if state.get("explicit_human_request"):
         return {"handoff_reason": "explicit_request"}
 
+    # N1/N2 guard: never escalate through qualification-based routes (stall, hot_lead, warm_lead).
+    # derive_lead_level already returns "cold" for is_negative_persona, but this explicit guard
+    # prevents future stall-path regressions and signals intent clearly. (TC-ADV-013, TC-ADV-014)
+    stored_qual: QualificationState = state.get("qualification", QualificationState())
+    if stored_qual.is_negative_persona or stored_qual.is_no_fit:
+        return {}
+
     # Consultant guard: when is_consultant is set and no Stage 3 proposal has been issued yet,
     # route to generate_response so EC-03 guidance can ask about the client's context (TC-ADV-015).
     if state.get("is_consultant") and state.get("stage3_proposals_issued", 0) == 0:
@@ -77,18 +84,16 @@ def _score_router(state: GraphState) -> dict:
     # Problem-fit guard: never escalate unless problem_fit is confirmed in the stored state.
     # LLM extraction can over-infer problem_fit from urgency/budget/authority signals alone (TC-ADV-018).
     # P3 referral path is exempted — referral substitutes for problem_fit (CDD §2.1).
-    stored_qual: QualificationState = state.get("qualification", QualificationState())
     if stored_qual.problem_fit != "confirmed" and not state.get("referral_mentioned"):
         return {}
 
     if _is_hot_lead(state):
-        qual = state.get("qualification", QualificationState())
         # Downgrade to warm_lead when timing is not fully confirmed and no referral urgency.
         # "not_detected" and "partially_confirmed" both indicate no committed budget/deadline.
         # LLM extraction can set "partially_confirmed" for weak urgency signals like
         # "board knows about it but we haven't committed budget" — those should stay warm.
         # Only "confirmed" timing (explicit Q3 deadline, approved budget) justifies hot_lead.
-        if qual.timing_fit != "confirmed" and not state.get("referral_mentioned"):
+        if stored_qual.timing_fit != "confirmed" and not state.get("referral_mentioned"):
             return {"handoff_reason": "warm_lead"}
         return {"handoff_reason": "hot_lead"}
     return {}
