@@ -93,6 +93,20 @@ uv run --package backend pytest backend/tests/acceptance/ -v
 BACKEND_URL=https://staging.example.com uv run --package backend pytest backend/tests/acceptance/ -v
 ```
 
+### Load tests
+
+k6 scripts live in `backend/tests/load/`. Install [k6](https://k6.io/docs/get-started/installation/) first.
+
+```bash
+# Dry run — 1 VU, 30 s (confirms script parses and SSE events flow)
+k6 run --vus 1 --duration 30s \
+  -e BASE_URL=https://growth-chat-api.fly.dev \
+  -e API_KEY=<ZGC_API_KEY> \
+  backend/tests/load/load-test.js
+```
+
+The full DoD run (10 VUs × 10 min, p95 TTFT < 3,000ms gate) is triggered manually via **Actions → Load Test — TTFT p95 < 3s** in GitHub Actions.
+
 ## Docker
 
 The image is built with a two-stage Dockerfile. Run all commands from the **project root** (the build context must include the uv workspace).

@@ -1,0 +1,66 @@
+name: Load Test — TTFT p95 < 3s
+
+on:
+  # Manual trigger for Phase 5 DoD sign-off
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "API base URL (e.g. https://growth-chat-api.fly.dev)"
+        required: true
+        type: string
+
+jobs:
+  load-test:
+    name: k6 stress test — 10 VUs × 10 min
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20  # ramp-up (2m) + sustained (10m) + ramp-down (30s) + buffer
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Wake production machine
+        # Prevents cold-start latency (~500–700ms) from contaminating TTFT measurements.
+        # fly.toml sets min_machines_running = 0 (auto-suspend), so we must warm it first.
+        run: |
+          flyctl scale count 1 --app growth-chat-api
+          echo "Waiting 30s for machine to be fully warm..."
+          sleep 30
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Run k6 load test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: backend/tests/load/load-test.js
+          flags: --out json=results.json
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url }}
+          API_KEY:  ${{ secrets.VITE_API_KEY }}
+
+      # k6-action exits with code 1 if any threshold fails — the step above will
+      # mark the job as failed automatically. This step uploads results regardless.
+      - name: Upload results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ github.run_id }}
+          path: results.json
+          retention-days: 30
+
+      - name: Print summary
+        if: always()
+        run: |
+          echo "## Load Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target:** p95 TTFT < 3,000ms" >> $GITHUB_STEP_SUMMARY
+          echo "- **Load:** 10 concurrent VUs × 10 minutes" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ github.event.inputs.base_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Results JSON artifact uploaded. Check k6 step output for threshold pass/fail." >> $GITHUB_STEP_SUMMARY
