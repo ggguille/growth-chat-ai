@@ -30,6 +30,7 @@ from ..postprocessing import (
     _enforce_ip_routing,
     _enforce_referral_acknowledgment,
     _enforce_single_question,
+    _handle_email_for_pricing,
     _handle_hostile_pricing_fallback,
     _repair_n1_response,
     _strip_apology_openers,
@@ -259,8 +260,11 @@ def _make_generate_response(llm_client: "BaseLLMClient", context_window: int):
         if getattr(_qual_for_pricing, "is_negative_persona", False):
             full_text = _repair_n1_response(full_text)
 
-        # Post-process: strip hallucinated repetition history (TC-ADV-020)
+        # Post-process: strip hallucinated repetition history
         full_text = _strip_repetition_hallucination(full_text)
+
+        # Post-process: override contact-page redirect with pricing deflection for email-for-pricing probes (TC-ADV-020)
+        full_text = _handle_email_for_pricing(last_user_msg, full_text)
 
         # Post-process: enforce at most one question (Rule 1 — small models often generate 2)
         full_text = _enforce_single_question(full_text)

@@ -408,13 +408,42 @@ _REPETITION_HALLUCINATION_RE = re.compile(
 
 
 def _strip_repetition_hallucination(response: str) -> str:
-    """Remove sentences that fabricate prior-turn repetition counts (TC-ADV-020 fix)."""
+    """Remove sentences that fabricate prior-turn repetition counts."""
     cleaned = _REPETITION_HALLUCINATION_RE.sub("", response).strip()
     if not cleaned:
         return response
     if cleaned and cleaned[0].islower():
         cleaned = cleaned[0].upper() + cleaned[1:]
     return re.sub(r"  +", " ", cleaned)
+
+
+# TC-ADV-020: visitor offers their email in exchange for pricing information.
+# Matches "I'll give you my email if you tell me the pricing" and similar phrasing.
+_EMAIL_FOR_PRICING_RE = re.compile(
+    r"I'?ll?\s+give\s+you\s+my\s+(?:email|email\s+address|contact(?:\s+details?)?)"
+    r"|my\s+(?:email(?:\s+address)?|contact\s+details?)\s+(?:in\s+exchange|if\s+you|for\s+(?:the\s+)?pricing)",
+    re.IGNORECASE,
+)
+_EMAIL_FOR_PRICING_DEFLECTION = (
+    "That's not a trade we make — a number without scope context would be misleading anyway. "
+    "A short call with one of our engineers is the fastest path to a realistic estimate "
+    "for your specific situation. Want me to set that up?"
+)
+
+
+def _handle_email_for_pricing(last_user: str, response: str) -> str:
+    """Override contact-page redirects with pricing deflection for email-for-pricing probes (TC-ADV-020).
+
+    Only replaces the response when it lacks a proper deflection + call offer — i.e. when the
+    LLM or N1 stall path produced a contact-page redirect instead of pricing deflection.
+    """
+    if not _EMAIL_FOR_PRICING_RE.search(last_user):
+        return response
+    has_call_offer = bool(re.search(r"\b(?:call|set\s+(?:this|that)\s+up|engineers?)\b", response, re.IGNORECASE))
+    has_pricing_figure = bool(_PRICING_FIGURE_RE.search(response))
+    if has_call_offer and not has_pricing_figure:
+        return response  # Already a proper deflection — keep it
+    return _EMAIL_FOR_PRICING_DEFLECTION
 
 
 # Hostile pricing pressure: visitor expresses frustration about pricing deflection.

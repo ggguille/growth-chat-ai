@@ -33,9 +33,24 @@ async def _write_state(state: GraphState) -> dict:
 
 def _make_stall_check(stall_threshold: int):
     def _stall_check(state: GraphState) -> dict:
+        from backend.conversation.graph.postprocessing import _EMAIL_FOR_PRICING_RE  # noqa: PLC0415
+
         new_count = state.get("turn_counter", 0) + 1
         update: dict = {"turn_counter": new_count}
         is_stall = new_count >= stall_threshold and state.get("stage3_proposals_issued", 0) == 0
+        if is_stall:
+            # Pricing manipulation probes are not a stall — generate_response handles them
+            # via _handle_email_for_pricing. Suppressing stall here prevents propose_handoff
+            # from running after generate_response, avoiding double SSE output (TC-ADV-020).
+            messages = state.get("messages", [])
+            last_user = next(
+                (m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
+                 for m in reversed(messages)
+                 if (m.get("role") if isinstance(m, dict) else getattr(m, "type", "")) in ("human", "user")),
+                "",
+            )
+            if _EMAIL_FOR_PRICING_RE.search(last_user):
+                is_stall = False
         if is_stall:
             update["handoff_reason"] = "stall"
         return update
