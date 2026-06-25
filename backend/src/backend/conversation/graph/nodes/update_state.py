@@ -80,6 +80,18 @@ Return JSON matching QualificationDelta schema. All fields are optional.
 _VALID_SIGNAL_TYPES = frozenset(("explicit", "implicit"))
 _VALID_DIMENSIONS = frozenset(("problem_fit", "authority_fit", "company_fit", "timing_fit"))
 
+# Broad vocabulary check — detects any AI/ML/tech problem descriptor.
+# Used to validate LLM problem_fit extraction: if the message contains no problem
+# vocabulary at all, the LLM cannot have correctly inferred a problem signal (TC-ADV-018).
+_ANY_PROBLEM_VOCAB_RE = re.compile(
+    r"\b(?:AI|ML|LLM|RAG|NLP|GPT|recommendation|embed(?:ding)?|vector|"
+    r"machine\s+learning|deep\s+learning|neural|model|inference|"
+    r"chatbot|agent|automation|MLOps|algorithm|analytic|"
+    r"data\s+(?:science|engineering|pipeline|platform)|"
+    r"AI\s+engineers?|ML\s+engineers?|data\s+engineers?)\b",
+    re.IGNORECASE,
+)
+
 # Rule-based qualification signal patterns — supplement LLM extraction when
 # structured_complete returns empty deltas (common with small models like Llama 3.1 8B).
 _PROBLEM_CONFIRMED_RE = re.compile(
@@ -250,6 +262,13 @@ def _make_update_state(llm_client: "BaseLLMClient", context_window: int):
         # pattern match catches those cases before the monotonic merge runs.
         if _has_explicit_authority(last_user) and qual.authority_fit != "confirmed":
             delta.authority_fit = "confirmed"
+
+        # TC-ADV-018 guard: LLM extraction over-infers problem_fit from authority/budget/timing
+        # signals alone ("I'm the CTO, full budget approved, need to start in two weeks" has
+        # no AI/tech problem vocabulary). Clear any LLM-returned problem_fit when the message
+        # contains no problem-related vocabulary so the monotonic merge keeps "not_detected".
+        if delta.problem_fit and not _ANY_PROBLEM_VOCAB_RE.search(last_user):
+            delta.problem_fit = None
 
         # Rule-based overrides for problem/company/timing — supplement LLM extraction
         # when structured_complete returns empty deltas (small models like Llama 3.1 8B).
