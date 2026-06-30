@@ -22,7 +22,7 @@ export function ChatThread({ adapterConfig }: ChatThreadProps) {
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <ThreadPrimitive.Root className="widget-thread" style={{ display: 'contents' }}>
-        <ThreadPrimitive.Viewport className="widget-viewport">
+        <ThreadPrimitive.Viewport className="widget-viewport" data-testid="message-list">
           <ThreadPrimitive.Empty>
             <div className="widget-empty">
               <p className="widget-empty-title">How can we help?</p>
@@ -41,10 +41,14 @@ export function ChatThread({ adapterConfig }: ChatThreadProps) {
 
 function Message({ message }: { message: MessageState }) {
   const isUser = message.role === 'user';
-  const isStreaming =
-    !isUser &&
-    'status' in message &&
-    message.status?.type === 'running';
+  const rawStatus = 'status' in message
+    ? (message.status as { type: string; error?: unknown })
+    : null;
+  const isStreaming = !isUser && rawStatus?.type === 'running';
+  const isError = rawStatus?.type === 'error';
+  const errorText = isError
+    ? (rawStatus?.error instanceof Error ? rawStatus.error.message : 'Something went wrong. Please try again.')
+    : '';
 
   const text = message.content
     .filter(p => p.type === 'text')
@@ -52,14 +56,12 @@ function Message({ message }: { message: MessageState }) {
     .join('');
 
   return (
-    <MessagePrimitive.Root
-      className={`widget-message widget-message--${isUser ? 'user' : 'assistant'}`}
-    >
-      <div
-        className={`widget-message-bubble${isStreaming ? ' is-streaming' : ''}`}
-      >
-        {text}
-      </div>
+    <MessagePrimitive.Root className={`widget-message widget-message--${isUser ? 'user' : 'assistant'}`}>
+      {isError ? (
+        <div className="widget-error-message" data-testid="error-message">{errorText}</div>
+      ) : (
+        <div className={`widget-message-bubble${isStreaming ? ' is-streaming' : ''}`}>{text}</div>
+      )}
     </MessagePrimitive.Root>
   );
 }
@@ -87,6 +89,7 @@ function Composer() {
   return (
     <ComposerPrimitive.Root className="widget-composer">
       <ComposerPrimitive.Input
+        data-testid="message-input"
         ref={textareaRef}
         className="widget-input"
         placeholder="Type a message…"

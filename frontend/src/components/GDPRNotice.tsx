@@ -30,7 +30,7 @@ export function GDPRNotice({ text, hostElement, onAccept }: GDPRNoticeProps) {
         {text ||
           'This chat is powered by AI. Messages you send may be processed to help us respond to your enquiry. By continuing you agree to this.'}
       </p>
-      <button className="widget-gdpr-accept" onClick={handleAccept} type="button">
+      <button className="widget-gdpr-accept" data-testid="gdpr-accept" onClick={handleAccept} type="button">
         Got it — let's chat
       </button>
     </div>

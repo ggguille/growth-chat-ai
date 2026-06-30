@@ -18,7 +18,7 @@ function getOrCreateSessionId(): string {
 }
 
 export class GrowthChat extends HTMLElement {
-  static observedAttributes = ['api-url', 'fallback-url', 'api-key'];
+  static observedAttributes = ['api-url', 'fallback-url', 'api-key', 'proactive-delay-ms'];
 
   private root: Root | null = null;
   private mountPoint: HTMLDivElement | null = null;
@@ -60,6 +60,7 @@ export class GrowthChat extends HTMLElement {
         sessionId: this.sessionId,
         gdprNoticeText: import.meta.env.VITE_GDPR_NOTICE_TEXT ?? '',
         streamTimeoutMs: Number(import.meta.env.VITE_STREAM_TIMEOUT_MS) || 10_000,
+        proactiveDelayMs: Number(this.getAttribute('proactive-delay-ms')) || 45_000,
         hostElement: this,
       })
     );

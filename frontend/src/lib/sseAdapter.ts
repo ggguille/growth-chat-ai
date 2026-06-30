@@ -74,6 +74,17 @@ export function createSSEAdapter(config: SSEAdapterConfig): ChatModelAdapter {
         throw new Error(`HTTP ${response.status}`);
       }
 
+      if (response.status === 429) {
+        let errorMessage = 'Too many messages. Please wait before sending another.';
+        try {
+          const errBody = await response.json() as { error?: { message?: string } };
+          if (errBody.error?.message) errorMessage = errBody.error.message;
+        } catch {
+          // non-JSON body — use default message
+        }
+        throw new Error(errorMessage);
+      }
+
       if (!response.body) {
         if (isFirstRequest) config.onFallback();
         throw new Error('Empty response body');

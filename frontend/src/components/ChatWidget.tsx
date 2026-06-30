@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GDPRNotice, isGdprAccepted } from './GDPRNotice';
 import { FallbackView } from './FallbackView';
 import { ChatThread } from './ChatThread';
@@ -11,6 +11,7 @@ export interface ChatWidgetProps {
   sessionId: string;
   gdprNoticeText?: string;
   streamTimeoutMs?: number;
+  proactiveDelayMs?: number;
   hostElement?: HTMLElement | null;
 }
 
@@ -21,11 +22,22 @@ export function ChatWidget({
   sessionId,
   gdprNoticeText = '',
   streamTimeoutMs = 10_000,
+  proactiveDelayMs = 45_000,
   hostElement = null,
 }: ChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [gdprAccepted, setGdprAccepted] = useState(isGdprAccepted);
   const [fallbackActive, setFallbackActive] = useState(false);
+  const [showProactivePrompt, setShowProactivePrompt] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setShowProactivePrompt(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowProactivePrompt(true), proactiveDelayMs);
+    return () => clearTimeout(timer);
+  }, [isOpen, proactiveDelayMs]);
 
   const adapterConfig: SSEAdapterConfig = {
     apiUrl,
@@ -90,7 +102,24 @@ export function ChatWidget({
         </div>
       )}
 
+      {showProactivePrompt && !isOpen && (
+        <div className="widget-proactive" data-testid="proactive-prompt">
+          <p className="widget-proactive-text">Have questions about AI engineering?</p>
+          <button
+            type="button"
+            className="widget-proactive-cta"
+            onClick={() => {
+              setIsOpen(true);
+              setShowProactivePrompt(false);
+            }}
+          >
+            Let's chat
+          </button>
+        </div>
+      )}
+
       <button
+        data-testid="launcher-button"
         className="widget-launcher"
         onClick={() => setIsOpen(o => !o)}
         aria-label={isOpen ? 'Toggle chat' : 'Open chat'}
