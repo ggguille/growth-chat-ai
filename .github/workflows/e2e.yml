@@ -1,15 +1,6 @@
 name: E2E Tests
 
 on:
-  push:
-    branches:
-      - main
-      - staging
-    paths:
-      - 'frontend/**'
-  pull_request:
-    paths:
-      - 'frontend/**'
   workflow_dispatch:
     inputs:
       grep:
