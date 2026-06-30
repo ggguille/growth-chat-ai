@@ -17,6 +17,7 @@ export interface SSEAdapterConfig {
   onFallback: () => void;
   streamTimeoutMs: number;
   onDone?: (event: Extract<SSEEvent, { type: 'done' }>) => void;
+  onError?: (err: Error | null) => void;
 }
 
 export function createSSEAdapter(config: SSEAdapterConfig): ChatModelAdapter {
@@ -25,6 +26,8 @@ export function createSSEAdapter(config: SSEAdapterConfig): ChatModelAdapter {
   return {
     async *run(options: ChatModelRunOptions): AsyncGenerator<ChatModelRunResult> {
       const { messages, abortSignal } = options;
+
+      config.onError?.(null);
 
       const lastMessage = messages[messages.length - 1];
       if (!lastMessage || lastMessage.role !== 'user') return;
@@ -82,7 +85,9 @@ export function createSSEAdapter(config: SSEAdapterConfig): ChatModelAdapter {
         } catch {
           // non-JSON body — use default message
         }
-        throw new Error(errorMessage);
+        const err = new Error(errorMessage);
+        config.onError?.(err);
+        throw err;
       }
 
       if (!response.body) {

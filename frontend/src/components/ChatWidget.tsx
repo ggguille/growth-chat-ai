@@ -29,6 +29,7 @@ export function ChatWidget({
   const [gdprAccepted, setGdprAccepted] = useState(isGdprAccepted);
   const [fallbackActive, setFallbackActive] = useState(false);
   const [showProactivePrompt, setShowProactivePrompt] = useState(false);
+  const [adapterError, setAdapterError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -45,6 +46,7 @@ export function ChatWidget({
     sessionId,
     streamTimeoutMs,
     onFallback: () => setFallbackActive(true),
+    onError: (err) => setAdapterError(err ? err.message : null),
     onDone: event => {
       hostElement?.dispatchEvent(
         new CustomEvent('zgc:qualification_state_changed', {
@@ -75,7 +77,16 @@ export function ChatWidget({
           onAccept={() => setGdprAccepted(true)}
         />
       );
-    return <ChatThread adapterConfig={adapterConfig} />;
+    return (
+      <>
+        <ChatThread adapterConfig={adapterConfig} />
+        {adapterError && (
+          <div className="widget-error-message" data-testid="error-message">
+            {adapterError}
+          </div>
+        )}
+      </>
+    );
   }
 
   return (
