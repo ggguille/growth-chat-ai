@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>E2E Test Page</title>
+</head>
+<body>
+  <h1 style="font-family: sans-serif; padding: 16px; color: #374151;">E2E Test Fixture</h1>
+  <script type="module" src="/src/main.ts"></script>
+  <growth-chat proactive-delay-ms="2000"></growth-chat>
+  <script>
+    // Inject api-url and fallback-url from query params so Playwright tests can
+    // set them via page.goto('/test-page.html?api-url=...&fallback-url=...')
+    // This runs synchronously before the module script upgrades the custom element,
+    // so the attributes are present when connectedCallback fires.
+    const params = new URLSearchParams(location.search);
+    const widget = document.querySelector('growth-chat');
+    const apiUrl = params.get('api-url');
+    const fallbackUrl = params.get('fallback-url');
+    if (apiUrl && widget) widget.setAttribute('api-url', apiUrl);
+    if (fallbackUrl && widget) widget.setAttribute('fallback-url', fallbackUrl);
+  </script>
+</body>
+</html>
