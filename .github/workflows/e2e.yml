@@ -1,0 +1,62 @@
+name: E2E Tests
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+    paths:
+      - 'frontend/**'
+  pull_request:
+    paths:
+      - 'frontend/**'
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: 'Test filter (e.g. "E2E-02" to run a single test)'
+        required: false
+        type: string
+
+jobs:
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    env:
+      VITE_API_URL:          ${{ vars.VITE_API_URL }}
+      VITE_FALLBACK_URL:     ${{ vars.VITE_FALLBACK_URL }}
+      VITE_GDPR_NOTICE_TEXT: ${{ vars.VITE_GDPR_NOTICE_TEXT }}
+      VITE_API_KEY:          ${{ secrets.VITE_API_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      - name: Run E2E tests
+        run: npx playwright test ${{ inputs.grep && format('--grep "{0}"', inputs.grep) || '' }}
+        working-directory: frontend
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: frontend/playwright-report/
+          retention-days: 7
