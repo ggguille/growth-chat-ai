@@ -12,9 +12,6 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  VITE_API_URL: https://growth-chat-api.fly.dev/chat  # update to real API domain before first deploy
-  VITE_FALLBACK_URL: https://www.example.com/contact  # update to real contact form URL
-  VITE_GDPR_NOTICE_TEXT: ''                           # update with legal-approved notice text before first deploy
   TIGRIS_BUCKET_NAME: growth-chat-assets
 
 jobs:
@@ -46,7 +43,10 @@ jobs:
     needs: test
 
     env:
-      VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+      VITE_API_URL:          ${{ vars.VITE_API_URL }}
+      VITE_FALLBACK_URL:     ${{ vars.VITE_FALLBACK_URL }}
+      VITE_GDPR_NOTICE_TEXT: ${{ vars.VITE_GDPR_NOTICE_TEXT }}
+      VITE_API_KEY:          ${{ secrets.VITE_API_KEY }}
 
     steps:
       - uses: actions/checkout@v6
@@ -64,7 +64,7 @@ jobs:
       - name: Build widget
         working-directory: frontend
         run: npm run build
-        # VITE_* vars are inherited from the workflow-level env block and job-level env
+        # VITE_* vars are inherited from the job-level env block above
 
       - name: Patch demo page for production
         run: |
