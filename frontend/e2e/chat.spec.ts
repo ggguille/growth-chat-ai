@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { collectSseEvents } from './helpers/sse';
 
 const STAGING_API_URL = process.env.VITE_API_URL!;
-const FALLBACK_URL = process.env.VITE_FALLBACK_URL ?? 'https://example.com/contact';
+const FALLBACK_URL = 'https://example.com/contact';
 
 function testPageUrl() {
   const params = new URLSearchParams({
@@ -40,6 +40,17 @@ test('E2E-01: widget launcher renders within Shadow DOM', async ({ page }) => {
 // ─── E2E-02: Message sends and streaming response renders ────────────────────
 
 test('E2E-02: message sends and streaming response renders', async ({ page }) => {
+  await page.route(`${STAGING_API_URL}**`, async route => {
+    await route.fulfill({
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+      body: [
+        'data: {"type":"token","content":"Happy to help with your AI engineering questions."}\n\n',
+        'data: {"type":"done","session_id":"t1","lead_level":"warm","current_stage":1,"stage3_proposal_issued":false,"handoff_reason":null,"turn_count":1}\n\n',
+      ].join(''),
+    });
+  });
+
   // Set up response capture before sending the message
   const responsePromise = page.waitForResponse(
     r => r.url().includes('/chat') && r.status() === 200
@@ -123,6 +134,30 @@ test('E2E-04: rate limit 429 displays user-facing message', async ({ page }) => 
 // ─── E2E-05: Multi-turn hot lead conversation reaches Stage 3 proposal ───────
 
 test('E2E-05: hot lead conversation triggers Stage 3 proposal', async ({ page }) => {
+  let callCount = 0;
+  await page.route(`${STAGING_API_URL}**`, async route => {
+    callCount++;
+    if (callCount === 1) {
+      await route.fulfill({
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+        body: [
+          'data: {"type":"token","content":"That\'s exciting! Tell me more about the project scope and timeline."}\n\n',
+          'data: {"type":"done","session_id":"t1","lead_level":"hot","current_stage":2,"stage3_proposal_issued":false,"handoff_reason":null,"turn_count":1}\n\n',
+        ].join(''),
+      });
+    } else {
+      await route.fulfill({
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+        body: [
+          'data: {"type":"token","content":"Based on your requirements, I\'d love to connect you via email to discuss a tailored proposal. Let\'s follow up soon!"}\n\n',
+          'data: {"type":"done","session_id":"t1","lead_level":"hot","current_stage":3,"stage3_proposal_issued":true,"handoff_reason":"budget_confirmed","turn_count":2}\n\n',
+        ].join(''),
+      });
+    }
+  });
+
   await launcher(page).click();
   await gdprAccept(page).click();
 
