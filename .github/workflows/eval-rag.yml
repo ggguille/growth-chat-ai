@@ -58,3 +58,36 @@ jobs:
           LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
           LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
           LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
+
+      - name: Upload RAGAS report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragas-report-${{ github.run_id }}
+          path: evaluation/.evaluation-reports/ragas-*.json
+          retention-days: 30
+
+      - name: Post job summary
+        if: always()
+        run: |
+          echo "## RAGAS Evaluation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          python3 -c "
+          import json, glob, sys
+          files = sorted(glob.glob('evaluation/.evaluation-reports/ragas-*.json'))
+          if not files:
+              print('No report file found.')
+              sys.exit(0)
+          d = json.load(open(files[-1]))
+          print(f'**Run:** {d[\"run_name\"]}')
+          print(f'**Embedding mode:** {d[\"embedding_mode\"]}')
+          print()
+          print('| Metric | Score | Threshold | Pass |')
+          print('| --- | --- | --- | --- |')
+          for metric, info in d.get('scores', {}).items():
+              status = 'PASS' if info['pass'] else 'FAIL'
+              print(f'| {metric} | {info[\"value\"]:.3f} | {info[\"threshold\"]:.2f} | {status} |')
+          overall = 'All metrics passed' if d.get('all_pass') else 'One or more metrics FAILED'
+          print()
+          print(f'**Overall: {overall}**')
+          " >> $GITHUB_STEP_SUMMARY

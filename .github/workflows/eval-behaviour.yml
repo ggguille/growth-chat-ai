@@ -77,7 +77,11 @@ jobs:
       - name: Run behaviour evaluation (60 tests)
         # Phase 5: full suite — 50 persona flows + 10 pattern tests + 4 edge cases.
         # Excludes test_adversarial.py (Layer 2, promptfoo gate).
-        run: uv run --package evaluation pytest evaluation/behaviour -m "not adversarial" -v
+        run: >
+          uv run --package evaluation pytest evaluation/behaviour
+          -m "not adversarial" -v
+          --html=evaluation/.evaluation-reports/behaviour-${{ github.run_id }}.html
+          --self-contained-html
         env:
           EVAL_API_URL: ${{ vars.EVAL_API_URL }}
           ZGC_API_KEY: ${{ secrets.ZGC_API_KEY }}
@@ -85,3 +89,21 @@ jobs:
           LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
           LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
           LANGFUSE_HOST: ${{ vars.LANGFUSE_HOST }}
+
+      - name: Upload behaviour report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: behaviour-report-${{ github.run_id }}
+          path: evaluation/.evaluation-reports/behaviour-${{ github.run_id }}.html
+          retention-days: 30
+
+      - name: Post job summary
+        if: always()
+        run: |
+          echo "## Behaviour Evaluation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Suite:** 60 tests (50 persona flows + 10 pattern tests + edge cases)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Excluded:** adversarial tests (promptfoo gate)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Results HTML artifact: \`behaviour-report-${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
