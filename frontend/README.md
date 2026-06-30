@@ -13,13 +13,36 @@ Open `http://localhost:5173` — the `<growth-chat>` element renders inside its 
 
 ## Testing
 
+### Unit tests (Vitest)
+
 ```bash
-npm test         # run all tests once (vitest)
+npm test            # run all tests once
 npm run test:watch  # watch mode
-npm run test:ui  # visual test UI in browser
+npm run test:ui     # visual test UI in browser
 ```
 
 33 tests across 5 suites covering the SSE adapter, web component lifecycle, and all UI components.
+
+### E2E tests (Playwright)
+
+```bash
+# Install Playwright browsers (first time only)
+npx playwright install chromium
+
+# Set required env vars (mirrors what the CI workflow hardcodes / pulls from secrets)
+export VITE_API_URL=https://growth-chat-api.fly.dev/chat
+export VITE_FALLBACK_URL=https://www.example.com/contact
+export VITE_GDPR_NOTICE_TEXT=''
+export VITE_API_KEY=<your-api-key>
+
+npm run test:e2e                         # all 5 tests (headless Chromium)
+npm run test:e2e -- --grep "E2E-02"      # single test by ID
+npm run test:e2e:headed                  # headed mode for debugging
+npm run test:e2e:report                  # open HTML report from last run
+npm run test:e2e:ui                      # interactive Playwright UI
+```
+
+5 tests in `e2e/chat.spec.ts` covering widget load, SSE streaming, backend unavailability (mocked 503), rate limiting (mocked 429), and a multi-turn hot-lead conversation reaching Stage 3. Tests run against the staging API with a local Vite dev server serving the widget from source. See `documentation/docs/e2e-tests-plan.md` for the full test design rationale.
 
 ## Build
 
@@ -80,6 +103,17 @@ Required GitHub secrets (in the `production` environment):
 | `TIGRIS_SECRET_ACCESS_KEY` | Object storage write access |
 | `VITE_API_KEY` | Baked into `chat.js`; injected into `demo/index.html` |
 
+The E2E workflow reuses the same `production` environment secret and hardcoded values already used by `deploy-frontend.yml` — no new secrets are required:
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `VITE_API_KEY` | Secret (existing) | Same `VITE_API_KEY` used by the frontend deploy |
+| `VITE_API_URL` | Hardcoded in workflow | `https://growth-chat-api.fly.dev/chat` |
+| `VITE_FALLBACK_URL` | Hardcoded in workflow | `https://www.example.com/contact` |
+| `VITE_GDPR_NOTICE_TEXT` | Hardcoded in workflow | `''` (uses default built-in copy) |
+
+The E2E workflow runs automatically on push/PR when `frontend/**` changes, and supports manual dispatch via **Actions → E2E Tests → Run workflow** with an optional `grep` input to target a single test.
+
 Required build-time env vars (set in the workflow; copy `frontend/.env.example` for local development):
 
 | Variable | Required | Description |
@@ -103,30 +137,37 @@ src/
 ├── styles/
 │   └── widget.css                 # all widget styles (injected into shadow root at runtime)
 ├── lib/
-│   ├── sseAdapter.ts              # ChatModelAdapter: SSE streaming + fallback logic
+│   ├── sseAdapter.ts              # ChatModelAdapter: SSE streaming, fallback, 429 handling
 │   └── __tests__/
 │       └── sseAdapter.test.ts
 └── components/
-    ├── ChatWidget.tsx             # top-level widget: launcher, panel, GDPR, fallback routing
-    ├── ChatThread.tsx             # message list + composer (uses @assistant-ui/react primitives)
+    ├── ChatWidget.tsx             # top-level widget: launcher, proactive prompt, panel routing
+    ├── ChatThread.tsx             # message list + composer + turn-level error display
     ├── GDPRNotice.tsx             # GDPR consent screen (persisted in sessionStorage)
     ├── FallbackView.tsx           # fallback screen shown when backend is unavailable
     └── __tests__/
         ├── ChatWidget.test.tsx
         ├── GDPRNotice.test.tsx
         └── FallbackView.test.tsx
+e2e/
+├── helpers/
+│   └── sse.ts                     # SSE response body parser for Playwright assertions
+└── chat.spec.ts                   # 5 E2E tests (E2E-01 through E2E-05)
 demo/
 └── index.html                     # standalone demo page (loads dist/chat.js)
+playwright.config.ts               # Playwright config (Chromium, Vite dev server webServer)
+test-page.html                     # E2E fixture page; api-url/fallback-url injected via query params
 ```
 
 ## Attributes
 
-| Attribute | Required | Description |
-| --- | --- | --- |
-| `api-url` | yes | Backend streaming endpoint URL |
-| `fallback-url` | yes | Contact page URL displayed when chat is unavailable |
-| `api-key` | yes | API key sent as `ZGC-API-KEY` header on every request |
-| `data-gdpr-text` | no | Custom GDPR/privacy notice text |
+| Attribute | Required | Default | Description |
+| --- | --- | --- | --- |
+| `api-url` | yes | — | Backend streaming endpoint URL |
+| `fallback-url` | yes | — | Contact page URL displayed when chat is unavailable |
+| `api-key` | yes | — | API key sent as `ZGC-API-KEY` header on every request |
+| `data-gdpr-text` | no | Built-in copy | Custom GDPR/privacy notice text |
+| `proactive-delay-ms` | no | `45000` | Milliseconds before the proactive prompt bubble appears; set to a low value (e.g. `2000`) in test fixtures |
 
 ## Custom Events
 
