@@ -145,6 +145,20 @@ export default defineConfig({
       ]
     },
     { title: 'Conversation Design', path: '/conversation-design-document', icon: 'message-square' },
+    {
+      title: 'Operations',
+      path: '/operations',
+      icon: 'settings',
+      children: [
+        { title: 'Overview', path: '/operations/' },
+        { title: 'Backend API', path: '/operations/ops-backend' },
+        { title: 'Frontend Widget', path: '/operations/ops-frontend' },
+        { title: 'Database', path: '/operations/ops-database' },
+        { title: 'Knowledge Ingestion', path: '/operations/ops-ingestion' },
+        { title: 'Observability', path: '/operations/ops-observability' },
+        { title: 'Documentation Site', path: '/operations/ops-documentation' },
+      ]
+    },
   ],
 
   // --- Plugins ---
