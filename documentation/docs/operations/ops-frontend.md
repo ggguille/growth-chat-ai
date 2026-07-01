@@ -102,3 +102,38 @@ Optional attributes:
 | `proactive-message` | `"Have a question about AI engineering?"` | Proactive prompt text |
 
 These attributes are set at the host website level, not in the widget bundle.
+
+---
+
+## E2E Testing
+
+End-to-end tests verify the widget's rendering, interaction flows, and error-handling behaviour in a real browser. This is a **manual gate** — run before production releases and after significant widget changes.
+
+**Tool:** Playwright (Chromium), tests at `frontend/e2e/chat.spec.ts`
+
+::: callout tip "Mocked backend"
+SSE responses are mocked in all E2E tests — the tests do not hit the real backend. They verify widget rendering and client-side state logic, not backend behaviour.
+:::
+
+**Test coverage:**
+
+| Test ID | What is verified |
+| --- | --- |
+| E2E-01 | Widget launcher renders within Shadow DOM; proactive prompt appears after configured delay |
+| E2E-02 | Message sends; streaming tokens render; `done` event re-enables input |
+| E2E-03 | Backend 503 permanently activates fallback state; fallback link visible; input hidden |
+| E2E-04 | Rate limit 429 shows error message; input re-enabled (turn-level error, not permanent failure); fallback banner does not appear |
+| E2E-05 | Multi-turn hot lead conversation: `done` event carries `stage3_proposal_issued=true`; proposal text visible |
+
+**How to run:**
+
+1. Go to the repository's **Actions** tab.
+2. Select the **`e2e.yml`** workflow.
+3. Click **Run workflow**. Optionally provide a `grep` filter to run a single test (e.g. `"E2E-02"`).
+4. The Playwright HTML report is uploaded as an artifact (7-day retention) and includes screenshots and traces for any failures.
+
+Build-time variables (`VITE_API_URL`, `VITE_API_KEY`, etc.) are injected automatically from the `production` GitHub environment.
+
+**If a test fails:**
+
+Download the Playwright HTML report artifact from the Actions run summary. It contains screenshots, step-by-step traces, and the failing assertion for each test. Failures indicate a widget rendering regression or broken state-transition logic.

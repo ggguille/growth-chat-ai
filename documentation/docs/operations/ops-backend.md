@@ -142,3 +142,41 @@ For the full list of environment variables, their types, and default values, see
 | LLM observability | Langfuse public key, secret key, host |
 
 After rotating a secret, the machine restarts automatically. Verify recovery via `GET /ready`.
+
+---
+
+## Load Testing
+
+Load tests verify the backend meets the Time to First Token (TTFT) performance requirement under realistic concurrent load. This is a **manual Phase 5 DoD gate** — not triggered automatically.
+
+**Tool:** k6 (Grafana), script at `backend/tests/load/load-test.js`
+
+**Thresholds:**
+
+| Metric | Threshold |
+| --- | --- |
+| p95 TTFT | < 3,000 ms |
+| Error rate | < 5% |
+
+TTFT is measured as TTFB (`http_req_waiting`) — the time from request sent to first byte received. For a streaming SSE endpoint this equals time-to-first-token and is the standard k6 proxy.
+
+**Test configuration:**
+
+- 10 virtual users (VUs), 2-minute ramp-up → 10-minute sustained → 30-second ramp-down
+- Each VU simulates 5–7 conversation turns with 15–30 second think-time between turns (realistic cadence)
+- Message mix: 60% RAG-triggering queries, 40% non-RAG queries
+- Machine is pre-warmed to 1 instance before the test run to prevent cold-start latency from contaminating TTFT measurements
+
+**How to run:**
+
+1. Go to the repository's **Actions** tab.
+2. Select the **`load-test.yml`** workflow.
+3. Click **Run workflow** and provide the `base_url` input (the API base URL to test against).
+4. The workflow pre-warms the machine, runs the k6 test, and uploads a `results.json` artifact (30-day retention).
+
+k6 exits with code 1 if any threshold fails, which fails the workflow job.
+
+**If the test fails:**
+
+- Review the k6 step output for which threshold failed and the actual p95/error-rate values.
+- If `p95 TTFT` exceeds 3,000 ms under 10 VUs: scale the machine — set `min_machines_running = 1` and `max_machines_running = 2` in `backend/fly.toml`. No code changes required. See ADR-006 for the full scaling criteria.
