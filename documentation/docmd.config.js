@@ -160,6 +160,7 @@ export default defineConfig({
         { title: 'Documentation Site', path: '/operations/ops-documentation' },
       ]
     },
+    { title: 'Cost Report', path: '/cost-report', icon: 'dollar-sign' },
   ],
 
   // --- Plugins ---
