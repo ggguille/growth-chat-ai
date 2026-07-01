@@ -72,4 +72,5 @@ The system has runtime dependencies on the following external services. A prolon
 - [Database](./ops-database.md) — migrations, backup, recovery, data retention
 - [Knowledge Ingestion](./ops-ingestion.md) — when and how to re-run the ingestion pipeline
 - [Observability](./ops-observability.md) — logs, LLM tracing, health monitoring, alerting
+- [Evaluation Pipelines](./ops-evaluation.md) — behaviour tests, red team, RAG quality, thresholds, CI gates
 - [Documentation Site](./ops-documentation.md) — deploy, local preview, adding content

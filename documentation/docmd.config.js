@@ -156,6 +156,7 @@ export default defineConfig({
         { title: 'Database', path: '/operations/ops-database' },
         { title: 'Knowledge Ingestion', path: '/operations/ops-ingestion' },
         { title: 'Observability', path: '/operations/ops-observability' },
+        { title: 'Evaluation Pipelines', path: '/operations/ops-evaluation' },
         { title: 'Documentation Site', path: '/operations/ops-documentation' },
       ]
     },
